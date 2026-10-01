@@ -1,5 +1,5 @@
-const CACHE='baby-roulette-pages-v1.0.0-memorybrand1';
-const ASSETS=['./','./index.html','./style.css?v=1.0.0-memorybrand1','./deluxe.css?v=1.0.0-memorybrand1','./features.css?v=1.0.0-memorybrand1','./app.js?v=1.0.0-memorybrand1','./deluxe.js?v=1.0.0-memorybrand1','./features.js?v=1.0.0-memorybrand1','./hidden-settings.js?v=1.0.0-memorybrand1','./manifest.webmanifest?v=memorybrand1','./icons/memory-roulette-omikuji.svg?v=memorybrand1'];
+const CACHE='baby-roulette-pages-v1.0.0-memorybrand2';
+const ASSETS=['./','./index.html','./style.css?v=1.0.0-memorybrand2','./deluxe.css?v=1.0.0-memorybrand2','./features.css?v=1.0.0-memorybrand2','./app.js?v=1.0.0-memorybrand2','./deluxe.js?v=1.0.0-memorybrand2','./features.js?v=1.0.0-memorybrand2','./hidden-settings.js?v=1.0.0-memorybrand2','./manifest.webmanifest?v=memorybrand2','./icons/memory-roulette-omikuji.png?v=memorybrand2'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(fetch(e.request).then(r=>{const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy)).catch(()=>{});return r;}).catch(()=>caches.match(e.request).then(r=>r||caches.match('./index.html'))));});

@@ -1,0 +1,591 @@
+#labFortuneExtra{display:none;margin-top:10px;padding-top:9px;border-top:1px dashed #dbcabb}
+#labLucky{display:grid;gap:6px}
+.labLuckyRow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 8px;border-radius:10px;background:#fffaf4;font-size:10px;color:#745f53}
+.labLuckyRow b{display:flex;align-items:center;gap:5px;color:#4b382e;font-size:11px;text-align:right}
+.labLuckyRow i{display:inline-block;width:14px;height:14px;border-radius:50%;border:1px solid #0002;box-shadow:0 1px 3px #0002}
+#labSpecialLine{display:none;margin:8px 0 2px;padding:7px 9px;border-radius:12px;font-size:11px;line-height:1.45;text-align:center;font-weight:900}
+#labSpecialLine.miracle{background:#fff6c8;color:#8a5b00;border:1px solid #f2d264}
+#labSpecialLine.reversal{background:linear-gradient(135deg,#f7e8ff,#e5f8ff,#fff3c9);color:#60407d;border:1px solid #d5c5ec}
+#labSavePhoto{display:block;margin:9px auto 0;padding:8px 12px;border-radius:999px;background:#fff1f4;color:#9f405b;border:1px solid #efcbd5;font-size:11px;font-weight:900;box-shadow:none}
+#labSavePhoto:disabled{opacity:.65}
+#labRareBadge{position:absolute;left:50%;top:72px;z-index:8;transform:translateX(-50%) scale(.75);opacity:0;pointer-events:none;white-space:nowrap;padding:9px 15px;border-radius:999px;font-size:14px;font-weight:1000;transition:opacity .22s ease,transform .35s cubic-bezier(.2,.9,.2,1.3),background .3s ease;color:#7b4b00}
+#labRareBadge.show{opacity:1;transform:translateX(-50%) scale(1)}
+#labRareBadge.miracle{background:linear-gradient(135deg,#fff9ca,#ffd857);box-shadow:0 8px 28px #0005,0 0 34px #ffd700aa;border:1px solid #fff7b0}
+#labRareBadge.reversal-wait{background:#25202d;color:#fff;box-shadow:0 8px 26px #0007;border:1px solid #81778c}
+#labRareBadge.reversal{background:linear-gradient(110deg,#ffd8f3,#d7e8ff,#fff2a8,#d8ffd8);color:#5d3c75;box-shadow:0 8px 30px #0005,0 0 34px #c88cff99;border:1px solid #fff}
+#stage.lab-miracle{animation:labMiracleGlow 1.8s ease-out}
+#stage.lab-reversal{animation:labReversalGlow 2s ease-out}
+@keyframes labMiracleGlow{0%{box-shadow:inset 0 0 0 transparent}30%{box-shadow:inset 0 0 65px #ffd70088,0 0 32px #ffd70088}100%{box-shadow:inset 0 0 0 transparent}}
+@keyframes labReversalGlow{0%{filter:saturate(.55) brightness(.78)}32%{filter:saturate(1.35) brightness(1.16);box-shadow:0 0 45px #d38cffbb}100%{filter:none}}
+.labHistoryCard{border-color:#d9cfbf}
+#labHistory{display:flex;gap:7px;overflow-x:auto;padding:4px 1px 8px;margin-top:10px;scrollbar-width:thin}
+.labHistoryItem{flex:0 0 92px;overflow:hidden;border:1px solid #e4ddd5;border-radius:12px;background:#fff;box-shadow:0 3px 10px #0001}
+.labHistoryItem img{display:block;width:100%;aspect-ratio:3/4;object-fit:cover;background:#eee}
+.labHistoryItem div{padding:6px}
+.labHistoryItem strong,.labHistoryItem span{display:block;line-height:1.25}
+.labHistoryItem strong{font-size:9px;color:#513d34}
+.labHistoryItem span{margin-top:2px;font-size:8px;color:#8b766b}
+.labGifActions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.labGifActions button{flex:1;min-width:130px}
+#labGifStatus{margin-top:9px}
+#labGifResult{margin-top:12px;text-align:center}
+#labGifPreview{display:block;width:min(100%,360px);max-height:480px;object-fit:contain;margin:0 auto;border-radius:14px;background:#111;box-shadow:0 7px 22px #0003}
+.labDownload{display:inline-block;margin-top:10px;padding:10px 15px;border-radius:999px;background:#7b4055;color:#fff;text-decoration:none;font-size:12px;font-weight:900}
+.labCollectionCard{border-color:#ead6c8}
+#labCollection{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:12px}
+.labPhotoCard{position:relative;overflow:hidden;border:1px solid #eadfd8;border-radius:15px;background:#fff;box-shadow:0 5px 14px #0001}
+.labPhotoCard img{width:100%;aspect-ratio:3/4;object-fit:cover;display:block;background:#eee}
+.labPhotoMeta{padding:7px 8px 9px;display:grid;gap:2px}
+.labPhotoMeta strong{font-size:10px;line-height:1.25;color:#49372e}
+.labPhotoMeta span{font-size:9px;color:#8a766b}
+.labDelete{position:absolute;right:5px;top:5px;padding:4px 7px;border-radius:999px;background:#0008;color:#fff;font-size:9px;font-weight:800}
+@media(max-width:520px){
+  #labCollection{grid-template-columns:repeat(2,1fr)}
+  #labRareBadge{top:66px;font-size:12px;max-width:90%;white-space:normal;text-align:center}
+  .labLuckyRow{font-size:9px}.labLuckyRow b{font-size:10px}
+}
+
+/* LAB 4: move the result panel below the photo after the initial reveal */
+#labResultDock{display:none;margin-top:10px}
+#labResultDock.show{display:block}
+#labResultDock #resultCard.labDocked{
+  display:block!important;
+  position:relative!important;
+  left:auto!important;
+  right:auto!important;
+  bottom:auto!important;
+  top:auto!important;
+  width:100%!important;
+  max-width:none!important;
+  transform:none!important;
+  margin:0!important;
+  padding:14px 16px 15px!important;
+  border-radius:18px!important;
+  background:rgba(255,253,248,.97)!important;
+  box-shadow:0 7px 22px #0002,0 0 0 1px #fff inset!important;
+  backdrop-filter:none!important;
+  animation:labDockIn .42s ease both!important
+}
+#labResultDock #resultCard.labDocked #resultHead{font-size:9px!important}
+#labResultDock #resultCard.labDocked #resultText{font-size:30px!important;margin:2px 0 5px!important;text-shadow:none!important}
+#labResultDock #resultCard.labDocked #message{font-size:11px!important;line-height:1.45!important}
+#labResultDock #labFortuneExtra{margin-top:8px;padding-top:8px}
+
+#labResultDock #rouletteBadge.labPlainDocked{
+  display:block!important;
+  position:relative!important;
+  left:auto!important;
+  right:auto!important;
+  top:auto!important;
+  bottom:auto!important;
+  transform:none!important;
+  width:100%!important;
+  max-width:none!important;
+  margin:0!important;
+  padding:13px 16px!important;
+  border-radius:15px!important;
+  text-align:center!important;
+  background:rgba(255,253,248,.97)!important;
+  color:#50382d!important;
+  box-shadow:0 7px 22px #0002,0 0 0 1px #fff inset!important;
+  animation:labDockIn .42s ease both!important
+}
+
+@keyframes labDockIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+
+/* LAB 4: unmistakable full-screen miracle / reversal sequence */
+#labMiracleOverlay{
+  position:fixed;inset:0;z-index:30000;display:none;pointer-events:none;
+  align-items:center;justify-content:center;overflow:hidden;text-align:center
+}
+#labMiracleOverlay.show{display:flex}
+.labMiracleHalo{position:absolute;inset:-35%;opacity:0}
+.labMiracleCenter{position:relative;z-index:3;width:min(92vw,620px);padding:28px 18px;filter:drop-shadow(0 8px 20px #0007)}
+.labMiracleKicker{font-size:clamp(14px,4vw,22px);font-weight:950;letter-spacing:.08em}
+.labMiracleTitle{margin-top:8px;font-size:clamp(48px,15vw,96px);line-height:.95;font-weight:1000;letter-spacing:-.04em}
+.labMiracleSub{margin-top:14px;font-size:clamp(14px,4.6vw,26px);font-weight:1000;letter-spacing:.08em}
+.labMiracleSparkles{position:absolute;inset:0;z-index:2}
+.labMiracleSparkles span{
+  position:absolute;left:var(--x);top:var(--y);opacity:0;
+  animation:labSparkBurst 1.8s var(--d) cubic-bezier(.17,.67,.25,1) both;
+  transform:translate(-50%,-50%) rotate(var(--r));text-shadow:0 2px 12px #0005
+}
+#labMiracleOverlay.miracle-mode{
+  color:#7b3800;
+  background:radial-gradient(circle at 50% 44%,#fff 0 9%,#fff7a8 20%,#ffd331dd 38%,#ff7a6ccc 60%,#8c4affcc 80%,#210a35ee 100%);
+  animation:labMiracleScreen 3s ease both
+}
+#labMiracleOverlay.miracle-mode .labMiracleHalo{
+  opacity:1;background:repeating-conic-gradient(from 0deg,#fff9 0 5deg,transparent 5deg 14deg);
+  animation:labHaloSpin 2.4s linear infinite
+}
+#labMiracleOverlay.reversal-wait-mode{
+  color:#fff;background:rgba(15,11,20,.90);animation:labDarkIn .45s ease both
+}
+#labMiracleOverlay.reversal-wait-mode .labMiracleTitle{font-size:clamp(44px,13vw,78px)}
+#labMiracleOverlay.reversal-mode{
+  color:#5d277d;
+  background:radial-gradient(circle at center,#fff 0 8%,#fff4a7 19%,#9ff6ffcc 35%,#f4a8ffcc 53%,#86ffbacc 70%,#8b6dffdd 100%);
+  animation:labReversalScreen 3.2s ease both
+}
+#labMiracleOverlay.reversal-mode .labMiracleHalo{
+  opacity:1;background:repeating-conic-gradient(from 0deg,#fff8 0 4deg,transparent 4deg 11deg);
+  animation:labHaloSpin 1.5s linear infinite reverse
+}
+@keyframes labSparkBurst{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.2) rotate(0)}
+  18%{opacity:1}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(1.9) rotate(var(--r))}
+}
+@keyframes labHaloSpin{to{transform:rotate(360deg)}}
+@keyframes labMiracleScreen{
+  0%{opacity:0;filter:brightness(3)}
+  10%{opacity:1;filter:brightness(1.35)}
+  78%{opacity:1}
+  100%{opacity:0}
+}
+@keyframes labDarkIn{from{opacity:0}to{opacity:1}}
+@keyframes labReversalScreen{
+  0%{opacity:0;filter:brightness(4) saturate(2)}
+  8%{opacity:1}
+  18%{filter:brightness(1.15) saturate(1.3)}
+  82%{opacity:1}
+  100%{opacity:0}
+}
+@media(max-width:520px){
+  #labResultDock #resultCard.labDocked{padding:12px 13px 13px!important}
+  .labMiracleCenter{padding:20px 12px}
+}
+
+
+/* LAB 5: scrolling on the photo is scrolling, not a roulette tap */
+#stage{touch-action:pan-y}
+
+/* History entries are interactive result snapshots */
+.labHistoryItem{
+  border:1px solid #e4ddd5;
+  padding:0;
+  text-align:left;
+  color:inherit;
+  cursor:pointer
+}
+.labHistoryItem:active{transform:scale(.98)}
+.labHistoryItem em{
+  display:block;margin-top:4px;font-size:8px;font-style:normal;font-weight:900;color:#a44761
+}
+
+
+/* LAB 6: tease the hidden miracle */
+.labMiracleHint{
+  margin-top:8px;padding:9px 11px;border-radius:13px;
+  background:linear-gradient(135deg,#fff9d8,#fff0f6);
+  border:1px solid #efd8a0;color:#7b5b34;
+  font-size:11px;font-weight:850;line-height:1.45
+}
+
+/* LAB 6: cinematic miracle replay */
+#labMiracleOverlay{
+  pointer-events:auto!important;
+  background:#08070a!important;
+  color:#fff!important;
+}
+#labMiracleOverlay .labMiracleBackdrop{
+  position:absolute;inset:-30px;z-index:0;overflow:hidden;background:#09080b
+}
+#labMiracleOverlay .labMiracleBackdrop img{
+  width:100%;height:100%;object-fit:cover;
+  filter:blur(32px) brightness(.36) saturate(1.25);
+  transform:scale(1.15);opacity:.9
+}
+#labMiracleOverlay .labMiracleReplayWrap{
+  position:absolute;inset:0;z-index:1;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.18)
+}
+#labMiracleVideo,#labMiracleStill{
+  width:100vw;height:100dvh;object-fit:contain;display:none;
+  background:transparent
+}
+#labMiracleReplayLabel{
+  position:absolute;left:50%;top:max(18px,env(safe-area-inset-top));
+  transform:translateX(-50%);z-index:5;
+  padding:7px 11px;border-radius:999px;
+  background:rgba(0,0,0,.48);border:1px solid #ffffff55;
+  font-size:10px;font-weight:950;letter-spacing:.14em;color:#fff;
+  backdrop-filter:blur(7px)
+}
+#labMiracleOverlay .labMiracleCenter{
+  position:absolute;z-index:8;left:50%;top:50%;
+  transform:translate(-50%,-50%);
+  width:min(94vw,680px);pointer-events:none
+}
+#labMiracleOverlay.replay-mode .labMiracleCenter{
+  top:auto;bottom:max(36px,env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  filter:drop-shadow(0 3px 10px #000)
+}
+#labMiracleOverlay.replay-mode .labMiracleKicker{font-size:12px}
+#labMiracleOverlay.replay-mode .labMiracleSub{font-size:13px;margin-top:5px}
+#labMiracleOverlay.final-photo .labMiracleCenter{
+  top:20%;transform:translateX(-50%);
+}
+#labMiracleOverlay.final-photo .labMiracleTitle{
+  font-size:clamp(54px,16vw,105px);
+  text-shadow:0 3px 10px #0009,0 0 26px #fff9;
+  animation:labFinalTitle .75s cubic-bezier(.18,.9,.25,1.25) both
+}
+#labMiracleOverlay.final-photo #labMiracleStill{
+  display:block;
+  animation:labMiraclePhotoReveal 5s ease-out both
+}
+#labMiracleOverlay.final-photo .labMiracleBackdrop img{
+  filter:blur(30px) brightness(.48) saturate(1.45)
+}
+#labMiracleOverlay.final-photo.miracle-mode{
+  background:radial-gradient(circle at 50% 38%,#fff3 0,#ffd85c22 32%,#a550ff22 66%,#08070a 100%)!important
+}
+#labMiracleOverlay.final-photo.reversal-mode{
+  background:radial-gradient(circle at 50% 38%,#fff4 0,#77f1ff22 28%,#ec70ff22 60%,#08070a 100%)!important
+}
+#labMiracleOverlay .labMiracleActions{
+  display:none;position:absolute;z-index:15;
+  left:50%;bottom:max(18px,env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  gap:8px;align-items:center;justify-content:center;width:min(94vw,520px)
+}
+#labMiracleOverlay.final-photo .labMiracleActions{display:flex}
+#labMiracleOverlay .labMiracleActions button{
+  flex:1;min-width:0;padding:11px 13px;border-radius:999px;
+  background:rgba(16,12,20,.68);border:1px solid #ffffff80;
+  color:#fff;font-size:12px;font-weight:950;backdrop-filter:blur(9px);
+  box-shadow:0 6px 22px #0005
+}
+#labMiracleOverlay.final-photo .labMiracleHalo{
+  opacity:1!important;
+  background:repeating-conic-gradient(from 0deg,#fff4 0 4deg,transparent 4deg 12deg);
+  animation:labHaloSpin 3.8s linear infinite
+}
+#labMiracleOverlay.miracle-intro-mode{
+  background:radial-gradient(circle,#fff3 0,#ffd85c22 30%,#09080b 75%)!important
+}
+#labMiracleOverlay.reversal-wait-mode{
+  background:rgba(8,5,12,.94)!important
+}
+#labMiracleOverlay.replay-mode{
+  background:#050506!important
+}
+@keyframes labMiraclePhotoReveal{
+  0%{opacity:0;transform:scale(.92);filter:brightness(2.2) saturate(1.7)}
+  12%{opacity:1;transform:scale(1.025);filter:brightness(1.2) saturate(1.25)}
+  45%{transform:scale(1.01);filter:none}
+  100%{opacity:1;transform:scale(1);filter:none}
+}
+@keyframes labFinalTitle{
+  0%{opacity:0;transform:scale(.45) rotate(-4deg)}
+  65%{opacity:1;transform:scale(1.08) rotate(1deg)}
+  100%{opacity:1;transform:scale(1)}
+}
+@media(max-width:520px){
+  #labMiracleOverlay.final-photo .labMiracleCenter{top:16%}
+  #labMiracleOverlay .labMiracleActions{bottom:max(12px,env(safe-area-inset-bottom))}
+  #labMiracleOverlay .labMiracleActions button{font-size:11px;padding:10px 9px}
+}
+
+
+/* LAB 6.1: lock background while miracle replay is open */
+body.labMiracleOpen{overflow:hidden}
+#labReplaySpecial{
+  display:none;margin:9px auto 0;padding:8px 12px;border-radius:999px;
+  background:linear-gradient(135deg,#fff7c2,#f1d6ff);
+  color:#70406f;border:1px solid #e2c579;
+  font-size:11px;font-weight:950;box-shadow:none
+}
+
+
+/* LAB 6.2: final miracle photo must never fade into an invisible tap-blocking layer */
+#labMiracleOverlay{user-select:none;-webkit-user-select:none}
+#labMiracleOverlay:not(.show){pointer-events:none!important}
+#labMiracleOverlay.final-photo{
+  opacity:1!important;
+  animation:none!important;
+  filter:none!important;
+}
+#labMiracleOverlay.final-photo.miracle-mode,
+#labMiracleOverlay.final-photo.reversal-mode{
+  opacity:1!important;
+  animation:none!important;
+  filter:none!important;
+}
+#labMiracleOverlay.final-photo .labMiracleActions{
+  pointer-events:auto
+}
+
+
+/* LAB 6.3: replay buttons must stay above all visual FX and react immediately */
+#labReplayAgain,#labMiracleBack,#labReplaySpecial{
+  position:relative;
+  z-index:50;
+  touch-action:manipulation;
+  pointer-events:auto!important;
+  -webkit-tap-highlight-color:transparent;
+}
+#labMiracleOverlay .labMiracleSparkles,
+#labMiracleOverlay .labMiracleHalo,
+#labMiracleOverlay .labMiracleBackdrop,
+#labMiracleOverlay .labMiracleReplayWrap{
+  pointer-events:none;
+}
+
+
+/* LAB 6.4: in-app GIF viewer (browser-independent) */
+body.labGifViewerOpen{overflow:hidden}
+#labGifViewer{
+  position:fixed;inset:0;z-index:40000;display:none;
+  align-items:center;justify-content:center;
+  padding:max(18px,env(safe-area-inset-top)) 16px max(18px,env(safe-area-inset-bottom));
+  background:rgba(8,7,10,.94);
+  backdrop-filter:blur(12px)
+}
+#labGifViewer.show{display:flex}
+#labGifViewerClose{
+  position:absolute;right:max(12px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));
+  width:44px;height:44px;border-radius:999px;border:1px solid #ffffff66;
+  background:rgba(0,0,0,.55);color:#fff;font-size:28px;line-height:1;z-index:3
+}
+.labGifViewerInner{
+  width:min(94vw,560px);max-height:94dvh;
+  display:flex;flex-direction:column;align-items:center;gap:10px
+}
+.labGifViewerTitle{color:#fff;font-size:17px;font-weight:950}
+#labGifViewerImage{
+  display:block;max-width:100%;max-height:76dvh;
+  object-fit:contain;border-radius:16px;background:#000;
+  box-shadow:0 12px 38px #0008
+}
+.labGifViewerNote{color:#ffffffbb;font-size:11px}
+#labGifViewerDone{
+  margin-top:2px;padding:10px 18px;border-radius:999px;
+  border:1px solid #ffffff70;background:rgba(255,255,255,.12);
+  color:#fff;font-weight:900;font-size:12px
+}
+
+
+
+
+/* LAB 16: premium miracle fortune UX */
+#labSpecialEmblem{display:none;margin:0 auto 8px;width:max-content;max-width:100%;padding:5px 10px;border-radius:999px;font-size:9px;font-weight:1000;letter-spacing:.12em}
+#resultCard.labSpecialMiracle,
+#labResultDock #resultCard.labDocked.labSpecialMiracle{
+  border:1px solid #f1cd58!important;
+  background:
+    radial-gradient(circle at 50% -20%,#fffbe7 0,#fff4b8 34%,transparent 63%),
+    linear-gradient(145deg,#fffdf5,#fff1b7 52%,#ffd978)!important;
+  box-shadow:0 10px 30px #a76b162e,0 0 0 2px #fff6c7 inset,0 0 30px #ffd85b45!important
+}
+#resultCard.labSpecialMiracle #labSpecialEmblem{background:#8a5b00;color:#fff8cf;box-shadow:0 3px 12px #8a5b0033}
+#resultCard.labSpecialMiracle #resultHead{color:#8c6410!important;font-weight:950!important;letter-spacing:.08em}
+#resultCard.labSpecialMiracle #resultText{
+  color:#9a5b00!important;
+  text-shadow:0 1px 0 #fff8c8,0 3px 12px #ffcf4a77!important;
+  font-size:clamp(38px,11vw,58px)!important
+}
+#resultCard.labSpecialReversal,
+#labResultDock #resultCard.labDocked.labSpecialReversal{
+  border:1px solid #c5a7eb!important;
+  background:
+    radial-gradient(circle at 8% 10%,#ffd8f0aa 0,transparent 34%),
+    radial-gradient(circle at 92% 14%,#b8f2ffaa 0,transparent 36%),
+    linear-gradient(145deg,#fffafd,#eef1ff 48%,#fff3bd)!important;
+  box-shadow:0 10px 30px #70499524,0 0 0 2px #ffffffcc inset,0 0 34px #c17cff36!important
+}
+#resultCard.labSpecialReversal #labSpecialEmblem{background:linear-gradient(110deg,#8654aa,#497bc2,#be7379);color:#fff;box-shadow:0 3px 13px #70499544}
+#resultCard.labSpecialReversal #resultHead{color:#745486!important;font-weight:950!important;letter-spacing:.04em}
+#resultCard.labSpecialReversal #resultText{
+  background:linear-gradient(100deg,#8b49a7,#447ec4,#bf6a83,#a47917);
+  -webkit-background-clip:text;background-clip:text;color:transparent!important;
+  text-shadow:none!important;
+  font-size:clamp(31px,9vw,48px)!important;line-height:1.05!important
+}
+#labMiracleOverlay.final-photo.reversal-mode .labMiracleTitle{font-size:clamp(38px,11vw,74px)!important;line-height:1!important}
+#labMiracleOverlay.final-photo.miracle-mode .labMiracleTitle{color:#fff7bd;text-shadow:0 3px 10px #0009,0 0 28px #ffd750!important}
+@media(max-width:520px){
+  #labMiracleOverlay .labMiracleActions{width:min(96vw,540px);gap:6px}
+  #labMiracleOverlay .labMiracleActions button{font-size:10px;padding:10px 7px}
+}
+
+
+/* LAB 22: richer rare-result FX + WebM movie export */
+#labMiracleOverlay .labMiracleBurst{
+  position:absolute;inset:-30%;z-index:2;pointer-events:none;opacity:0;
+  transform:scale(.5) rotate(0deg)
+}
+#labMiracleOverlay.final-photo .labMiracleBurst{
+  opacity:.82;
+  background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.42) 0 2deg,transparent 2deg 9deg);
+  animation:labRareBurst 4.2s cubic-bezier(.12,.8,.2,1) both
+}
+#labMiracleOverlay.final-photo.reversal-mode .labMiracleBurst{
+  background:repeating-conic-gradient(from 0deg,
+    rgba(255,120,220,.52) 0 2deg,transparent 2deg 6deg,
+    rgba(110,220,255,.48) 6deg 8deg,transparent 8deg 12deg,
+    rgba(255,238,115,.45) 12deg 14deg,transparent 14deg 18deg)
+}
+@keyframes labRareBurst{
+  0%{opacity:0;transform:scale(.35) rotate(-10deg)}
+  14%{opacity:1;transform:scale(.78) rotate(2deg)}
+  100%{opacity:.18;transform:scale(1.35) rotate(28deg)}
+}
+#labMiracleOverlay.final-photo::after{
+  content:"";position:absolute;inset:0;z-index:12;pointer-events:none;
+  background:#fff;opacity:0;animation:labRareFlash .72s ease-out both
+}
+@keyframes labRareFlash{0%{opacity:.92}16%{opacity:.2}100%{opacity:0}}
+.labMiracleSparkles span.gold{color:#ffe470}
+.labMiracleSparkles span.rainbow:nth-child(5n+1){color:#ff94d9}
+.labMiracleSparkles span.rainbow:nth-child(5n+2){color:#86dcff}
+.labMiracleSparkles span.rainbow:nth-child(5n+3){color:#fff18a}
+.labMiracleSparkles span.rainbow:nth-child(5n+4){color:#a2ffc0}
+.labMiracleSparkles span.rainbow:nth-child(5n){color:#d5a4ff}
+#labMiracleOverlay .labMiracleConfetti{
+  position:absolute;inset:0;z-index:7;pointer-events:none;overflow:hidden
+}
+#labMiracleOverlay .labMiracleConfetti i{
+  position:absolute;left:var(--x);top:-8vh;width:7px;height:18px;border-radius:2px;
+  background:hsl(var(--h),92%,64%);opacity:0;
+  transform:rotate(var(--rot));
+}
+#labMiracleOverlay.final-photo .labMiracleConfetti i{
+  animation:labConfettiFall var(--dur) var(--d) cubic-bezier(.15,.55,.38,.98) both
+}
+@keyframes labConfettiFall{
+  0%{opacity:0;transform:translate3d(0,-8vh,0) rotate(0deg)}
+  10%{opacity:1}
+  100%{opacity:.72;transform:translate3d(28px,112vh,0) rotate(var(--rot))}
+}
+#labSaveSpecialMovieResult{
+  display:none;margin:8px auto 0;padding:9px 13px;border-radius:999px;
+  background:linear-gradient(135deg,#2d2037,#76528e);color:#fff;
+  border:1px solid #9579a6;font-size:11px;font-weight:950;box-shadow:0 5px 16px #55336624
+}
+#labMovieResultStatus{
+  margin-top:5px;text-align:center;font-size:9px;font-weight:850;color:#76665d;min-height:0
+}
+#labMovieStatus{
+  display:none;position:absolute;z-index:16;left:50%;
+  bottom:max(70px,calc(env(safe-area-inset-bottom) + 64px));
+  transform:translateX(-50%);width:min(88vw,460px);
+  padding:7px 10px;border-radius:999px;background:rgba(8,7,10,.68);
+  border:1px solid #ffffff45;color:#fff;font-size:10px;font-weight:850;
+  backdrop-filter:blur(8px);pointer-events:none
+}
+#labMiracleOverlay.final-photo #labMovieStatus:not(:empty){display:block}
+#labMovieStatus.state-success,#labMovieResultStatus.state-success{color:#d7ffd8}
+#labMovieStatus.state-error{color:#ffd3cb}
+#labMovieResultStatus.state-success{color:#36734b}
+#labMovieResultStatus.state-error{color:#a34b3c}
+#labSaveSpecialMovie{
+  background:linear-gradient(135deg,rgba(76,48,91,.88),rgba(145,95,174,.76))!important;
+  border-color:#d9b8e9!important
+}
+#labSaveSpecialMovie:disabled,#labSaveSpecialMovieResult:disabled{opacity:.58}
+#labReplayAgain,#labSaveSpecialMovie,#labMiracleBack,#labReplaySpecial,#labSaveSpecialMovieResult{
+  position:relative;z-index:50;touch-action:manipulation;pointer-events:auto!important;
+  -webkit-tap-highlight-color:transparent
+}
+@media(max-width:520px){
+  #labMiracleOverlay .labMiracleActions{width:min(98vw,560px);gap:5px}
+  #labMiracleOverlay .labMiracleActions button{font-size:9.5px;padding:10px 6px}
+  #labMovieStatus{bottom:max(66px,calc(env(safe-area-inset-bottom) + 60px));font-size:9px}
+}
+
+
+/* LAB 23: download saved "today's photo" */
+.labPhotoMeta .labPhotoDownload{
+  width:100%;margin-top:6px;padding:7px 8px;border-radius:10px;
+  border:1px solid #dfd2c9;background:#fffaf6;color:#624a3e;
+  font-size:9px;font-weight:900;box-shadow:none;touch-action:manipulation
+}
+.labPhotoMeta .labPhotoDownload:disabled{opacity:.62}
+
+
+/* v26: make downloaded daily photos immediately reopenable */
+.labPhotoActions{display:grid;grid-template-columns:1fr auto;gap:5px;margin-top:6px}
+.labPhotoMeta .labPhotoActions .labPhotoDownload,
+.labPhotoMeta .labPhotoActions .labPhotoOpen{
+  width:100%;margin:0;padding:7px 8px;border-radius:10px;
+  font-size:9px;font-weight:900;box-shadow:none;touch-action:manipulation
+}
+.labPhotoMeta .labPhotoActions .labPhotoDownload{
+  border:1px solid #dfd2c9;background:#fffaf6;color:#624a3e
+}
+.labPhotoMeta .labPhotoActions .labPhotoOpen{
+  border:1px solid #75536b;background:#75536b;color:#fff;min-width:50px
+}
+body.labPhotoViewerOpen{overflow:hidden}
+#labPhotoViewer{
+  position:fixed;inset:0;z-index:45000;display:none;
+  align-items:center;justify-content:center;
+  padding:max(18px,env(safe-area-inset-top)) 14px max(18px,env(safe-area-inset-bottom));
+  background:rgba(8,7,10,.95);backdrop-filter:blur(12px)
+}
+#labPhotoViewer.show{display:flex}
+#labPhotoViewerClose{
+  position:absolute;right:max(12px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));
+  width:44px;height:44px;border-radius:999px;border:1px solid #ffffff66;
+  background:rgba(0,0,0,.55);color:#fff;font-size:28px;line-height:1;z-index:3
+}
+.labPhotoViewerInner{
+  width:min(96vw,700px);max-height:94dvh;
+  display:flex;flex-direction:column;align-items:center;gap:10px
+}
+.labPhotoViewerTitle{color:#fff;font-size:17px;font-weight:950}
+#labPhotoViewerImage{
+  display:block;max-width:100%;max-height:78dvh;object-fit:contain;
+  border-radius:16px;background:#000;box-shadow:0 12px 38px #0008
+}
+.labPhotoViewerNote{color:#ffffffbb;font-size:10px;text-align:center}
+#labPhotoViewerDone{
+  padding:10px 18px;border-radius:999px;border:1px solid #ffffff70;
+  background:rgba(255,255,255,.12);color:#fff;font-weight:900;font-size:12px
+}
+#labDownloadNotice{
+  position:fixed;z-index:44000;left:50%;
+  bottom:max(18px,calc(env(safe-area-inset-bottom) + 10px));
+  transform:translate(-50%,24px);opacity:0;pointer-events:none;
+  width:min(92vw,460px);display:grid;grid-template-columns:1fr auto auto;
+  align-items:center;gap:7px;padding:9px 10px 9px 14px;border-radius:16px;
+  background:rgba(42,34,39,.95);color:#fff;
+  box-shadow:0 10px 28px #0005;backdrop-filter:blur(10px);
+  transition:opacity .18s ease,transform .22s ease
+}
+#labDownloadNotice.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+#labDownloadNotice span{font-size:11px;font-weight:900}
+#labDownloadNotice button{box-shadow:none;touch-action:manipulation}
+#labDownloadNoticeOpen{
+  padding:7px 12px;border-radius:999px;background:#fff;color:#5a3d50;
+  border:0;font-size:10px;font-weight:950
+}
+#labDownloadNoticeClose{
+  width:30px;height:30px;border-radius:999px;background:transparent;color:#fff;
+  border:1px solid #ffffff40;font-size:18px;line-height:1
+}
+
+
+/* v41: display-only fixes; replay implementation remains the known-good v38 code */
+#labMiracleOverlay.final-photo .labMiracleTitle{
+  white-space:nowrap;
+  font-size:clamp(40px,12.5vw,88px);
+  letter-spacing:-.055em;
+}
+#labMiracleOverlay.final-photo #labMiracleStill{
+  width:auto;
+  height:auto;
+  max-width:100vw;
+  max-height:78dvh;
+  object-fit:contain;
+}
+@media(max-width:520px){
+  #labMiracleOverlay.final-photo .labMiracleTitle{
+    font-size:clamp(38px,12vw,62px);
+  }
+}

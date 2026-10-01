@@ -1,0 +1,17 @@
+{
+  "name": "思い出ルーレットおみくじ",
+  "short_name": "思い出おみくじ",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fff7ef",
+  "theme_color": "#fff7ef",
+  "icons": [
+    {
+      "src": "./icons/memory-roulette-omikuji.svg?v=memorybrand1",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

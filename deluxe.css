@@ -1,0 +1,141 @@
+.fxParticle{position:fixed;z-index:9998;pointer-events:none;font-weight:900;text-shadow:0 2px 8px #0002;animation:fortuneFall linear forwards}
+@keyframes fortuneFall{0%{transform:translate3d(0,0,0) rotate(0deg) scale(.7);opacity:0}12%{opacity:1}100%{transform:translate3d(var(--drift),125vh,0) rotate(540deg) scale(1.1);opacity:0}}
+#bigOverlay.deluxe.show{animation:flashDeluxe 3s ease-out forwards;background:radial-gradient(circle at center,#fffbe8 0,#ffd86a88 24%,#c00b 58%,transparent 78%)}
+#bigOverlay.deluxe.show #bigText{animation:popDeluxe 2.8s cubic-bezier(.17,.89,.32,1.35) forwards}
+@keyframes flashDeluxe{0%{opacity:0}10%{opacity:1}75%{opacity:.95}100%{opacity:0}}
+@keyframes popDeluxe{0%{transform:scale(.1) rotate(-12deg);opacity:0}15%{transform:scale(1.45) rotate(5deg);opacity:1}30%{transform:scale(.92) rotate(-2deg)}50%{transform:scale(1.12)}78%{transform:scale(1.04);opacity:1}100%{transform:scale(1.1);opacity:0}}
+.deluxe-mode .playShell{padding:11px;background:linear-gradient(135deg,#6b0d16 0%,#d7a93b 28%,#fff0a1 50%,#c89a25 72%,#6b0d16 100%);box-shadow:0 20px 58px rgba(78,34,12,.38),0 0 0 2px #fff8 inset}
+.deluxe-mode #stage{border-radius:18px;background:radial-gradient(circle at 50% 35%,#493b2c,#120d0a 72%);isolation:isolate}
+.deluxe-mode #stage:before,.deluxe-mode #stage:after{content:"";position:absolute;inset:-35%;pointer-events:none;opacity:0;z-index:2;transition:opacity .25s ease}
+.deluxe-mode #stage:before{background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.20) 0 5deg,transparent 5deg 13deg);animation:slowSpin 12s linear infinite}
+.deluxe-mode #stage:after{inset:0;background:radial-gradient(circle at center,var(--fxGlow,#ffd76a55),transparent 58%)}
+.deluxe-mode #stage.result-reveal:before,.deluxe-mode #stage.result-reveal:after{opacity:1}
+.deluxe-mode #stage.result-reveal #playImage{filter:saturate(1.08) brightness(.88);transform:scale(1.018)}
+.deluxe-mode #fortuneBadge{left:50%;top:16px;transform:translateX(-50%);font-size:24px;padding:9px 18px;border:1px solid #ffffffcc;box-shadow:0 8px 30px #0005,0 0 24px var(--fxGlow,#ffd76a88);backdrop-filter:blur(6px);z-index:5}
+.deluxe-mode #resultCard{left:50%;right:auto;bottom:20px;width:min(84%,350px);transform:translateX(-50%);padding:18px 18px 17px;border-radius:22px;border:1px solid #ffffffd9;background:linear-gradient(160deg,#fffffff5,#fff8edf0);box-shadow:0 18px 50px #0006,0 0 0 2px #ffffff55 inset,0 0 32px var(--fxGlow,#ffd76a66);backdrop-filter:blur(8px);z-index:5}
+.deluxe-mode #stage.result-reveal #resultCard{animation:resultIn .7s cubic-bezier(.2,.9,.2,1.15) both}
+.deluxe-mode #resultHead{font-size:11px;letter-spacing:.18em;color:#8a5b36}
+.deluxe-mode #resultText{font-size:clamp(42px,12vw,68px);margin:7px 0 9px;text-shadow:0 2px 0 #fff,0 0 18px var(--fxGlow,#ffd76a88)}
+.deluxe-mode #message{font-size:13px;line-height:1.65;text-align:center;font-weight:750;color:#4b382e}
+.deluxe-mode #stage.fortune-daikichi{--fxGlow:#ffd700aa}.deluxe-mode #stage.fortune-kichi{--fxGlow:#ffb36baa}.deluxe-mode #stage.fortune-chukichi{--fxGlow:#ffc77baa}.deluxe-mode #stage.fortune-shokichi{--fxGlow:#85cf8aaa}.deluxe-mode #stage.fortune-suekichi{--fxGlow:#eea7c3aa}.deluxe-mode #stage.fortune-kyo{--fxGlow:#9fb0c4aa}.deluxe-mode #stage.fortune-daikyo{--fxGlow:#8f7eb4aa}
+.deluxe-mode #stage.fortune-daikichi #resultCard{background:linear-gradient(160deg,#fffef7f7,#fff0bdf2)}.deluxe-mode #stage.fortune-daikyo #resultCard,.deluxe-mode #stage.fortune-kyo #resultCard{background:linear-gradient(160deg,#f9f8fff4,#eef1f7f2)}
+@keyframes slowSpin{to{transform:rotate(360deg)}}
+@keyframes resultIn{0%{opacity:0;transform:translateX(-50%) translateY(45px) scale(.72) rotate(-2deg)}65%{opacity:1;transform:translateX(-50%) translateY(-5px) scale(1.035) rotate(.5deg)}100%{opacity:1;transform:translateX(-50%) translateY(0) scale(1) rotate(0)}}
+@media(max-width:520px){.deluxe-mode #resultCard{width:min(88%,340px);bottom:14px}.deluxe-mode #resultText{font-size:48px}}
+/* v12.2: result effects yield to the baby photo after the reveal */
+.deluxe-mode #playImage{transition:filter .5s ease,transform .5s ease}
+.deluxe-mode #resultCard{transition:width .5s ease,bottom .5s ease,padding .5s ease,border-radius .5s ease,background .5s ease,box-shadow .5s ease,opacity .5s ease}
+.deluxe-mode #fortuneBadge{transition:font-size .5s ease,padding .5s ease,opacity .5s ease,box-shadow .5s ease}
+.deluxe-mode #stage.photo-focus:before,
+.deluxe-mode #stage.photo-focus:after{opacity:0!important}
+.deluxe-mode #stage.photo-focus #playImage{filter:none;transform:none}
+.deluxe-mode #stage.photo-focus #resultCard{
+  width:min(78%,310px);
+  bottom:10px;
+  padding:10px 13px 11px;
+  border-radius:16px;
+  background:rgba(255,253,248,.86);
+  box-shadow:0 8px 24px #0004,0 0 0 1px #ffffff88 inset;
+  backdrop-filter:blur(3px)
+}
+.deluxe-mode #stage.photo-focus #resultHead{font-size:9px;letter-spacing:.12em}
+.deluxe-mode #stage.photo-focus #resultText{font-size:26px;margin:2px 0 4px;text-shadow:none}
+.deluxe-mode #stage.photo-focus #message{font-size:11px;line-height:1.45;font-weight:700}
+.deluxe-mode #stage.photo-focus #fortuneBadge{
+  font-size:16px;
+  padding:6px 10px;
+  box-shadow:0 5px 16px #0004;
+  backdrop-filter:blur(3px)
+}
+@media(max-width:520px){
+  .deluxe-mode #stage.photo-focus #resultCard{width:min(82%,290px);bottom:8px;padding:9px 11px 10px}
+  .deluxe-mode #stage.photo-focus #resultText{font-size:24px}
+  .deluxe-mode #stage.photo-focus #message{font-size:10.5px}
+}
+
+/* v15: dedicated photo-view button keeps the fortune badge clean */
+#photoAction{
+  position:absolute;
+  right:12px;
+  top:14px;
+  z-index:6;
+  align-items:center;
+  gap:7px;
+  padding:8px 11px;
+  border:1px solid rgba(255,255,255,.8);
+  border-radius:999px;
+  background:rgba(255,255,255,.90);
+  color:#4b382e;
+  box-shadow:0 6px 20px rgba(0,0,0,.25);
+  backdrop-filter:blur(6px);
+  font-size:12px;
+  font-weight:900;
+  line-height:1;
+  white-space:nowrap;
+  touch-action:manipulation
+}
+#photoAction .photoActionIcon{
+  font-size:19px;
+  line-height:1
+}
+.deluxe-mode #photoAction{
+  background:rgba(255,253,248,.92);
+  box-shadow:0 7px 24px rgba(0,0,0,.30),0 0 16px var(--fxGlow,#ffd76a44)
+}
+@media(max-width:520px){
+  #photoAction{right:9px;top:10px;padding:7px 9px;font-size:11px;gap:5px}
+  #photoAction .photoActionIcon{font-size:18px}
+}
+#photoViewer{
+  position:fixed;
+  inset:0;
+  z-index:20000;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  background:#000;
+  padding:0;
+  touch-action:manipulation
+}
+#photoViewer.show{display:flex}
+#photoViewer img{
+  width:100vw;
+  height:100dvh;
+  object-fit:contain;
+  display:block;
+  background:#000
+}
+#photoViewerClose{
+  position:fixed;
+  z-index:20002;
+  top:max(14px,env(safe-area-inset-top));
+  right:max(14px,env(safe-area-inset-right));
+  width:44px;
+  height:44px;
+  border:0;
+  border-radius:999px;
+  background:rgba(0,0,0,.48);
+  color:#fff;
+  font-size:30px;
+  line-height:1;
+  font-weight:400;
+  box-shadow:0 2px 14px #0006;
+  backdrop-filter:blur(5px)
+}
+#photoViewerHint{
+  position:fixed;
+  z-index:20001;
+  left:50%;
+  bottom:max(18px,env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  padding:7px 12px;
+  border-radius:999px;
+  background:rgba(0,0,0,.42);
+  color:#fff;
+  font-size:11px;
+  font-weight:700;
+  opacity:.78;
+  pointer-events:none;
+  animation:photoHintFade 2.8s 1s both
+}
+@keyframes photoHintFade{0%{opacity:.78}100%{opacity:.12}}

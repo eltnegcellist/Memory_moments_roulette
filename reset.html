@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>思い出ルーレットおみくじ - 完全初期化</title>
+<style>
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;min-height:100vh;display:grid;place-items:center;background:#fffaf5;color:#4b382e}
+main{width:min(88vw,420px);padding:28px;border:1px solid #eadfd8;border-radius:22px;background:#fff;box-shadow:0 12px 32px #0001;text-align:center}
+h1{font-size:20px;margin:0 0 12px}
+p{font-size:14px;line-height:1.7;margin:0}
+</style>
+</head>
+<body>
+<main>
+<h1>この端末のアプリデータを完全初期化しています</h1>
+<p id="status">履歴・保存データ・設定・キャッシュを削除しています…</p>
+</main>
+<script>
+(async()=>{
+  const status=document.getElementById('status');
+  let authorized=false;
+  try{
+    authorized=sessionStorage.getItem('baby-roulette-reset-authorized')==='1';
+    sessionStorage.removeItem('baby-roulette-reset-authorized');
+  }catch(e){}
+  const fromLab=new URLSearchParams(location.search).get('from')==='lab';
+  if(!authorized||!fromLab){
+    location.replace('./');
+    return;
+  }
+  const path=new URL('./',location.href).pathname;
+  const dbNames=['babyExpressionRouletteDB','babyExpressionRouletteLabDB'];
+  const localKeys=['baby-roulette-hidden-settings-v29','baby-roulette-hidden-settings-v27'];
+
+  const deleteDb=name=>new Promise(resolve=>{
+    try{
+      const r=indexedDB.deleteDatabase(name);
+      r.onsuccess=()=>resolve(true);
+      r.onerror=()=>resolve(false);
+      r.onblocked=()=>setTimeout(()=>resolve(false),1200);
+    }catch(e){resolve(false);}
+  });
+
+  try{
+    if('serviceWorker' in navigator){
+      const regs=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.filter(r=>{
+        try{return new URL(r.scope).pathname.startsWith(path);}catch(e){return false;}
+      }).map(r=>r.unregister()));
+    }
+
+    if('caches' in window){
+      const keys=await caches.keys();
+      await Promise.all(keys.filter(k=>k.startsWith('baby-roulette-pages-')).map(k=>caches.delete(k)));
+    }
+
+    try{localKeys.forEach(k=>localStorage.removeItem(k));}catch(e){}
+    try{sessionStorage.clear();}catch(e){}
+
+    const deleted=await Promise.all(dbNames.map(deleteDb));
+    if(deleted.every(Boolean)){
+      status.textContent='完全初期化しました。最新版を開きます。';
+    }else{
+      status.textContent='ほぼ初期化しました。別タブでアプリを開いている場合は閉じて、もう一度このページを開いてください。';
+    }
+  }catch(e){
+    status.textContent='初期化処理を続行しました。最新版を開きます。';
+  }
+
+  setTimeout(()=>location.replace('./?fresh='+Date.now()),800);
+})();
+</script>
+</body>
+</html>

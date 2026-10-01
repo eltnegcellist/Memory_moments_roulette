@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#fff7ef">
+<meta name="description" content="思い出の動画からいろいろなシーンを切り出し、ルーレットのようにランダム表示して楽しむWebアプリ。おみくじや特別なスローリプレイで、忘れていた一瞬との再会を楽しめます。">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ja_JP">
+<meta property="og:title" content="思い出ルーレットおみくじ">
+<meta property="og:description" content="思い出の動画からランダムな一瞬を引き当て、ルーレットとおみくじで楽しむWebアプリです。">
+<meta property="og:url" content="https://eltnegcellist.github.io/Memory_moments_roulette/">
+<meta property="og:image" content="https://eltnegcellist.github.io/Memory_moments_roulette/icons/memory-roulette-omikuji.svg">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="思い出ルーレットおみくじ">
+<meta name="twitter:description" content="思い出の動画からランダムな一瞬を引き当て、ルーレットとおみくじで楽しむWebアプリです。">
+<meta name="twitter:image" content="https://eltnegcellist.github.io/Memory_moments_roulette/icons/memory-roulette-omikuji.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="./manifest.webmanifest?v=memorybrand1">
+<link rel="apple-touch-icon" href="./icons/memory-roulette-omikuji.svg?v=memorybrand1">
+<link rel="icon" href="./icons/memory-roulette-omikuji.svg?v=memorybrand1" type="image/svg+xml">
+<title>思い出ルーレットおみくじ</title>
+<link rel="stylesheet" href="./style.css?v=1.0.0-memorybrand1">
+<link rel="stylesheet" href="./deluxe.css?v=1.0.0-memorybrand1">
+<link rel="stylesheet" href="./features.css?v=1.0.0-memorybrand1">
+<style>
+body:not(.show-score-details) .scoreChip,
+body:not(.show-score-details) .scoreDetails,
+body:not(.show-score-details) #analysisStatus{display:none!important}
+body:not(.show-fortune-map) #grid .fchip{display:none!important}
+
+.versionBadge#labSettingsTrigger{cursor:pointer;touch-action:manipulation}
+.labSettingsHint{margin-top:14px;text-align:right;font-size:10px;line-height:1.4;color:rgba(92,72,60,.56)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="hero">
+  <div class="heroMark" aria-hidden="true"><img src="./icons/memory-roulette-omikuji.svg?v=memorybrand1" alt=""></div>
+  <div class="heroText">
+    <div class="heroTopline"><span class="eyebrow">MEMORY MOMENTS</span><span class="versionBadge" id="labSettingsTrigger" title="5回タップでラボ設定">v1.0.0</span></div>
+    <h1><span class="titlePart">思い出ルーレット</span><span class="titlePart">おみくじ</span></h1>
+    <p class="heroCatch">思い出の一瞬を、ルーレットで楽しく。</p>
+    <p class="lead">思い出の動画からいろいろなシーンを切り出し、ルーレットのようにランダムに見返して楽しむアプリです。忘れていた一瞬に出会ったり、おみくじで遊んだり。動画の中に眠っている思い出を、偶然の力でもう一度楽しめます。</p>
+  </div>
+</header>
+<button id="howtoOpen" class="howtoBanner" type="button" aria-haspopup="dialog">
+  <span class="howtoBannerIcon" aria-hidden="true">📖</span>
+  <span>アプリの使い方を見る</span>
+  <span class="howtoBannerArrow" aria-hidden="true">›</span>
+</button>
+<section class="card">
+  <div class="step">CREATE</div>
+  <h2>新しい思い出ルーレットを作る</h2>
+  <div class="filebox">
+    <input id="fileInput" type="file" accept="video/*">
+    <div class="note">動画を選ぶと自動でシーン候補を抽出します。処理はブラウザ内だけで行い、元動画は外部へ送信しません。</div>
+  </div>
+  <div id="progressWrap"><div class="progress"><div id="progressBar"></div></div><div id="progressText">準備中...</div></div>
+  <details class="opt" id="detailOptions">
+    <summary>詳細オプション</summary>
+    <div class="row" style="margin-bottom:10px">
+      <label for="frameCount">抽出枚数</label>
+      <select id="frameCount">
+        <option value="auto" selected>おまかせ（12〜28枚）</option>
+        <option value="8">8枚</option><option value="10">10枚</option><option value="12">12枚</option><option value="14">14枚</option><option value="16">16枚</option><option value="18">18枚</option><option value="20">20枚</option><option value="24">24枚</option><option value="28">28枚</option><option value="32">32枚</option>
+      </select>
+    </div>
+    <label class="toggle"><span><b style="display:block;margin-bottom:3px">通常ルーレットにする</b><span class="note">ONにすると、運勢なしの思い出ルーレットとして作ります。豪華演出も自動でOFFになります。</span></span><input id="plainMode" type="checkbox"></label>
+    <label class="toggle" style="margin-top:10px"><span><b style="display:block;margin-bottom:3px">運勢の割り当てを表示する</b><span class="note">ONにすると、プレビュー写真ごとの「大吉・吉・凶」などを先に確認できます。通常は隠したまま遊べます。</span></span><input id="showFortunes" type="checkbox"></label>
+
+    <section id="labSettingsInline" class="labSettingsInline" hidden>
+      <div class="labSettingsInlineHead">
+        <span class="labSettingsInlineBadge">LAB</span>
+        <div>
+          <b>隠し設定</b>
+          <span>実験・確認用の設定です</span>
+        </div>
+      </div>
+      <label class="labSettingsItem">
+        <span><b>特徴度を表示する</b><span class="note">初期値はOFFです。ONにすると、プレビューに特徴度と「くっきり・珍しさ・変化」の内訳を表示します。</span></span>
+        <input id="showScores" type="checkbox">
+      </label>
+      <label class="labSettingsItem" id="labDeluxeItem">
+        <span><b>豪華演出モード</b><span class="note">初期値はONです。結果札・光・粒子・効果音などの演出を切り替えます。通常ルーレット時は自動でOFFになります。</span></span>
+        <input id="deluxeMode" type="checkbox" checked>
+      </label>
+      <label class="labSettingsItem labSpecialTestItem">
+        <span><b>特別スローモーションを強制する（実験用）</b><span class="note">特別演出をすぐ確認したいときに使います。通常のおみくじでは確率どおりに動作します。</span></span>
+        <select id="labSpecialMode">
+          <option value="normal" selected>通常（確率どおり）</option>
+          <option value="slow">毎回スローモーション</option>
+          <option value="miracle">奇跡の一枚を毎回表示</option>
+          <option value="reversal">大逆転大吉を毎回表示</option>
+        </select>
+      </label>
+      <div class="labSettingsItem labResetItem">
+        <span><b>この端末のアプリデータを完全初期化</b><span class="note">保存済みルーレット・今日の一枚・LAB設定・キャッシュをこの端末から削除します。元に戻せません。</span></span>
+        <button id="labResetAppData" type="button">完全初期化</button>
+      </div>
+    </section>
+
+    <div id="labSettingsHint" class="labSettingsHint">LAB設定：画面右上のバージョン表示を5回タップで表示・非表示</div>
+  </details>
+</section>
+<section id="previewSection" class="card" style="display:none">
+  <div class="step">PREVIEW</div><h2 id="previewTitle">自動で作成したおみくじ</h2>
+  <div id="analysisStatus" class="note analysisStatus" style="display:none"></div><div id="grid" class="grid"></div>
+  <div class="row" style="margin-top:13px"><button id="playBtn" class="primary">この内容で遊ぶ</button><button id="reextractBtn" class="secondary">もう一度抽出する</button></div>
+  <div class="note" id="previewNote" style="margin-top:8px">保存名は自動で付けます。必要なら保存後に変更できます。</div>
+</section>
+<section class="card"><div class="step">SAVED</div><h2>保存したルーレット</h2><div id="library"><div class="note">まだ保存されていません。</div></div></section>
+<section id="playSection" class="card">
+  <div class="step">PLAY</div>
+  <div class="playShell"><div id="stage"><img id="playImage" alt=""><div id="fortuneBadge"></div><div id="resultCard"><div id="resultHead">きょうの運勢</div><div id="resultText"></div><div id="message"></div></div><div id="rouletteBadge">タップでストップ</div></div></div>
+  <div id="tapHint">画像をタップすると止まります</div><div class="row" style="justify-content:center;margin-top:12px"><button id="backBtn" class="secondary">戻る</button></div>
+</section>
+<section id="labHistorySection" class="card labHistoryCard">
+  <div class="step">HISTORY / GIF</div>
+  <h2>引いた写真の履歴</h2>
+  <p class="note">止まった写真を自動でためます。GIFを作るときは、引いた順ではなく元動画の時間順に並べ直します。</p>
+  <div id="labHistoryEmpty" class="note">まだ履歴はありません。</div>
+  <div id="labHistory"></div>
+  <div class="labGifActions">
+    <button id="labMakeGif" class="primary" type="button" disabled>履歴からGIFを作る</button>
+    <button id="labClearHistory" class="secondary" type="button" disabled>履歴をクリア</button>
+  </div>
+  <div id="labGifStatus" class="note" style="display:none"></div>
+  <div id="labGifResult" style="display:none">
+    <img id="labGifPreview" alt="履歴から作ったGIF">
+    <a id="labGifDownload" class="labDownload" download="memory-roulette-history.gif">GIFを保存して見る</a>
+  </div>
+</section>
+<section id="labCollectionSection" class="card labCollectionCard">
+  <div class="step">COLLECTION</div>
+  <h2>今日の一枚コレクション</h2>
+  <p class="note">結果画面の「今日の一枚に保存」で残した写真です。ブラウザ内に残し、端末へダウンロードした後も「開く」からすぐ確認できます。</p>
+  <div id="labCollection"><div class="note">まだ保存されていません。</div></div>
+</section>
+
+
+<div id="howtoModal" aria-hidden="true">
+  <div class="howtoPanel" role="dialog" aria-modal="true" aria-labelledby="howtoTitle">
+    <div class="howtoHead">
+      <div>
+        <div class="howtoEyebrow">HOW TO PLAY</div>
+        <h2 id="howtoTitle">使い方</h2>
+      </div>
+      <button id="howtoClose" class="howtoClose" type="button" aria-label="使い方を閉じる">×</button>
+    </div>
+    <p class="howtoLead">思い出の動画から、いろいろなシーンを切り出して遊びます。動画はブラウザ内で処理され、元動画を外部へ送信しません。</p>
+
+    <div class="howtoSteps">
+      
+<article class="howtoStep">
+        <div class="howtoNum">1</div>
+        <div class="howtoCopy">
+          <h3>動画を選ぶ</h3>
+          <p>「ファイルを選択」から動画を選びます。おまかせなら、動画の中から変化のある場面を12〜28枚ほど自動で切り出します。</p>
+        </div>
+        <div class="howtoMock mockUpload" aria-hidden="true">
+          <div class="mockLabel">CREATE</div>
+          <div class="mockTitle">新しい思い出ルーレット</div>
+          <div class="mockFile">📹 動画を選択</div>
+          <div class="mockNote">元動画は外部へ送信しません</div>
+        </div>
+      </article>
+
+      <article class="howtoStep">
+        <div class="howtoNum">2</div>
+        <div class="howtoCopy">
+          <h3>シーンを確認する</h3>
+          <p>切り出された写真を確認して、「この内容で遊ぶ」を押します。違う場面を選び直したいときは「もう一度抽出する」でやり直せます。</p>
+        </div>
+        <div class="howtoMock mockPreview" aria-hidden="true">
+          <div class="mockLabel">PREVIEW</div>
+          <div class="mockThumbGrid">
+            <i>😊</i><i>😮</i><i>🙂</i><i>😴</i><i>😆</i><i>🥺</i>
+          </div>
+          <div class="mockPrimary">この内容で遊ぶ</div>
+        </div>
+      </article>
+
+      <article class="howtoStep">
+        <div class="howtoNum">3</div>
+        <div class="howtoCopy">
+          <h3>タップしてストップ</h3>
+          <p>シーンが次々に切り替わります。好きなタイミングで写真をタップすると、その一瞬でストップ。右のミニデモも実際にタップして止められます。</p>
+        </div>
+        <div class="howtoMock mockPlay">
+          <div class="mockLabel">PLAY DEMO</div>
+          <button class="mockPhoto mockAnimated" id="howtoDemoPhoto" type="button" aria-label="説明用ルーレットを止める">
+            <span id="howtoDemoFace" class="mockFace">😊</span>
+            <b id="howtoDemoLabel">タップでストップ</b>
+          </button>
+          <div class="mockFilmstrip" aria-hidden="true"><i>😊</i><i>😮</i><i>😆</i><i>🥺</i></div>
+          <div class="mockTap">この見本もタップできます</div>
+        </div>
+      </article>
+
+      <article class="howtoStep">
+        <div class="howtoNum">4</div>
+        <div class="howtoCopy">
+          <h3>気に入った一瞬を残す</h3>
+          <p>止まった写真は履歴にたまります。気に入った写真は「今日の一枚」に保存して、あとから開いたり端末へ画像としてダウンロードしたりできます。</p>
+        </div>
+        <div class="howtoMock mockResult" aria-hidden="true">
+          <div class="mockResultPhoto">🎞️</div>
+          <div class="mockFortune">🌟 大吉</div>
+          <div class="mockActions"><span>♡ 今日の一枚</span><span>↓ 画像保存</span></div>
+        </div>
+      </article>
+    </div>
+
+    <section class="howtoSecret">
+      <div class="secretBadge">✨ 特別な奇跡のリプレイ</div>
+      <h3>ときどき、止まった一瞬が特別な演出に</h3>
+      <div class="secretVisual" aria-hidden="true">
+        <div class="secretFortune">大吉</div>
+        <div class="secretArrow">→</div>
+        <div class="secretReplay"><span>▶</span><b>SLOW REPLAY</b></div>
+        <div class="secretArrow">→</div>
+        <div class="secretFortune special">特別</div>
+      </div>
+      <p>おみくじでは、<b>大凶以外の結果で低い確率で「奇跡のリプレイ」</b>が始まることがあります。運勢はそのままに、止まった一瞬をスローモーションで見返して「奇跡の一枚」として楽しめる特別演出です。</p>
+      <p><b>大凶では、一定確率で「大逆転」リプレイ</b>が発生します。どちらの演出も、出会えたらその一瞬ごと楽しんでください。</p>
+    </section>
+
+    <section class="howtoTips">
+      <h3>もっと楽しむための便利な機能</h3>
+      <p class="howtoTipsLead">止めて終わりではなく、気に入った一瞬を残したり、動きとしてまとめたりできます。</p>
+      <div class="howtoTipGrid">
+        <div class="howtoFeature"><b>🎴 おみくじモード</b><span>止まった一瞬と一緒に今日の運勢やメッセージを楽しむ基本モードです。特別なリプレイが現れることもあります。</span></div>
+        <div class="howtoFeature"><b>🎯 通常ルーレット</b><span>運勢を付けず、純粋に「どの瞬間で止まるか」だけを楽しみたいときに使えます。</span></div>
+        <div class="howtoFeature featureSave"><b>🖼 今日の一枚</b><span>気に入った停止写真をアプリ内に残せます。あとから「開く」で大きく見返せます。</span></div>
+        <div class="howtoFeature featureSave"><b>↓ 画像をダウンロード</b><span>「今日の一枚」に残した写真は、コレクションから端末へ画像ファイルとして保存できます。</span></div>
+        <div class="howtoFeature"><b>🎞 履歴からGIF</b><span>止めた写真を自動でため、元動画の時間順に並べ直してGIFにできます。シーンの変化を短い動きとして残せます。</span></div>
+        <div class="howtoFeature"><b>🎬 特別演出をムービー保存</b><span>奇跡のリプレイなどが出たときは、その演出をムービーとして保存できます。</span></div>
+      </div>
+    </section>
+
+    <button id="howtoDone" class="primary howtoDone" type="button">使ってみる</button>
+  </div>
+</div>
+
+<video id="video" playsinline muted preload="metadata" style="display:none"></video><canvas id="captureCanvas" style="display:none"></canvas><canvas id="smallCanvas" width="28" height="28" style="display:none"></canvas>
+</div>
+<div id="bigOverlay"><div id="bigText">大吉！</div></div>
+<script src="./app.js?v=1.0.0-memorybrand1" defer></script>
+<script src="./deluxe.js?v=1.0.0-memorybrand1" defer></script>
+<script src="./features.js?v=1.0.0-memorybrand1" defer></script>
+<script src="./hidden-settings.js?v=1.0.0-memorybrand1" defer></script>
+<script>
+(()=>{
+  const scoreBox=document.getElementById('showScores');
+  const fortuneBox=document.getElementById('showFortunes');
+  const grid=document.getElementById('grid');
+  const status=document.getElementById('analysisStatus');
+  const sync=()=>{
+    document.body.classList.toggle('show-score-details',!!scoreBox?.checked);
+    document.body.classList.toggle('show-fortune-map',!!fortuneBox?.checked);
+  };
+  const rename=()=>{
+    document.querySelectorAll('.scoreChip').forEach(el=>{
+      const next=el.textContent.replace(/^魅力度/,'特徴度');
+      if(next!==el.textContent) el.textContent=next;
+    });
+    if(status){
+      const next=status.textContent.replace(/魅力度/g,'特徴度');
+      if(next!==status.textContent) status.textContent=next;
+    }
+  };
+  scoreBox?.addEventListener('change',sync);fortuneBox?.addEventListener('change',sync);
+  if(grid)new MutationObserver(rename).observe(grid,{childList:true,subtree:true});
+  if(status)new MutationObserver(rename).observe(status,{childList:true,subtree:true,characterData:true});
+  sync();rename();
+})();
+</script>
+
+
+
+<script>
+(()=>{
+  const modal=document.getElementById('howtoModal');
+  const open=document.getElementById('howtoOpen');
+  const close=document.getElementById('howtoClose');
+  const done=document.getElementById('howtoDone');
+  const demo=document.getElementById('howtoDemoPhoto');
+  const demoFace=document.getElementById('howtoDemoFace');
+  const demoLabel=document.getElementById('howtoDemoLabel');
+  const faces=['😊','😮','🙂','😴','😆','🥺'];
+  let previousFocus=null;
+  let demoIndex=0;
+  let demoTimer=null;
+  let demoPaused=false;
+  const tickDemo=()=>{
+    if(!demoFace||demoPaused)return;
+    demoIndex=(demoIndex+1)%faces.length;
+    demoFace.classList.remove('swap');
+    void demoFace.offsetWidth;
+    demoFace.textContent=faces[demoIndex];
+    demoFace.classList.add('swap');
+  };
+  const startDemo=()=>{
+    clearInterval(demoTimer);
+    demoPaused=false;
+    if(demoLabel)demoLabel.textContent='タップでストップ';
+    demoTimer=setInterval(tickDemo,430);
+  };
+  const stopDemo=()=>{
+    clearInterval(demoTimer);
+    demoTimer=null;
+  };
+  const show=()=>{
+    if(!modal)return;
+    previousFocus=document.activeElement;
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden','false');
+    document.body.classList.add('howto-open');
+    startDemo();
+    close?.focus();
+  };
+  const hide=()=>{
+    if(!modal)return;
+    stopDemo();
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden','true');
+    document.body.classList.remove('howto-open');
+    previousFocus?.focus?.();
+  };
+  demo?.addEventListener('click',()=>{
+    if(demoPaused){
+      startDemo();
+      return;
+    }
+    demoPaused=true;
+    stopDemo();
+    demo.classList.add('stopped');
+    if(demoLabel)demoLabel.textContent='この瞬間！';
+    setTimeout(()=>{
+      demo.classList.remove('stopped');
+      if(modal?.classList.contains('show'))startDemo();
+    },1300);
+  });
+  open?.addEventListener('click',show);
+  close?.addEventListener('click',hide);
+  done?.addEventListener('click',hide);
+  modal?.addEventListener('click',e=>{if(e.target===modal)hide();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal?.classList.contains('show'))hide();});
+})();
+</script>
+
+</body>
+</html>

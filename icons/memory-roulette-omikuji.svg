@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 384" role="img" aria-label="思い出ルーレットおみくじ">
+  <defs>
+    <linearGradient id="bg" x1="40" y1="30" x2="340" y2="350" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fffaf5"/>
+      <stop offset="1" stop-color="#ffe7ea"/>
+    </linearGradient>
+    <linearGradient id="wheel" x1="95" y1="82" x2="300" y2="300" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#cf6d83"/>
+      <stop offset="1" stop-color="#9c4660"/>
+    </linearGradient>
+  </defs>
+  <rect width="384" height="384" rx="86" fill="url(#bg)"/>
+  <circle cx="192" cy="192" r="126" fill="#fff" stroke="url(#wheel)" stroke-width="16"/>
+  <circle cx="192" cy="192" r="102" fill="none" stroke="#efd4da" stroke-width="6" stroke-dasharray="12 13"/>
+  <path d="M294 117c22 24 34 53 34 83" fill="none" stroke="#9c4660" stroke-width="13" stroke-linecap="round"/>
+  <path d="M318 190l12 22 14-21" fill="none" stroke="#9c4660" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="109" y="116" width="166" height="130" rx="22" fill="#fff8f0" stroke="#51362f" stroke-width="10"/>
+  <rect x="124" y="132" width="136" height="91" rx="14" fill="#f5d6b3"/>
+  <circle cx="226" cy="155" r="16" fill="#fff5bf"/>
+  <path d="M126 211l39-39 26 26 21-20 46 33" fill="none" stroke="#9c4660" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+  <g fill="#51362f">
+    <rect x="117" y="101" width="17" height="13" rx="4"/>
+    <rect x="151" y="101" width="17" height="13" rx="4"/>
+    <rect x="185" y="101" width="17" height="13" rx="4"/>
+    <rect x="219" y="101" width="17" height="13" rx="4"/>
+    <rect x="253" y="101" width="17" height="13" rx="4"/>
+  </g>
+  <g transform="rotate(8 250 250)">
+    <rect x="217" y="215" width="76" height="108" rx="13" fill="#fff" stroke="#b33d52" stroke-width="9"/>
+    <path d="M235 240h40M235 259h40M235 278h29" stroke="#b33d52" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="255" cy="301" r="9" fill="#e6a23a"/>
+  </g>
+</svg>

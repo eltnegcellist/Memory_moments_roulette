@@ -364,3 +364,42 @@ body.howto-open{overflow:hidden}
     width:100%;
   }
 }
+
+
+/* concept positioning: celebrate unexpected, imperfect moments */
+.conceptCard{
+  margin:-3px 2px 13px;
+  padding:14px 16px;
+  border:1px solid #eed8cf;
+  border-radius:19px;
+  background:linear-gradient(135deg,#fffaf4,#fff3f4);
+  box-shadow:0 8px 22px rgba(109,66,73,.07);
+}
+.conceptLabel{
+  display:inline-flex;
+  margin-bottom:6px;
+  padding:4px 8px;
+  border-radius:999px;
+  background:#f5e6e8;
+  color:#9b4962;
+  font-size:9px;
+  font-weight:1000;
+  letter-spacing:.08em;
+}
+.conceptCard strong{
+  display:block;
+  font-size:15px;
+  line-height:1.45;
+  color:#493027;
+}
+.conceptCard p{
+  margin:5px 0 0;
+  color:#765f54;
+  font-size:11.5px;
+  line-height:1.65;
+}
+@media(max-width:520px){
+  .conceptCard{padding:12px 13px;border-radius:17px}
+  .conceptCard strong{font-size:14px}
+  .conceptCard p{font-size:10.8px}
+}

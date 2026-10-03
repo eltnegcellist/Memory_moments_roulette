@@ -4,16 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#fff7ef">
-<meta name="description" content="思い出の動画からいろいろなシーンを切り出し、ルーレットのようにランダム表示して楽しむWebアプリ。おみくじや特別なスローリプレイで、忘れていた一瞬との再会を楽しめます。">
+<meta name="description" content="動画の中に隠れている、半目・変顔・妙なポーズまで。自分では選ばなかった一瞬を、ルーレットとおみくじで楽しむWebアプリです。">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="ja_JP">
 <meta property="og:title" content="思い出ルーレットおみくじ">
-<meta property="og:description" content="思い出の動画からランダムな一瞬を引き当て、ルーレットとおみくじで楽しむWebアプリです。">
+<meta property="og:description" content="ベストショットだけが思い出じゃない。動画の中の、自分では選ばなかった一瞬を偶然楽しむWebアプリです。">
 <meta property="og:url" content="https://eltnegcellist.github.io/Memory_moments_roulette/">
 <meta property="og:image" content="https://eltnegcellist.github.io/Memory_moments_roulette/icons/memory-roulette-omikuji.png">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="思い出ルーレットおみくじ">
-<meta name="twitter:description" content="思い出の動画からランダムな一瞬を引き当て、ルーレットとおみくじで楽しむWebアプリです。">
+<meta name="twitter:description" content="ベストショットだけが思い出じゃない。動画の中の、自分では選ばなかった一瞬を偶然楽しむWebアプリです。">
 <meta name="twitter:image" content="https://eltnegcellist.github.io/Memory_moments_roulette/icons/memory-roulette-omikuji.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -21,9 +21,9 @@
 <link rel="apple-touch-icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2">
 <link rel="icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2" type="image/png">
 <title>思い出ルーレットおみくじ</title>
-<link rel="stylesheet" href="./style.css?v=1.0.0-memorybrand2">
-<link rel="stylesheet" href="./deluxe.css?v=1.0.0-memorybrand2">
-<link rel="stylesheet" href="./features.css?v=1.0.0-memorybrand2">
+<link rel="stylesheet" href="./style.css?v=1.0.0-concept1">
+<link rel="stylesheet" href="./deluxe.css?v=1.0.0-concept1">
+<link rel="stylesheet" href="./features.css?v=1.0.0-concept1">
 <style>
 body:not(.show-score-details) .scoreChip,
 body:not(.show-score-details) .scoreDetails,
@@ -41,10 +41,15 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <div class="heroText">
     <div class="heroTopline"><span class="eyebrow">MEMORY MOMENTS</span><span class="versionBadge" id="labSettingsTrigger" title="5回タップでラボ設定">v1.0.0</span></div>
     <h1><span class="titlePart">思い出ルーレット</span><span class="titlePart">おみくじ</span></h1>
-    <p class="heroCatch">思い出の一瞬を、ルーレットで楽しく。</p>
-    <p class="lead">思い出の動画からいろいろなシーンを切り出し、ルーレットのようにランダムに見返して楽しむアプリです。忘れていた一瞬に出会ったり、おみくじで遊んだり。動画の中に眠っている思い出を、偶然の力でもう一度楽しめます。</p>
+    <p class="heroCatch">ベストじゃない一瞬ほど、あとで笑える。</p>
+    <p class="lead">半目、変顔、妙なポーズ。写真なら選ばなかった一瞬も、動画には残っています。そんな「自分では選ばなかった一枚」を偶然引いて、みんなで笑って楽しむアプリです。</p>
   </div>
 </header>
+<section class="conceptCard" aria-label="このアプリのコンセプト">
+  <span class="conceptLabel">このアプリが探すもの</span>
+  <strong>「一番いい写真」ではなく、思いがけない一瞬。</strong>
+  <p>少しブレた顔も、半目も、変なポーズも、写真なら残さない何気ない一コマも。きれいだから当たりではなく、見つけて笑えることが当たりです。</p>
+</section>
 <button id="howtoOpen" class="howtoBanner" type="button" aria-haspopup="dialog">
   <span class="howtoBannerIcon" aria-hidden="true">📖</span>
   <span>アプリの使い方を見る</span>
@@ -55,7 +60,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <h2>新しい思い出ルーレットを作る</h2>
   <div class="filebox">
     <input id="fileInput" type="file" accept="video/*">
-    <div class="note">動画を選ぶと自動でシーン候補を抽出します。処理はブラウザ内だけで行い、元動画は外部へ送信しません。</div>
+    <div class="note">動画から、きれいな場面だけでなく「普段なら写真にしない一瞬」も含めて候補を探します。処理はブラウザ内だけで行い、元動画は外部へ送信しません。</div>
   </div>
   <div id="progressWrap"><div class="progress"><div id="progressBar"></div></div><div id="progressText">準備中...</div></div>
   <details class="opt" id="detailOptions">
@@ -79,7 +84,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
         </div>
       </div>
       <label class="labSettingsItem">
-        <span><b>特徴度を表示する</b><span class="note">初期値はOFFです。ONにすると、プレビューに特徴度と「くっきり・珍しさ・変化」の内訳を表示します。</span></span>
+        <span><b>特徴度を表示する</b><span class="note">初期値はOFFです。写真の良し悪しではなく、動画内での「くっきり・珍しさ・変化」の違いを見る補助値です。</span></span>
         <input id="showScores" type="checkbox">
       </label>
       <label class="labSettingsItem" id="labDeluxeItem">
@@ -149,7 +154,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
       </div>
       <button id="howtoClose" class="howtoClose" type="button" aria-label="使い方を閉じる">×</button>
     </div>
-    <p class="howtoLead">思い出の動画から、いろいろなシーンを切り出して遊びます。動画はブラウザ内で処理され、元動画を外部へ送信しません。</p>
+    <p class="howtoLead">このアプリは「一番いい写真」を探すためのものではありません。動画の中に隠れた、少し変な一瞬や意外な表情まで含めて、偶然止まった一枚を楽しみます。動画はブラウザ内で処理され、元動画を外部へ送信しません。</p>
 
     <div class="howtoSteps">
       
@@ -157,7 +162,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
         <div class="howtoNum">1</div>
         <div class="howtoCopy">
           <h3>動画を選ぶ</h3>
-          <p>「ファイルを選択」から動画を選びます。おまかせなら、動画の中から変化のある場面を12〜28枚ほど自動で切り出します。</p>
+          <p>「ファイルを選択」から動画を選びます。おまかせなら、変化のある場面を中心に、普段なら写真として選ばない一瞬も含めて12〜28枚ほど切り出します。</p>
         </div>
         <div class="howtoMock mockUpload" aria-hidden="true">
           <div class="mockLabel">CREATE</div>
@@ -171,7 +176,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
         <div class="howtoNum">2</div>
         <div class="howtoCopy">
           <h3>シーンを確認する</h3>
-          <p>切り出された写真を確認して、「この内容で遊ぶ」を押します。違う場面を選び直したいときは「もう一度抽出する」でやり直せます。</p>
+          <p>切り出された一瞬を確認します。半目や変顔、ちょっと妙なポーズも「外れ」ではありません。そのまま遊ぶか、「もう一度抽出する」で別の一瞬を探せます。</p>
         </div>
         <div class="howtoMock mockPreview" aria-hidden="true">
           <div class="mockLabel">PREVIEW</div>
@@ -186,7 +191,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
         <div class="howtoNum">3</div>
         <div class="howtoCopy">
           <h3>タップしてストップ</h3>
-          <p>シーンが次々に切り替わります。好きなタイミングで写真をタップすると、その一瞬でストップ。右のミニデモも実際にタップして止められます。</p>
+          <p>いろいろな一瞬が次々に切り替わります。好きなタイミングでタップしてストップ。自分なら選ばなかった一枚に止まる偶然も、この遊びの一部です。</p>
         </div>
         <div class="howtoMock mockPlay">
           <div class="mockLabel">PLAY DEMO</div>
@@ -202,8 +207,8 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
       <article class="howtoStep">
         <div class="howtoNum">4</div>
         <div class="howtoCopy">
-          <h3>気に入った一瞬を残す</h3>
-          <p>止まった写真は履歴にたまります。気に入った写真は「今日の一枚」に保存して、あとから開いたり端末へ画像としてダウンロードしたりできます。</p>
+          <h3>笑えた一瞬・残したい一瞬を保存</h3>
+          <p>止まった写真は履歴にたまります。きれいな写真に限らず、「この顔は残したい」「あとでまた笑いたい」と思った一瞬を「今日の一枚」に保存できます。</p>
         </div>
         <div class="howtoMock mockResult" aria-hidden="true">
           <div class="mockResultPhoto">🎞️</div>
@@ -223,7 +228,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
         <div class="secretArrow">→</div>
         <div class="secretFortune special">特別</div>
       </div>
-      <p>おみくじでは、<b>大凶以外の結果で低い確率で「奇跡のリプレイ」</b>が始まることがあります。運勢はそのままに、止まった一瞬をスローモーションで見返して「奇跡の一枚」として楽しめる特別演出です。</p>
+      <p>おみくじでは、<b>大凶以外の結果で低い確率で「奇跡のリプレイ」</b>が始まることがあります。ここでいう「奇跡」は完璧なベストショットとは限りません。変顔でも妙なポーズでも、その場でしか引けなかった一瞬を特別演出で楽しみます。</p>
       <p><b>大凶では、一定確率で「大逆転」リプレイ</b>が発生します。どちらの演出も、出会えたらその一瞬ごと楽しんでください。</p>
     </section>
 
@@ -247,10 +252,10 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <video id="video" playsinline muted preload="metadata" style="display:none"></video><canvas id="captureCanvas" style="display:none"></canvas><canvas id="smallCanvas" width="28" height="28" style="display:none"></canvas>
 </div>
 <div id="bigOverlay"><div id="bigText">大吉！</div></div>
-<script src="./app.js?v=1.0.0-memorybrand2" defer></script>
-<script src="./deluxe.js?v=1.0.0-memorybrand2" defer></script>
-<script src="./features.js?v=1.0.0-memorybrand2" defer></script>
-<script src="./hidden-settings.js?v=1.0.0-memorybrand2" defer></script>
+<script src="./app.js?v=1.0.0-concept1" defer></script>
+<script src="./deluxe.js?v=1.0.0-concept1" defer></script>
+<script src="./features.js?v=1.0.0-concept1" defer></script>
+<script src="./hidden-settings.js?v=1.0.0-concept1" defer></script>
 <script>
 (()=>{
   const scoreBox=document.getElementById('showScores');
@@ -261,20 +266,8 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
     document.body.classList.toggle('show-score-details',!!scoreBox?.checked);
     document.body.classList.toggle('show-fortune-map',!!fortuneBox?.checked);
   };
-  const rename=()=>{
-    document.querySelectorAll('.scoreChip').forEach(el=>{
-      const next=el.textContent.replace(/^魅力度/,'特徴度');
-      if(next!==el.textContent) el.textContent=next;
-    });
-    if(status){
-      const next=status.textContent.replace(/魅力度/g,'特徴度');
-      if(next!==status.textContent) status.textContent=next;
-    }
-  };
   scoreBox?.addEventListener('change',sync);fortuneBox?.addEventListener('change',sync);
-  if(grid)new MutationObserver(rename).observe(grid,{childList:true,subtree:true});
-  if(status)new MutationObserver(rename).observe(status,{childList:true,subtree:true,characterData:true});
-  sync();rename();
+  sync();
 })();
 </script>
 

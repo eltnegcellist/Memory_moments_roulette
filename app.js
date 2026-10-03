@@ -17,7 +17,7 @@ function shuffle(arr){const a=arr.slice(); for(let i=a.length-1;i>0;i--){const j
 function buildFortunePool(count){ const forts=BASE_FORTUNES.slice(); let i=0; while(forts.length<count){ forts.push(EXTRA_FORTUNE_SEQUENCE[i % EXTRA_FORTUNE_SEQUENCE.length]); i++; } return forts.slice(0,count); }
 function manualTargetCount(){const v=frameCountEl.value; return v==='auto'?null:Number(v);}
 function autoTargetCount(duration,distinctCount,totalCount){ const choices=[12,14,16,18,20,24,28]; let desired=18; if(duration<4) desired=12; else if(duration<7) desired=14; else if(duration<12) desired=16; else if(duration<20) desired=18; else if(duration<35) desired=20; else if(duration<60) desired=24; else desired=28; const diversity=totalCount>0?distinctCount/totalCount:0.5; if(diversity<0.22) desired-=4; else if(diversity<0.35) desired-=2; else if(diversity>0.68) desired+=2; desired=Math.max(12,Math.min(28,desired)); return choices.reduce((best,x)=>Math.abs(x-desired)<Math.abs(best-desired)?x:best,choices[0]); }
-function updatePreviewMeta(){ const mode=modeName(); previewTitle.textContent=mode==='omikuji' ? '自動で作成したおみくじ' : '自動で作成した思い出ルーレット'; previewNote.textContent=mode==='omikuji' ? '保存名は自動で付けます。必要なら保存後に変更できます。全運勢を最低1枚ずつ含み、画像の特徴から印象的な写真を良い運勢寄りにします。' : '保存名は自動で付けます。必要なら保存後に変更できます。'; }
+function updatePreviewMeta(){ const mode=modeName(); previewTitle.textContent=mode==='omikuji' ? '自動で作成したおみくじ' : '自動で作成した思い出ルーレット'; previewNote.textContent=mode==='omikuji' ? '保存名は自動で付けます。必要なら保存後に変更できます。特徴度は写真の良し悪しを決める点数ではなく、候補どうしの違いを見るための補助値です。' : '保存名は自動で付けます。必要なら保存後に変更できます。'; }
 plainModeEl.addEventListener('change',async()=>{ if(selectedFrames.length){ if(modeName()==='omikuji'){ selectedFortunes=await assignFortunes(selectedFrames); } renderGrid(); } updatePreviewMeta(); });
 function once(target,event,timeout=6000){return new Promise((resolve,reject)=>{let done=false; const fn=()=>{if(done)return; done=true; clearTimeout(to); target.removeEventListener(event,fn); resolve();}; const to=setTimeout(()=>{if(done)return; done=true; target.removeEventListener(event,fn); reject(new Error(event+' timeout'));},timeout); target.addEventListener(event,fn,{once:true});})}
 async function loadVideo(file){ if(objectUrl) URL.revokeObjectURL(objectUrl); currentSourceKey=sourceKeyFor(file); objectUrl=URL.createObjectURL(file); video.src=objectUrl; video.load(); if(video.readyState<1) await once(video,'loadedmetadata',10000); if(!isFinite(video.duration)||video.duration<=0) throw new Error('動画の長さを取得できません'); }
@@ -77,7 +77,7 @@ x.changeScore=Math.round(x.change*100);
 if(analysisStatus){
 analysisStatus.style.display='block';
 analysisStatus.className='note analysisStatus ok';
-analysisStatus.textContent='魅力度はAIを使わず、動画内の相対評価で算出しています。くっきり度45%・珍しさ35%・前後からの変化20%。「くっきり度」は旧「画質」指標です。';
+analysisStatus.textContent='特徴度はAIを使わず、動画内の相対差から算出しています。くっきり45%・珍しさ35%・前後からの変化20%。写真の良し悪しを採点する値ではありません。';
 }
 return details;
 }
@@ -109,7 +109,7 @@ const sorted=[...candidates].sort((a,b)=>a.time-b.time), filtered=[];
 for(const c of sorted){ if(c.sharp<4) continue; const prev=filtered[filtered.length-1]; if(prev && dist(c.desc,prev.desc)<4.2){ if(c.quality>prev.quality) filtered[filtered.length-1]=c; } else filtered.push(c); }
 const target=manualTarget||autoTargetCount(video.duration,filtered.length,sorted.length);
 selectedFrames=chooseDiverse(filtered.length>=target?filtered:sorted,target);
-if(modeName()==='omikuji'){ progressText.textContent='写真の特徴を比べて運勢を決めています...'; progressBar.style.width='78%'; selectedFortunes=await assignFortunes(selectedFrames); } else { selectedFortunes=[]; selectedAppealDetails=[]; }
+if(modeName()==='omikuji'){ progressText.textContent='候補の特徴を比べて運勢を割り当てています...'; progressBar.style.width='78%'; selectedFortunes=await assignFortunes(selectedFrames); } else { selectedFortunes=[]; selectedAppealDetails=[]; }
 progressBar.style.width='100%'; progressText.textContent=`${manualTarget?'':'おまかせで'}${selectedFrames.length}枚を選びました`;
 renderGrid(); updatePreviewMeta(); previewSection.style.display='block'; previewSection.scrollIntoView({behavior:'smooth'});
 }catch(e){ console.error(e); progressText.textContent='動画を処理できませんでした'; alert('動画を処理できませんでした: '+e.message); }
@@ -120,7 +120,7 @@ const showFortune=modeName()==='omikuji';
 selectedFrames.forEach((f,i)=>{
 const d=document.createElement('div');d.className='thumbWrap';
 const fortune=selectedFortunes[i],a=selectedAppealDetails[i];
-d.innerHTML=`<div class="thumb"><img src="${f.dataUrl}">${showFortune&&a?`<span class="scoreChip">魅力度 ${a.score}</span>`:''}<div class="thumbInfo"><span>${i+1} / ${f.time.toFixed(1)}s</span>${showFortune?`<span class="fchip">${FORTUNE_ICONS[fortune]||'🎴'} ${fortune}</span>`:''}</div></div>${showFortune&&a?`<div class="scoreDetails">くっきり ${a.clarityScore} ・ 珍しさ ${a.rarityScore} ・ 変化 ${a.changeScore}</div>`:''}`;
+d.innerHTML=`<div class="thumb"><img src="${f.dataUrl}">${showFortune&&a?`<span class="scoreChip">特徴度 ${a.score}</span>`:''}<div class="thumbInfo"><span>${i+1} / ${f.time.toFixed(1)}s</span>${showFortune?`<span class="fchip">${FORTUNE_ICONS[fortune]||'🎴'} ${fortune}</span>`:''}</div></div>${showFortune&&a?`<div class="scoreDetails">くっきり ${a.clarityScore} ・ 珍しさ ${a.rarityScore} ・ 変化 ${a.changeScore}</div>`:''}`;
 grid.appendChild(d);
 });
 }

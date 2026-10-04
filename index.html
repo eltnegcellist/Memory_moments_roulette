@@ -21,9 +21,9 @@
 <link rel="apple-touch-icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2">
 <link rel="icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2" type="image/png">
 <title>思い出ルーレットおみくじ</title>
-<link rel="stylesheet" href="./style.css?v=1.0.0-concept1">
-<link rel="stylesheet" href="./deluxe.css?v=1.0.0-concept1">
-<link rel="stylesheet" href="./features.css?v=1.0.0-concept1">
+<link rel="stylesheet" href="./style.css?v=1.0.0-concept3">
+<link rel="stylesheet" href="./deluxe.css?v=1.0.0-concept3">
+<link rel="stylesheet" href="./features.css?v=1.0.0-concept3">
 <style>
 body:not(.show-score-details) .scoreChip,
 body:not(.show-score-details) .scoreDetails,
@@ -41,14 +41,14 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <div class="heroText">
     <div class="heroTopline"><span class="eyebrow">MEMORY MOMENTS</span><span class="versionBadge" id="labSettingsTrigger" title="5回タップでラボ設定">v1.0.0</span></div>
     <h1><span class="titlePart">思い出ルーレット</span><span class="titlePart">おみくじ</span></h1>
-    <p class="heroCatch">ベストじゃない一瞬ほど、あとで笑える。</p>
-    <p class="lead">半目、変顔、妙なポーズ。写真なら選ばなかった一瞬も、動画には残っています。そんな「自分では選ばなかった一枚」を偶然引いて、みんなで笑って楽しむアプリです。</p>
+    <p class="heroCatch">動画に隠れた、いろいろな一瞬を。</p>
+    <p class="lead">笑顔も、半目も、動きの途中も。写真として選ぶことのなかった一瞬まで、動画には残っています。そんなさまざまな一枚に偶然出会って楽しむアプリです。</p>
   </div>
 </header>
 <section class="conceptCard" aria-label="このアプリのコンセプト">
   <span class="conceptLabel">このアプリが探すもの</span>
-  <strong>「一番いい写真」ではなく、思いがけない一瞬。</strong>
-  <p>少しブレた顔も、半目も、変なポーズも、写真なら残さない何気ない一コマも。きれいだから当たりではなく、見つけて笑えることが当たりです。</p>
+  <strong>「一番いい写真」ではなく、動画に隠れたさまざまな一瞬。</strong>
+  <p>笑顔も、半目も、動きの途中も、何気ない表情も。写真として選ぶことのなかった一瞬まで、そのまま楽しむためのアプリです。</p>
 </section>
 <button id="howtoOpen" class="howtoBanner" type="button" aria-haspopup="dialog">
   <span class="howtoBannerIcon" aria-hidden="true">📖</span>
@@ -176,7 +176,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
         <div class="howtoNum">2</div>
         <div class="howtoCopy">
           <h3>シーンを確認する</h3>
-          <p>切り出された一瞬を確認します。半目や変顔、ちょっと妙なポーズも「外れ」ではありません。そのまま遊ぶか、「もう一度抽出する」で別の一瞬を探せます。</p>
+          <p>切り出されたさまざまな一瞬を確認します。笑顔も、半目も、動きの途中も、それぞれ動画に残っていた一コマです。そのまま遊ぶか、「もう一度抽出する」で別の一瞬を探せます。</p>
         </div>
         <div class="howtoMock mockPreview" aria-hidden="true">
           <div class="mockLabel">PREVIEW</div>
@@ -207,8 +207,8 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
       <article class="howtoStep">
         <div class="howtoNum">4</div>
         <div class="howtoCopy">
-          <h3>笑えた一瞬・残したい一瞬を保存</h3>
-          <p>止まった写真は履歴にたまります。きれいな写真に限らず、「この顔は残したい」「あとでまた笑いたい」と思った一瞬を「今日の一枚」に保存できます。</p>
+          <h3>残したい一瞬を保存</h3>
+          <p>止まった写真は履歴にたまります。きれいさに関係なく、「この一瞬を残したい」と思った写真を「今日の一枚」に保存できます。</p>
         </div>
         <div class="howtoMock mockResult" aria-hidden="true">
           <div class="mockResultPhoto">🎞️</div>
@@ -252,10 +252,10 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <video id="video" playsinline muted preload="metadata" style="display:none"></video><canvas id="captureCanvas" style="display:none"></canvas><canvas id="smallCanvas" width="28" height="28" style="display:none"></canvas>
 </div>
 <div id="bigOverlay"><div id="bigText">大吉！</div></div>
-<script src="./app.js?v=1.0.0-concept1" defer></script>
-<script src="./deluxe.js?v=1.0.0-concept1" defer></script>
-<script src="./features.js?v=1.0.0-concept1" defer></script>
-<script src="./hidden-settings.js?v=1.0.0-concept1" defer></script>
+<script src="./app.js?v=1.0.0-concept3" defer></script>
+<script src="./deluxe.js?v=1.0.0-concept3" defer></script>
+<script src="./features.js?v=1.0.0-concept3" defer></script>
+<script src="./hidden-settings.js?v=1.0.0-concept3" defer></script>
 <script>
 (()=>{
   const scoreBox=document.getElementById('showScores');

@@ -123,7 +123,7 @@ const LUCKY_POINTS=[
 ];
 const MIRACLE_MESSAGES=[
   '運勢とは別に、この一枚が今日のごほうび。',
-  'この瞬間は大当たり。奇跡の一枚です。',
+  'この瞬間に出会えたのも、今日だけの偶然。奇跡の一枚です。',
   '思いがけない一瞬が、今日の宝物になりました。'
 ];
 const REVERSAL_MESSAGES=[

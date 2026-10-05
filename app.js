@@ -4,6 +4,13 @@ const FORTUNE_MESSAGES={"大吉":"今日は特別ないい日。笑顔で過ご�
 const EXTRA_FORTUNE_SEQUENCE=["吉","小吉","中吉","末吉","吉","小吉","中吉","吉","末吉","吉","凶","小吉","中吉","吉","小吉","末吉","吉","中吉","大吉","吉","小吉","凶","吉","末吉"];
 const BASE_FORTUNES=["大吉","吉","中吉","小吉","末吉","凶","大凶"];
 const FORTUNE_RANK={"大吉":6,"吉":5,"中吉":4,"小吉":3,"末吉":2,"凶":1,"大凶":0};
+const FORTUNE_WEIGHTS=[["大吉",10],["吉",20],["中吉",20],["小吉",20],["末吉",15],["凶",10],["大凶",5]];
+function drawFortune(){
+  const total=FORTUNE_WEIGHTS.reduce((s,x)=>s+x[1],0);
+  let r=Math.random()*total;
+  for(const [name,w] of FORTUNE_WEIGHTS){r-=w;if(r<0)return name;}
+  return "吉";
+}
 const $=id=>document.getElementById(id);
 const fileInput=$("fileInput"), frameCountEl=$("frameCount"), plainModeEl=$("plainMode"), previewSection=$("previewSection"), progressWrap=$("progressWrap"), progressBar=$("progressBar"), progressText=$("progressText"), grid=$("grid"), previewTitle=$("previewTitle"), previewNote=$("previewNote"), analysisStatus=$("analysisStatus"), playBtn=$("playBtn"), reextractBtn=$("reextractBtn"), library=$("library");
 const video=$("video"), captureCanvas=$("captureCanvas"), smallCanvas=$("smallCanvas"), ctx=captureCanvas.getContext("2d",{willReadFrequently:true}), sctx=smallCanvas.getContext("2d",{willReadFrequently:true});
@@ -91,7 +98,7 @@ return fortunes;
 }
 async function assignFortunes(frames){
 selectedAppealDetails=computeAppealDetails(frames);
-return assignFortunesByScores(frames,selectedAppealDetails.map(x=>x.raw));
+return frames.map(()=>drawFortune());
 }
 async function extractFromCurrentFile(){
 const file=fileInput.files?.[0] || lastFile; if(!file) return; lastFile=file;
@@ -109,7 +116,7 @@ const sorted=[...candidates].sort((a,b)=>a.time-b.time), filtered=[];
 for(const c of sorted){ if(c.sharp<4) continue; const prev=filtered[filtered.length-1]; if(prev && dist(c.desc,prev.desc)<4.2){ if(c.quality>prev.quality) filtered[filtered.length-1]=c; } else filtered.push(c); }
 const target=manualTarget||autoTargetCount(video.duration,filtered.length,sorted.length);
 selectedFrames=chooseDiverse(filtered.length>=target?filtered:sorted,target);
-if(modeName()==='omikuji'){ progressText.textContent='候補の特徴を比べて運勢を割り当てています...'; progressBar.style.width='78%'; selectedFortunes=await assignFortunes(selectedFrames); } else { selectedFortunes=[]; selectedAppealDetails=[]; }
+if(modeName()==='omikuji'){ progressText.textContent='候補の特徴を整理し、運勢サンプルを準備しています...'; progressBar.style.width='78%'; selectedFortunes=await assignFortunes(selectedFrames); } else { selectedFortunes=[]; selectedAppealDetails=[]; }
 progressBar.style.width='100%'; progressText.textContent=`${manualTarget?'':'おまかせで'}${selectedFrames.length}枚を選びました`;
 renderGrid(); updatePreviewMeta(); previewSection.style.display='block'; previewSection.scrollIntoView({behavior:'smooth'});
 }catch(e){ console.error(e); progressText.textContent='動画を処理できませんでした'; alert('動画を処理できませんでした: '+e.message); }
@@ -126,7 +133,19 @@ grid.appendChild(d);
 }
 function makeCreation(){ const mode=modeName(); const id=currentCreation?.id || ('r'+Date.now()+Math.random().toString(36).slice(2,8)); return { id, title: currentCreation?.title || autoTitle(mode), createdAt: currentCreation?.createdAt || Date.now(), updatedAt: Date.now(), sourceKey: currentSourceKey, mode, frames: selectedFrames.map(f=>f.dataUrl), fortunes: mode==='omikuji' ? selectedFortunes.slice() : [], times: selectedFrames.map(f=>f.time), appeal: mode==='omikuji' ? selectedAppealDetails.map(x=>({score:x.score,clarityScore:x.clarityScore,rarityScore:x.rarityScore,changeScore:x.changeScore})) : [] }; }
 const DBNAME='babyExpressionRouletteDB', STORE='creations';
-function openDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DBNAME,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE))r.result.createObjectStore(STORE,{keyPath:'id'})};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+function openDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DBNAME,2);r.onupgradeneeded=()=>{
+  const db=r.result;
+  if(!db.objectStoreNames.contains(STORE))db.createObjectStore(STORE,{keyPath:'id'});
+  if(!db.objectStoreNames.contains('deckSources')){
+    const s=db.createObjectStore('deckSources',{keyPath:'id'});
+    s.createIndex('fingerprint','fingerprint',{unique:false});
+  }
+  if(!db.objectStoreNames.contains('deckFrames')){
+    const s=db.createObjectStore('deckFrames',{keyPath:'id'});
+    s.createIndex('sourceVideoId','sourceVideoId',{unique:false});
+  }
+  if(!db.objectStoreNames.contains('deckMeta'))db.createObjectStore('deckMeta',{keyPath:'key'});
+};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
 async function dbPut(x){const db=await openDB();return new Promise((res,rej)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(x);tx.oncomplete=res;tx.onerror=()=>rej(tx.error)})}
 async function dbAll(){const db=await openDB();return new Promise((res,rej)=>{const r=db.transaction(STORE).objectStore(STORE).getAll();r.onsuccess=()=>res(r.result.sort((a,b)=>(b.updatedAt||b.createdAt)-(a.updatedAt||a.createdAt)));r.onerror=()=>rej(r.error)})}
 async function dbDelete(id){const db=await openDB();return new Promise((res,rej)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).delete(id);tx.oncomplete=res;tx.onerror=()=>rej(tx.error)})}
@@ -181,9 +200,28 @@ startRun(false);
 }
 function showRandom(){ const arr=activeCreation.frames; if(!arr?.length) return; let n=currentIndex; while(arr.length>1 && n===currentIndex) n=Math.floor(Math.random()*arr.length); currentIndex=n; playImage.src=arr[n]; }
 function startRun(withSound=true){ running=true; stage.classList.add('pulse'); fortuneBadge.style.display='none'; resultCard.style.display='none'; rouletteBadge.style.display='block'; rouletteBadge.textContent='タップでストップ'; tapHint.textContent='画像をタップすると止まります'; showRandom(); clearInterval(timer); timer=setInterval(showRandom,75); if(withSound) playSound('start'); }
-function stopRun(){ running=false; clearInterval(timer); timer=null; stage.classList.remove('pulse'); if(activeCreation.mode==='omikuji'){ const f=activeCreation.fortunes[currentIndex]||'吉'; fortuneBadge.style.display='block'; fortuneBadge.textContent=(FORTUNE_ICONS[f]||'🎴')+' '+f; fortuneBadge.style.color=FORTUNE_COLORS[f]||'#700'; resultCard.style.display='block'; resultText.textContent=f; resultText.style.color=FORTUNE_COLORS[f]||'#700'; message.textContent=FORTUNE_MESSAGES[f]||''; rouletteBadge.style.display='none'; if(f==='大吉') celebrate(); else playSound(f); } else { rouletteBadge.style.display='block'; rouletteBadge.textContent='この瞬間！'; playSound('吉'); } tapHint.textContent='もう一度タップすると再開します'; }
+function stopRun(){
+running=false; clearInterval(timer); timer=null; stage.classList.remove('pulse');
+if(activeCreation?.deckMode&&typeof window.__memoryDeckResolveStop==='function'){
+  const resolved=window.__memoryDeckResolveStop(activeCreation,currentIndex);
+  if(Number.isInteger(resolved)&&resolved>=0&&resolved<activeCreation.frames.length){
+    currentIndex=resolved;
+    playImage.src=activeCreation.frames[currentIndex];
+  }
+}
+if(activeCreation.mode==='omikuji'){
+  const f=window.__babyLabForcedSpecial==='reversal'?'大凶':drawFortune();
+  if(Array.isArray(activeCreation.fortunes))activeCreation.fortunes[currentIndex]=f;
+  fortuneBadge.style.display='block'; fortuneBadge.textContent=(FORTUNE_ICONS[f]||'🎴')+' '+f; fortuneBadge.style.color=FORTUNE_COLORS[f]||'#700';
+  resultCard.style.display='block'; resultText.textContent=f; resultText.style.color=FORTUNE_COLORS[f]||'#700'; message.textContent=FORTUNE_MESSAGES[f]||'';
+  rouletteBadge.style.display='none'; if(f==='大吉') celebrate(); else playSound(f);
+}else{
+  rouletteBadge.style.display='block'; rouletteBadge.textContent='この瞬間！'; playSound('吉');
+}
+tapHint.textContent='もう一度タップすると再開します';
+}
 function celebrate(){ bigOverlay.classList.remove('show'); void bigOverlay.offsetWidth; bigOverlay.classList.add('show'); const pal=['#ffd700','#fff0a0','#fff','#ff5a61','#ff9d00']; for(let i=0;i<90;i++){ const e=document.createElement('div'); e.className='confetti'; e.style.left=Math.random()*100+'vw'; e.style.width=7+Math.random()*9+'px'; e.style.height=10+Math.random()*18+'px'; e.style.background=pal[Math.floor(Math.random()*pal.length)]; e.style.animationDuration=1.8+Math.random()*1.6+'s'; e.style.animationDelay=Math.random()*.3+'s'; document.body.appendChild(e); setTimeout(()=>e.remove(),3800); } if(navigator.vibrate) navigator.vibrate([100,60,140,70,260]); playSound('大吉'); setTimeout(()=>bigOverlay.classList.remove('show'),2500); }
-fileInput.addEventListener('change',()=>{ if(fileInput.files?.length){ currentCreation=null; extractFromCurrentFile(); } });
+fileInput.addEventListener('change',()=>{ if(fileInput.files?.length){ currentCreation=null; if(typeof window.__memoryDeckHandleFiles==='function'){ window.__memoryDeckHandleFiles(Array.from(fileInput.files)); return; } extractFromCurrentFile(); } });
 reextractBtn.addEventListener('click',()=>{ if(lastFile){ currentCreation=null; extractFromCurrentFile(); } });
 playBtn.addEventListener('click',()=>{ if(!selectedFrames.length) return; unlockAudio(); currentCreation=makeCreation(); preparePlay(currentCreation); dbPut(currentCreation).then(refreshLibrary).catch(()=>{}); });
 stage.addEventListener('pointerdown',e=>{ e.preventDefault(); if(!primed) unlockAudio(); if(running) stopRun(); else startRun(); },{passive:false});

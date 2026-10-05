@@ -403,3 +403,94 @@ body.howto-open{overflow:hidden}
   .conceptCard strong{font-size:14px}
   .conceptCard p{font-size:10.8px}
 }
+
+
+/* v1.1 memory deck */
+.deckCard{
+  border-color:#e8d3ca;
+  background:linear-gradient(145deg,#fffdf9,#fff7f2);
+}
+.deckStatus{
+  margin:0 0 12px;
+  color:#6f594f;
+  font-size:13px;
+  line-height:1.65;
+}
+.deckActions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+.deckDraw{
+  min-width:180px;
+  flex:1 1 220px;
+}
+.deckNotice{
+  min-height:0;
+  margin-top:9px;
+}
+.deckNotice:empty{display:none}
+.deckNotice.ok{color:#35623f}
+.deckNotice.warn{color:#8b522e}
+.deckManage{
+  margin-top:14px;
+  padding-top:13px;
+  border-top:1px dashed #e5d4cc;
+}
+.deckStorage{
+  margin-bottom:9px;
+  padding:9px 11px;
+  border-radius:12px;
+  background:#faf3ee;
+  color:#725c51;
+  font-size:11px;
+  font-weight:800;
+}
+.deckSources{
+  display:grid;
+  gap:8px;
+}
+.deckSourceRow{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  justify-content:space-between;
+  padding:10px 11px;
+  border:1px solid #eaded7;
+  border-radius:14px;
+  background:#fff;
+}
+.deckSourceMain{
+  min-width:0;
+  display:grid;
+  gap:3px;
+}
+.deckSourceMain strong{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:12px;
+}
+.deckSourceMain span{
+  color:#7d6a60;
+  font-size:10px;
+}
+.deckSourceRow .danger{
+  flex:0 0 auto;
+  font-size:10px;
+  padding:7px 9px;
+}
+.deckBackupActions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin:12px 0 8px;
+}
+@media(max-width:520px){
+  .deckActions{display:grid;grid-template-columns:1fr 1fr}
+  .deckDraw{grid-column:1/-1;width:100%}
+  .deckActions .secondary{width:100%;padding-inline:10px}
+  .deckSourceRow{align-items:flex-start;flex-direction:column}
+  .deckSourceRow .danger{align-self:flex-end}
+}

@@ -17,6 +17,9 @@ const gifStatus=document.getElementById('labGifStatus');
 const gifResult=document.getElementById('labGifResult');
 const gifPreview=document.getElementById('labGifPreview');
 const gifDownload=document.getElementById('labGifDownload');
+const gifSourceWrap=document.getElementById('labGifSourceWrap');
+const gifSource=document.getElementById('labGifSource');
+const gifSourceNote=document.getElementById('labGifSourceNote');
 if(!stageEl||!resultCardEl||!collectionEl||!historyEl)return;
 
 const gifViewer=document.createElement('div');
@@ -135,6 +138,7 @@ const REVERSAL_MESSAGES=[
 let currentLab=null;
 let history=[];
 let gifUrl=null;
+let gifFileName='memory-roulette-history.gif';
 let dockTimer=null;
 let rareTimer=null;
 let miracleSequenceToken=0;
@@ -1392,10 +1396,47 @@ const closeMiracle=()=>{
 };
 miracleBack.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();closeMiracle();});
 
+function historySourceGroups(){
+  const map=new Map();
+  history.forEach((x,i)=>{
+    const key=x.deckMode?(x.sourceVideoId||('deck-'+(x.sourceName||'unknown'))):'single-source';
+    if(!map.has(key))map.set(key,{key,label:x.deckMode?(x.sourceName||'元動画'):'元動画',items:[]});
+    map.get(key).items.push({...x,historyIndex:i});
+  });
+  return Array.from(map.values());
+}
+function syncGifSourceChooser(){
+  if(!gifSourceWrap||!gifSource||!gifSourceNote)return;
+  const groups=historySourceGroups();
+  const deckHistory=history.some(x=>x.deckMode);
+  const previous=gifSource.value;
+  gifSource.innerHTML='';
+  groups.forEach(g=>{
+    const o=document.createElement('option');
+    o.value=g.key;
+    o.textContent=g.label+'（'+g.items.length+'枚）';
+    o.disabled=g.items.length<2;
+    gifSource.appendChild(o);
+  });
+  const eligible=groups.filter(g=>g.items.length>=2);
+  const keep=eligible.find(g=>g.key===previous);
+  if(keep)gifSource.value=keep.key;
+  else if(eligible[0])gifSource.value=eligible[0].key;
+  gifSourceWrap.style.display=deckHistory&&groups.length>1?'block':'none';
+  makeGifBtn.disabled=!eligible.length;
+  if(!history.length){
+    gifSourceNote.textContent='';
+  }else if(!eligible.length){
+    gifSourceNote.textContent='同じ元動画から2枚以上引くとGIFを作れます。';
+  }else if(deckHistory&&groups.length>1){
+    gifSourceNote.textContent='複数動画のコマは混ぜず、選んだ元動画の中だけを時間順に並べます。';
+  }else{
+    gifSourceNote.textContent='';
+  }
+}
 function renderHistory(){
   historyEl.innerHTML='';
   historyEmpty.style.display=history.length?'none':'block';
-  makeGifBtn.disabled=history.length<2;
   clearHistoryBtn.disabled=!history.length;
 
   history.forEach((x,i)=>{
@@ -1413,6 +1454,7 @@ function renderHistory(){
     card.addEventListener('click',()=>showHistoryEntry(x));
     historyEl.appendChild(card);
   });
+  syncGifSourceChooser();
 }
 function addHistory(item){
   const time=Number(activeCreation?.times?.[currentIndex]);
@@ -1508,6 +1550,7 @@ function clearGifResult(){
   gifResult.style.display='none';
   gifPreview.removeAttribute('src');
   gifDownload.removeAttribute('href');
+  gifFileName='memory-roulette-history.gif';
 }
 function showLabResult(){
   if(!activeCreation||running)return;
@@ -1661,7 +1704,7 @@ gifDownload.addEventListener('click',e=>{
 
   const a=document.createElement('a');
   a.href=gifUrl;
-  a.download='memory-roulette-history.gif';
+  a.download=gifFileName;
   a.style.display='none';
   document.body.appendChild(a);
   a.click();
@@ -1680,27 +1723,36 @@ makeGifBtn.addEventListener('click',async()=>{
   gifStatus.textContent='GIFを作っています… 0/'+history.length;
 
   try{
-    const isDeck=history.some(x=>x.deckMode);
-    const sorted=isDeck
-      ? history.slice().sort((a,b)=>a.drawnAt-b.drawnAt)
-      : history.slice().sort((a,b)=>a.time-b.time||a.drawnAt-b.drawnAt);
+    const groups=historySourceGroups();
+    const eligible=groups.filter(g=>g.items.length>=2);
+    let group=null;
+    if(history.some(x=>x.deckMode)){
+      group=eligible.find(g=>g.key===gifSource?.value)||eligible[0]||null;
+    }else{
+      group=eligible[0]||null;
+    }
+    if(!group)throw new Error('同じ元動画から2枚以上の履歴が必要です');
+    const sorted=group.items.slice().sort((a,b)=>a.time-b.time||a.drawnAt-b.drawnAt);
+    gifStatus.textContent='「'+group.label+'」を時間順に並べています… 0/'+sorted.length;
     const blob=await makeGif(sorted,(done,total)=>{
-      gifStatus.textContent='GIFを作っています… '+done+'/'+total;
+      gifStatus.textContent='「'+group.label+'」を時間順に並べています… '+done+'/'+total;
     });
     gifUrl=URL.createObjectURL(blob);
     gifPreview.src=gifUrl;
     gifDownload.href=gifUrl;
+    const safe=(group.label||'video').replace(/[\\/:*?"<>|]/g,'_').slice(0,48);
+    gifFileName='memory-roulette-'+safe+'.gif';
+    gifDownload.download=gifFileName;
     gifResult.style.display='block';
-    gifStatus.textContent=isDeck
-      ? '引いた順に'+sorted.length+'枚を並べてGIFを作りました。'
-      : '元動画の時間順に'+sorted.length+'枚を並べてGIFを作りました。';
+    gifStatus.textContent='「'+group.label+'」の'+sorted.length+'枚を、元動画の時間順に並べてGIFを作りました。';
   }catch(err){
     console.error(err);
     gifStatus.textContent='GIFを作れませんでした: '+err.message;
   }finally{
-    makeGifBtn.disabled=history.length<2;
+    syncGifSourceChooser();
   }
 });
+gifSource?.addEventListener('change',()=>clearGifResult());
 
 async function loadImage(src){
   return new Promise((resolve,reject)=>{

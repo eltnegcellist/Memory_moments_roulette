@@ -100,7 +100,7 @@ deluxeMode.addEventListener('change',()=>{
 });
 plainMode.addEventListener('change',syncDeluxeForMode);
 resetAppDataBtn?.addEventListener('click',()=>{
-  const ok=confirm('この端末の「思い出ルーレットおみくじ」の保存済みルーレット・今日の一枚・LAB設定・キャッシュをすべて削除します。元に戻せません。完全初期化しますか？');
+  const ok=confirm('この端末の「思い出ルーレットおみくじ」の思い出デッキ・保存済みルーレット・今日の一枚・LAB設定・キャッシュをすべて削除します。元に戻せません。完全初期化しますか？');
   if(!ok)return;
   try{sessionStorage.setItem('baby-roulette-reset-authorized','1');}catch(e){}
   location.href='./reset.html?from=lab&ts='+Date.now();
@@ -112,21 +112,14 @@ load();
 // the full production sequence can be tested exactly as users will see it.
 const previousStop=stopRun;
 stopRun=function(){
-  let restore=null;
   let forced=null;
-  if(activeCreation?.mode==='omikuji'&&activeCreation.fortunes){
+  if(activeCreation?.mode==='omikuji'){
     const mode=specialMode.value||'normal';
     if(mode==='miracle')forced='miracle';
     if(mode==='reversal')forced='reversal';
     if(mode==='slow')forced=Math.random()<.5?'miracle':'reversal';
-
-    if(forced==='reversal'){
-      restore=activeCreation.fortunes[currentIndex];
-      activeCreation.fortunes[currentIndex]='大凶';
-    }
   }
   window.__babyLabForcedSpecial=forced;
   previousStop();
-  if(restore!==null)activeCreation.fortunes[currentIndex]=restore;
 };
 })();

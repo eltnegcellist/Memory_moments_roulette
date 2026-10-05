@@ -78,7 +78,28 @@ startRun=function(withSound=true){
   }
 };
 celebrate=function(){bigOverlay.classList.remove('deluxe');originals.celebrate();};
-stopRun=function(){stopDrumRoll();running=false;clearInterval(timer);timer=null;stage.classList.remove('pulse');if(activeCreation.mode==='omikuji'){const f=activeCreation.fortunes[currentIndex]||'吉';fortuneBadge.style.display='block';fortuneBadge.textContent=(FORTUNE_ICONS[f]||'🎴')+' '+f;fortuneBadge.style.color=FORTUNE_COLORS[f]||'#700';resultCard.style.display='block';resultText.textContent=f;resultText.style.color=FORTUNE_COLORS[f]||'#700';message.textContent=pick(f);rouletteBadge.style.display='none';if(deluxe)reveal(f);else if(f==='大吉')celebrate();else playSound(f);photoAction.style.display='inline-flex';}else{rouletteBadge.style.display='block';rouletteBadge.textContent='この瞬間！';if(deluxe){stage.classList.add('result-reveal');stage.classList.remove('photo-focus');particles('吉');impact('吉');clearTimeout(photoFocusTimer);photoFocusTimer=setTimeout(focusPhoto,1500);}playSound('吉');}tapHint.textContent='もう一度タップすると再開します';};
+stopRun=function(){
+  stopDrumRoll();running=false;clearInterval(timer);timer=null;stage.classList.remove('pulse');
+  if(activeCreation?.deckMode&&typeof window.__memoryDeckResolveStop==='function'){
+    const resolved=window.__memoryDeckResolveStop(activeCreation,currentIndex);
+    if(Number.isInteger(resolved)&&resolved>=0&&resolved<activeCreation.frames.length){
+      currentIndex=resolved;
+      playImage.src=activeCreation.frames[currentIndex];
+    }
+  }
+  if(activeCreation.mode==='omikuji'){
+    const f=window.__babyLabForcedSpecial==='reversal'?'大凶':drawFortune();
+    if(Array.isArray(activeCreation.fortunes))activeCreation.fortunes[currentIndex]=f;
+    fortuneBadge.style.display='block';fortuneBadge.textContent=(FORTUNE_ICONS[f]||'🎴')+' '+f;fortuneBadge.style.color=FORTUNE_COLORS[f]||'#700';
+    resultCard.style.display='block';resultText.textContent=f;resultText.style.color=FORTUNE_COLORS[f]||'#700';message.textContent=pick(f);rouletteBadge.style.display='none';
+    if(deluxe)reveal(f);else if(f==='大吉')celebrate();else playSound(f);photoAction.style.display='inline-flex';
+  }else{
+    rouletteBadge.style.display='block';rouletteBadge.textContent='この瞬間！';
+    if(deluxe){stage.classList.add('result-reveal');stage.classList.remove('photo-focus');particles('吉');impact('吉');clearTimeout(photoFocusTimer);photoFocusTimer=setTimeout(focusPhoto,1500);}
+    playSound('吉');
+  }
+  tapHint.textContent='もう一度タップすると再開します';
+};
 
 const photoViewer=document.createElement('div');
 photoViewer.id='photoViewer';

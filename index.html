@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#fff7ef">
-<meta name="description" content="動画の中に隠れている、半目・変顔・妙なポーズまで。自分では選ばなかった一瞬を、ルーレットとおみくじで楽しむWebアプリです。">
+<meta name="description" content="笑顔も、半目も、動きの途中も。動画に隠れたさまざまな一瞬をためて、ルーレットとおみくじで楽しむWebアプリです。">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="ja_JP">
 <meta property="og:title" content="思い出ルーレットおみくじ">
@@ -21,9 +21,9 @@
 <link rel="apple-touch-icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2">
 <link rel="icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2" type="image/png">
 <title>思い出ルーレットおみくじ</title>
-<link rel="stylesheet" href="./style.css?v=1.0.0-concept3">
-<link rel="stylesheet" href="./deluxe.css?v=1.0.0-concept3">
-<link rel="stylesheet" href="./features.css?v=1.0.0-concept3">
+<link rel="stylesheet" href="./style.css?v=1.1.0-deck1">
+<link rel="stylesheet" href="./deluxe.css?v=1.1.0-deck1">
+<link rel="stylesheet" href="./features.css?v=1.1.0-deck1">
 <style>
 body:not(.show-score-details) .scoreChip,
 body:not(.show-score-details) .scoreDetails,
@@ -39,7 +39,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <header class="hero">
   <div class="heroMark" aria-hidden="true"><img src="./icons/memory-roulette-omikuji.png?v=memorybrand2" alt=""></div>
   <div class="heroText">
-    <div class="heroTopline"><span class="eyebrow">MEMORY MOMENTS</span><span class="versionBadge" id="labSettingsTrigger" title="5回タップでラボ設定">v1.0.0</span></div>
+    <div class="heroTopline"><span class="eyebrow">MEMORY MOMENTS</span><span class="versionBadge" id="labSettingsTrigger" title="5回タップでラボ設定">v1.1.0</span></div>
     <h1><span class="titlePart">思い出ルーレット</span><span class="titlePart">おみくじ</span></h1>
     <p class="heroCatch">動画に隠れた、いろいろな一瞬を。</p>
     <p class="lead">笑顔も、半目も、動きの途中も。写真として選ぶことのなかった一瞬まで、動画には残っています。そんなさまざまな一枚に偶然出会って楽しむアプリです。</p>
@@ -55,12 +55,34 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <span>アプリの使い方を見る</span>
   <span class="howtoBannerArrow" aria-hidden="true">›</span>
 </button>
-<section class="card">
-  <div class="step">CREATE</div>
-  <h2>新しい思い出ルーレットを作る</h2>
+<section id="deckCard" class="card deckCard">
+  <div class="step">MY DECK</div>
+  <h2>思い出おみくじデッキ</h2>
+  <p id="deckStatus" class="deckStatus">デッキを読み込んでいます…</p>
+  <div class="deckActions">
+    <button id="deckDrawBtn" class="primary deckDraw" type="button" disabled>🎴 おみくじを引く</button>
+    <button id="deckAddBtn" class="secondary" type="button">＋ 思い出を追加</button>
+    <button id="deckManageBtn" class="secondary" type="button">デッキを管理</button>
+  </div>
+  <div id="deckNotice" class="note deckNotice"></div>
+  <div id="deckManage" class="deckManage" hidden>
+    <div id="deckStorage" class="deckStorage">保存容量を確認しています…</div>
+    <div id="deckSources" class="deckSources"><div class="note">追加した動画はここに表示されます。</div></div>
+    <div class="deckBackupActions">
+      <button id="deckBackupBtn" class="secondary" type="button">デッキを書き出す</button>
+      <button id="deckRestoreBtn" class="secondary" type="button">デッキを復元する</button>
+      <button id="deckClearBtn" class="danger" type="button">デッキをすべて削除</button>
+      <input id="deckRestoreInput" type="file" accept="application/json,.json" hidden>
+    </div>
+    <p class="note">元動画そのものはデッキに保存しません。候補の一瞬と、元動画名・動画内の時刻などの情報を端末内に保存します。継続利用する場合はホーム画面への追加と、定期的なデッキの書き出しがおすすめです。</p>
+  </div>
+</section>
+<section id="createSection" class="card">
+  <div class="step">ADD MOMENTS</div>
+  <h2>思い出動画を追加する</h2>
   <div class="filebox">
-    <input id="fileInput" type="file" accept="video/*">
-    <div class="note">動画から、きれいな場面だけでなく「普段なら写真にしない一瞬」も含めて候補を探します。処理はブラウザ内だけで行い、元動画は外部へ送信しません。</div>
+    <input id="fileInput" type="file" accept="video/*" multiple>
+    <div class="note">1本でも複数本でも選べます。動画の中に残ったさまざまな一瞬を抽出して、思い出デッキに追加します。処理はブラウザ内だけで行い、元動画は外部へ送信しません。</div>
   </div>
   <div id="progressWrap"><div class="progress"><div id="progressBar"></div></div><div id="progressText">準備中...</div></div>
   <details class="opt" id="detailOptions">
@@ -68,12 +90,12 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
     <div class="row" style="margin-bottom:10px">
       <label for="frameCount">抽出枚数</label>
       <select id="frameCount">
-        <option value="auto" selected>おまかせ（12〜28枚）</option>
-        <option value="8">8枚</option><option value="10">10枚</option><option value="12">12枚</option><option value="14">14枚</option><option value="16">16枚</option><option value="18">18枚</option><option value="20">20枚</option><option value="24">24枚</option><option value="28">28枚</option><option value="32">32枚</option>
+        <option value="auto" selected>おまかせ（動画の長さに応じて8〜15枚）</option>
+        <option value="8">8枚</option><option value="12">12枚</option><option value="15">15枚</option>
       </select>
     </div>
     <label class="toggle"><span><b style="display:block;margin-bottom:3px">通常ルーレットにする</b><span class="note">ONにすると、運勢なしの思い出ルーレットとして作ります。豪華演出も自動でOFFになります。</span></span><input id="plainMode" type="checkbox"></label>
-    <label class="toggle" style="margin-top:10px"><span><b style="display:block;margin-bottom:3px">運勢の割り当てを表示する</b><span class="note">ONにすると、プレビュー写真ごとの「大吉・吉・凶」などを先に確認できます。通常は隠したまま遊べます。</span></span><input id="showFortunes" type="checkbox"></label>
+    <label class="toggle" style="margin-top:10px"><span><b style="display:block;margin-bottom:3px">運勢サンプルを表示する</b><span class="note">候補確認用のサンプルです。実際の運勢は、ルーレットを止めたときに写真とは独立して抽選します。</span></span><input id="showFortunes" type="checkbox"></label>
 
     <section id="labSettingsInline" class="labSettingsInline" hidden>
       <div class="labSettingsInlineHead">
@@ -101,7 +123,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
         </select>
       </label>
       <div class="labSettingsItem labResetItem">
-        <span><b>この端末のアプリデータを完全初期化</b><span class="note">保存済みルーレット・今日の一枚・LAB設定・キャッシュをこの端末から削除します。元に戻せません。</span></span>
+        <span><b>この端末のアプリデータを完全初期化</b><span class="note">思い出デッキ・保存済みルーレット・今日の一枚・LAB設定・キャッシュをこの端末から削除します。元に戻せません。</span></span>
         <button id="labResetAppData" type="button">完全初期化</button>
       </div>
     </section>
@@ -115,7 +137,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <div class="row" style="margin-top:13px"><button id="playBtn" class="primary">この内容で遊ぶ</button><button id="reextractBtn" class="secondary">もう一度抽出する</button></div>
   <div class="note" id="previewNote" style="margin-top:8px">保存名は自動で付けます。必要なら保存後に変更できます。</div>
 </section>
-<section class="card"><div class="step">SAVED</div><h2>保存したルーレット</h2><div id="library"><div class="note">まだ保存されていません。</div></div></section>
+<section class="card"><div class="step">LEGACY SAVED</div><h2>これまでの保存ルーレット</h2><div id="library"><div class="note">まだ保存されていません。</div></div></section>
 <section id="playSection" class="card">
   <div class="step">PLAY</div>
   <div class="playShell"><div id="stage"><img id="playImage" alt=""><div id="fortuneBadge"></div><div id="resultCard"><div id="resultHead">きょうの運勢</div><div id="resultText"></div><div id="message"></div></div><div id="rouletteBadge">タップでストップ</div></div></div>
@@ -124,7 +146,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <section id="labHistorySection" class="card labHistoryCard">
   <div class="step">HISTORY / GIF</div>
   <h2>引いた写真の履歴</h2>
-  <p class="note">止まった写真を自動でためます。GIFを作るときは、引いた順ではなく元動画の時間順に並べ直します。</p>
+  <p class="note">止まった写真を自動でためます。1本の動画から遊んだ場合は元動画の時間順、思い出デッキから遊んだ場合は引いた順でGIFにできます。</p>
   <div id="labHistoryEmpty" class="note">まだ履歴はありません。</div>
   <div id="labHistory"></div>
   <div class="labGifActions">
@@ -154,20 +176,20 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
       </div>
       <button id="howtoClose" class="howtoClose" type="button" aria-label="使い方を閉じる">×</button>
     </div>
-    <p class="howtoLead">このアプリは「一番いい写真」を探すためのものではありません。動画の中に隠れた、少し変な一瞬や意外な表情まで含めて、偶然止まった一枚を楽しみます。動画はブラウザ内で処理され、元動画を外部へ送信しません。</p>
+    <p class="howtoLead">このアプリは「一番いい写真」を探すためのものではありません。笑顔も、半目も、動きの途中も、動画に残ったさまざまな一瞬をデッキにため、偶然出会うことを楽しみます。動画はブラウザ内で処理され、元動画を外部へ送信しません。</p>
 
     <div class="howtoSteps">
       
 <article class="howtoStep">
         <div class="howtoNum">1</div>
         <div class="howtoCopy">
-          <h3>動画を選ぶ</h3>
-          <p>「ファイルを選択」から動画を選びます。おまかせなら、変化のある場面を中心に、普段なら写真として選ばない一瞬も含めて12〜28枚ほど切り出します。</p>
+          <h3>思い出動画を追加する</h3>
+          <p>動画は1本でも複数本でも選べます。それぞれの動画から8〜15個ほどの一瞬を切り出し、端末内の「思い出おみくじデッキ」に追加します。</p>
         </div>
         <div class="howtoMock mockUpload" aria-hidden="true">
-          <div class="mockLabel">CREATE</div>
-          <div class="mockTitle">新しい思い出ルーレット</div>
-          <div class="mockFile">📹 動画を選択</div>
+          <div class="mockLabel">ADD MOMENTS</div>
+          <div class="mockTitle">思い出動画を追加</div>
+          <div class="mockFile">📹 動画を複数選択</div>
           <div class="mockNote">元動画は外部へ送信しません</div>
         </div>
       </article>
@@ -175,23 +197,23 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
       <article class="howtoStep">
         <div class="howtoNum">2</div>
         <div class="howtoCopy">
-          <h3>シーンを確認する</h3>
-          <p>切り出されたさまざまな一瞬を確認します。笑顔も、半目も、動きの途中も、それぞれ動画に残っていた一コマです。そのまま遊ぶか、「もう一度抽出する」で別の一瞬を探せます。</p>
+          <h3>デッキにためる</h3>
+          <p>切り出した一瞬は端末内に保存されます。次にアプリを開いたときは、動画を選び直さなくてもデッキからすぐに遊べます。</p>
         </div>
         <div class="howtoMock mockPreview" aria-hidden="true">
-          <div class="mockLabel">PREVIEW</div>
+          <div class="mockLabel">MY DECK</div>
           <div class="mockThumbGrid">
             <i>😊</i><i>😮</i><i>🙂</i><i>😴</i><i>😆</i><i>🥺</i>
           </div>
-          <div class="mockPrimary">この内容で遊ぶ</div>
+          <div class="mockPrimary">🎴 おみくじを引く</div>
         </div>
       </article>
 
       <article class="howtoStep">
         <div class="howtoNum">3</div>
         <div class="howtoCopy">
-          <h3>タップしてストップ</h3>
-          <p>いろいろな一瞬が次々に切り替わります。好きなタイミングでタップしてストップ。自分なら選ばなかった一枚に止まる偶然も、この遊びの一部です。</p>
+          <h3>デッキから引いてストップ</h3>
+          <p>複数の動画から集めた一瞬が次々に切り替わります。好きなタイミングでタップしてストップ。同じ一瞬は、原則としてデッキを一巡するまで結果として再登場しません。</p>
         </div>
         <div class="howtoMock mockPlay">
           <div class="mockLabel">PLAY DEMO</div>
@@ -240,8 +262,8 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
         <div class="howtoFeature"><b>🎯 通常ルーレット</b><span>運勢を付けず、純粋に「どの瞬間で止まるか」だけを楽しみたいときに使えます。</span></div>
         <div class="howtoFeature featureSave"><b>🖼 今日の一枚</b><span>気に入った停止写真をアプリ内に残せます。あとから「開く」で大きく見返せます。</span></div>
         <div class="howtoFeature featureSave"><b>↓ 画像をダウンロード</b><span>「今日の一枚」に残した写真は、コレクションから端末へ画像ファイルとして保存できます。</span></div>
-        <div class="howtoFeature"><b>🎞 履歴からGIF</b><span>止めた写真を自動でため、元動画の時間順に並べ直してGIFにできます。シーンの変化を短い動きとして残せます。</span></div>
-        <div class="howtoFeature"><b>🎬 特別演出をムービー保存</b><span>奇跡のリプレイなどが出たときは、その演出をムービーとして保存できます。</span></div>
+        <div class="howtoFeature"><b>🎞 履歴からGIF</b><span>止めた写真を自動でためます。1本の動画なら時間順、デッキなら引いた順でGIFにできます。</span></div>
+        <div class="howtoFeature"><b>💾 デッキのバックアップ</b><span>育てたデッキはファイルに書き出して復元できます。機種変更やブラウザデータ消去への備えに使えます。</span></div>
       </div>
     </section>
 
@@ -252,10 +274,11 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <video id="video" playsinline muted preload="metadata" style="display:none"></video><canvas id="captureCanvas" style="display:none"></canvas><canvas id="smallCanvas" width="28" height="28" style="display:none"></canvas>
 </div>
 <div id="bigOverlay"><div id="bigText">大吉！</div></div>
-<script src="./app.js?v=1.0.0-concept3" defer></script>
-<script src="./deluxe.js?v=1.0.0-concept3" defer></script>
-<script src="./features.js?v=1.0.0-concept3" defer></script>
-<script src="./hidden-settings.js?v=1.0.0-concept3" defer></script>
+<script src="./app.js?v=1.1.0-deck1" defer></script>
+<script src="./deck.js?v=1.1.0-deck1" defer></script>
+<script src="./deluxe.js?v=1.1.0-deck1" defer></script>
+<script src="./features.js?v=1.1.0-deck1" defer></script>
+<script src="./hidden-settings.js?v=1.1.0-deck1" defer></script>
 <script>
 (()=>{
   const scoreBox=document.getElementById('showScores');

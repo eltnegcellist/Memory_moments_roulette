@@ -1407,7 +1407,9 @@ function renderHistory(){
     card.innerHTML='<img alt=""><div><strong></strong><span></span><em>結果を見る</em></div>';
     card.querySelector('img').src=x.image;
     card.querySelector('strong').textContent=(i+1)+'回目 ・ '+historyLabel;
-    card.querySelector('span').textContent='元動画 '+x.time.toFixed(1)+'秒';
+    card.querySelector('span').textContent=x.deckMode
+      ? (x.sourceName||'動画')+' ・ '+x.time.toFixed(1)+'秒'
+      : '元動画 '+x.time.toFixed(1)+'秒';
     card.addEventListener('click',()=>showHistoryEntry(x));
     historyEl.appendChild(card);
   });
@@ -1425,6 +1427,9 @@ function addHistory(item){
     special:item.special||null,
     plain:!!item.plain,
     message:messageEl?.textContent||'',
+    deckMode:!!activeCreation?.deckMode,
+    sourceVideoId:activeCreation?.deckSourceIds?.[currentIndex]||null,
+    sourceName:activeCreation?.deckSourceNames?.[currentIndex]||null,
     drawnAt:Date.now()
   });
   if(history.length>40)history.shift();
@@ -1675,7 +1680,10 @@ makeGifBtn.addEventListener('click',async()=>{
   gifStatus.textContent='GIFを作っています… 0/'+history.length;
 
   try{
-    const sorted=history.slice().sort((a,b)=>a.time-b.time||a.drawnAt-b.drawnAt);
+    const isDeck=history.some(x=>x.deckMode);
+    const sorted=isDeck
+      ? history.slice().sort((a,b)=>a.drawnAt-b.drawnAt)
+      : history.slice().sort((a,b)=>a.time-b.time||a.drawnAt-b.drawnAt);
     const blob=await makeGif(sorted,(done,total)=>{
       gifStatus.textContent='GIFを作っています… '+done+'/'+total;
     });
@@ -1683,7 +1691,9 @@ makeGifBtn.addEventListener('click',async()=>{
     gifPreview.src=gifUrl;
     gifDownload.href=gifUrl;
     gifResult.style.display='block';
-    gifStatus.textContent='元動画の時間順に'+sorted.length+'枚を並べてGIFを作りました。';
+    gifStatus.textContent=isDeck
+      ? '引いた順に'+sorted.length+'枚を並べてGIFを作りました。'
+      : '元動画の時間順に'+sorted.length+'枚を並べてGIFを作りました。';
   }catch(err){
     console.error(err);
     gifStatus.textContent='GIFを作れませんでした: '+err.message;

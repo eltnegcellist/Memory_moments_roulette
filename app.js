@@ -1,9 +1,6 @@
 const FORTUNE_ICONS={"大吉":"🌟","中吉":"✨","小吉":"🍀","吉":"🎈","末吉":"🌸","凶":"☁️","大凶":"⚡"};
 const FORTUNE_COLORS={"大吉":"#b40000","中吉":"#b85d00","小吉":"#28752c","吉":"#754600","末吉":"#8b5f00","凶":"#56616c","大凶":"#4b2b7f"};
 const FORTUNE_MESSAGES={"大吉":"今日は特別ないい日。笑顔で過ごすとさらに運気アップ！","中吉":"いい流れの日。落ち着いて進めばいいことがありそう。","小吉":"小さな幸せを見つけられる日。やさしい気持ちで。","吉":"安定したいい日。いつも通りがいちばんの近道です。","末吉":"これからじわっと上向き。あせらずゆっくりいこう。","凶":"今日は慎重めで。無理せず、のんびりが吉です。","大凶":"ひと休みの日。深呼吸して、気楽にいきましょう。"};
-const EXTRA_FORTUNE_SEQUENCE=["吉","小吉","中吉","末吉","吉","小吉","中吉","吉","末吉","吉","凶","小吉","中吉","吉","小吉","末吉","吉","中吉","大吉","吉","小吉","凶","吉","末吉"];
-const BASE_FORTUNES=["大吉","吉","中吉","小吉","末吉","凶","大凶"];
-const FORTUNE_RANK={"大吉":6,"吉":5,"中吉":4,"小吉":3,"末吉":2,"凶":1,"大凶":0};
 const FORTUNE_WEIGHTS=[["大吉",10],["吉",20],["中吉",20],["小吉",20],["末吉",15],["凶",10],["大凶",5]];
 function drawFortune(){
   const total=FORTUNE_WEIGHTS.reduce((s,x)=>s+x[1],0);
@@ -21,7 +18,6 @@ function sourceKeyFor(file){return file?`${file.name}|${file.size}|${file.lastMo
 function modeName(){return plainModeEl.checked?"roulette":"omikuji";}
 function autoTitle(mode){const d=new Date(); const pad=n=>String(n).padStart(2,'0'); return mode==='omikuji' ? `思い出おみくじ ${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}` : `思い出ルーレット ${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;}
 function shuffle(arr){const a=arr.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a;}
-function buildFortunePool(count){ const forts=BASE_FORTUNES.slice(); let i=0; while(forts.length<count){ forts.push(EXTRA_FORTUNE_SEQUENCE[i % EXTRA_FORTUNE_SEQUENCE.length]); i++; } return forts.slice(0,count); }
 function manualTargetCount(){const v=frameCountEl.value; return v==='auto'?null:Number(v);}
 function autoTargetCount(duration,distinctCount,totalCount){ const choices=[12,14,16,18,20,24,28]; let desired=18; if(duration<4) desired=12; else if(duration<7) desired=14; else if(duration<12) desired=16; else if(duration<20) desired=18; else if(duration<35) desired=20; else if(duration<60) desired=24; else desired=28; const diversity=totalCount>0?distinctCount/totalCount:0.5; if(diversity<0.22) desired-=4; else if(diversity<0.35) desired-=2; else if(diversity>0.68) desired+=2; desired=Math.max(12,Math.min(28,desired)); return choices.reduce((best,x)=>Math.abs(x-desired)<Math.abs(best-desired)?x:best,choices[0]); }
 function updatePreviewMeta(){ const mode=modeName(); previewTitle.textContent=mode==='omikuji' ? '自動で作成したおみくじ' : '自動で作成した思い出ルーレット'; previewNote.textContent=mode==='omikuji' ? '保存名は自動で付けます。必要なら保存後に変更できます。特徴度は写真の良し悪しを決める点数ではなく、候補どうしの違いを見るための補助値です。' : '保存名は自動で付けます。必要なら保存後に変更できます。'; }
@@ -87,14 +83,6 @@ analysisStatus.className='note analysisStatus ok';
 analysisStatus.textContent='特徴度はAIを使わず、動画内の相対差から算出しています。くっきり45%・珍しさ35%・前後からの変化20%。写真の良し悪しを採点する値ではありません。';
 }
 return details;
-}
-function assignFortunesByScores(frames,scores){
-const count=frames.length;
-const pool=buildFortunePool(count).sort((a,b)=>FORTUNE_RANK[b]-FORTUNE_RANK[a]);
-const indexed=frames.map((f,i)=>({i,score:scores[i]??0})).sort((a,b)=>b.score-a.score);
-const fortunes=Array(count).fill('吉');
-for(let rank=0;rank<count;rank++) fortunes[indexed[rank].i]=pool[rank];
-return fortunes;
 }
 async function assignFortunes(frames){
 selectedAppealDetails=computeAppealDetails(frames);

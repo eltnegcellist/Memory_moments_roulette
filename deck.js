@@ -104,6 +104,19 @@ function waitUntilVisible(){
     document.addEventListener('visibilitychange',on);
   });
 }
+async function captureDeckImage(time){
+  await waitUntilVisible();
+  await seekTo(time);
+  const maxEdge=1280;
+  const vw=Math.max(1,video.videoWidth||1),vh=Math.max(1,video.videoHeight||1);
+  const scale=Math.min(1,maxEdge/Math.max(vw,vh));
+  captureCanvas.width=Math.max(2,Math.round(vw*scale));
+  captureCanvas.height=Math.max(2,Math.round(vh*scale));
+  ctx.drawImage(video,0,0,captureCanvas.width,captureCanvas.height);
+  let dataUrl=captureCanvas.toDataURL('image/webp',.82);
+  if(!dataUrl.startsWith('data:image/webp'))dataUrl=captureCanvas.toDataURL('image/jpeg',.82);
+  return {dataUrl,width:captureCanvas.width,height:captureCanvas.height};
+}
 async function stats(){
   const [sources,frames]=await Promise.all([getAll(SOURCE_STORE),getAll(FRAME_STORE)]);
   const bytes=frames.reduce((s,f)=>s+(f.imageSize||approxDataUrlBytes(f.imageData)),0);
@@ -230,12 +243,13 @@ async function extractOne(file,overallIndex,total){
   const frames=[];
   let bytes=before.bytes;
   for(let i=0;i<picked.length;i++){
-    const p=picked[i],imageSize=approxDataUrlBytes(p.dataUrl);
+    progressText.textContent='動画 '+overallIndex+' / '+total+' ・ 保存用の一瞬を準備しています '+(i+1)+' / '+picked.length;
+    const p=picked[i],stored=await captureDeckImage(p.time),imageSize=approxDataUrlBytes(stored.dataUrl);
     if(bytes+imageSize>MAX_BYTES)break;
     const d=details[i]||{};
     frames.push({
       id:sourceId+'-'+String(i).padStart(3,'0'),sourceVideoId:sourceId,timestamp:p.time,
-      imageData:p.dataUrl,width:captureCanvas.width,height:captureCanvas.height,imageSize,createdAt:Date.now(),
+      imageData:stored.dataUrl,width:stored.width,height:stored.height,imageSize,createdAt:Date.now(),
       clarity:d.clarityScore??null,rarity:d.rarityScore??null,change:d.changeScore??null,featureScore:d.score??null
     });
     bytes+=imageSize;
@@ -275,7 +289,17 @@ window.__memoryDeckHandleFiles=async files=>{
     if(duplicates)msg+=' '+duplicates+'本は追加済みのためスキップしました。';
     if(failed)msg+=' '+failed+'本は処理できませんでした。';
     progressText.textContent=msg;
-    deckNotice.textContent=errors.length?errors.join(' / '):msg;
+    const standalone=window.matchMedia?.('(display-mode: standalone)')?.matches||navigator.standalone===true;
+    let notice=errors.length?errors.join(' / '):msg;
+    if(added&&!standalone){
+      try{
+        if(!localStorage.getItem('memory-deck-home-hint-v1')){
+          notice+=' 継続して使う場合は、ホーム画面への追加とデッキのバックアップがおすすめです。';
+          localStorage.setItem('memory-deck-home-hint-v1','1');
+        }
+      }catch(e){}
+    }
+    deckNotice.textContent=notice;
     deckNotice.className='note deckNotice '+(failed?'warn':'ok');
     await renderDeck();
     deckCard.scrollIntoView({behavior:'smooth',block:'start'});
@@ -394,7 +418,17 @@ async function restoreDeck(file){
     }
     tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);
   });
-  await metaPut('drawState',{universeIds:[],remainingIds:[],cycle:1});
+  const after=await getAll(FRAME_STORE);
+  const afterIds=new Set(after.map(x=>x.id));
+  if(cur.count===0&&payload.drawState){
+    await metaPut('drawState',{
+      universeIds:(payload.drawState.universeIds||[]).filter(id=>afterIds.has(id)),
+      remainingIds:(payload.drawState.remainingIds||[]).filter(id=>afterIds.has(id)),
+      cycle:Number(payload.drawState.cycle)||1
+    });
+  }else{
+    await metaPut('drawState',{universeIds:[],remainingIds:[],cycle:1});
+  }
   await requestPersistence();
   await renderDeck();
   deckNotice.textContent=added+'個の一瞬をバックアップから復元しました。';

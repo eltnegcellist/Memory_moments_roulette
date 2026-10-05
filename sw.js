@@ -1,4 +1,4 @@
-const CACHE='baby-roulette-pages-v1.1.0-deck1';
+const CACHE='baby-roulette-pages-v1.1.0-deck2';
 const ASSETS=['./','./index.html','./style.css?v=1.1.0-deck1','./deluxe.css?v=1.1.0-deck1','./features.css?v=1.1.0-deck1','./app.js?v=1.1.0-deck1','./deck.js?v=1.1.0-deck1','./deluxe.js?v=1.1.0-deck1','./features.js?v=1.1.0-deck1','./hidden-settings.js?v=1.1.0-deck1','./manifest.webmanifest?v=memorybrand2','./icons/memory-roulette-omikuji.png?v=memorybrand2'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));

@@ -162,6 +162,8 @@ seq.forEach(([f,d,w],i)=>tone(f,d,w,name==='大吉'?.12:.08,i%2?'sine':'triangle
 function updatePlayStageAspect(x){
 stage.classList.remove('stageLandscape');
 stage.style.removeProperty('aspect-ratio');
+if(x?.deckPreferPortrait)return;
+if(x?.deckMode&&x?.deckAllLandscape===false)return;
 const src=x?.frames?.[0];
 if(!src)return;
 const probe=new Image();

@@ -21,9 +21,9 @@
 <link rel="apple-touch-icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2">
 <link rel="icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2" type="image/png">
 <title>思い出ルーレットおみくじ</title>
-<link rel="stylesheet" href="./style.css?v=1.1.0-deck4">
-<link rel="stylesheet" href="./deluxe.css?v=1.1.0-deck4">
-<link rel="stylesheet" href="./features.css?v=1.1.0-deck4">
+<link rel="stylesheet" href="./style.css?v=1.1.0-deck5">
+<link rel="stylesheet" href="./deluxe.css?v=1.1.0-deck5">
+<link rel="stylesheet" href="./features.css?v=1.1.0-deck5">
 <style>
 body:not(.show-score-details) .scoreChip,
 body:not(.show-score-details) .scoreDetails,
@@ -55,34 +55,12 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <span>アプリの使い方を見る</span>
   <span class="howtoBannerArrow" aria-hidden="true">›</span>
 </button>
-<section id="deckCard" class="card deckCard">
-  <div class="step">MY DECK</div>
-  <h2>思い出おみくじデッキ</h2>
-  <p id="deckStatus" class="deckStatus">デッキを読み込んでいます…</p>
-  <div class="deckActions">
-    <button id="deckDrawBtn" class="primary deckDraw" type="button" disabled>🎴 おみくじを引く</button>
-    <button id="deckAddBtn" class="secondary" type="button">＋ 思い出を追加</button>
-    <button id="deckManageBtn" class="secondary" type="button">デッキを管理</button>
-  </div>
-  <div id="deckNotice" class="note deckNotice"></div>
-  <div id="deckManage" class="deckManage" hidden>
-    <div id="deckStorage" class="deckStorage">保存容量を確認しています…</div>
-    <div id="deckSources" class="deckSources"><div class="note">追加した動画はここに表示されます。</div></div>
-    <div class="deckBackupActions">
-      <button id="deckBackupBtn" class="secondary" type="button">デッキを書き出す</button>
-      <button id="deckRestoreBtn" class="secondary" type="button">デッキを復元する</button>
-      <button id="deckClearBtn" class="danger" type="button">デッキをすべて削除</button>
-      <input id="deckRestoreInput" type="file" accept="application/json,.json" hidden>
-    </div>
-    <p class="note">元動画そのものは保存しません。候補画像に加えて、「奇跡の一枚」用に長辺420px・12コマの短い連続コマを端末内へ保存します。継続利用する場合はホーム画面への追加と、定期的なデッキの書き出しがおすすめです。</p>
-  </div>
-</section>
 <section id="createSection" class="card">
-  <div class="step">ADD MOMENTS</div>
-  <h2>思い出動画を追加する</h2>
+  <div class="step">1 · ADD MOMENTS</div>
+  <h2>新しい動画からルーレットを作る</h2>
   <div class="filebox">
     <input id="fileInput" type="file" accept="video/*" multiple>
-    <div class="note">1本でも複数本でも選べます。動画の中に残ったさまざまな一瞬を抽出して、思い出デッキに追加します。処理はブラウザ内だけで行い、元動画は外部へ送信しません。</div>
+    <div class="note">1本でも複数本でも選べます。今回アップロードした動画だけを、次のルーレット候補として自動で選びます。以前の動画は、下の動画選択で明示的に選んだときだけ混ざります。処理はブラウザ内だけで行い、元動画は外部へ送信しません。</div>
   </div>
   <div id="progressWrap"><div class="progress"><div id="progressBar"></div></div><div id="progressText">準備中...</div></div>
   <details class="opt" id="detailOptions">
@@ -130,6 +108,29 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 
     <div id="labSettingsHint" class="labSettingsHint">LAB設定：画面右上のバージョン表示を5回タップで表示・非表示</div>
   </details>
+</section>
+<section id="deckCard" class="card deckCard">
+  <div class="step">2 · SELECT</div>
+  <h2>ルーレットに使う動画を選ぶ</h2>
+  <p id="deckStatus" class="deckStatus">保存した動画を読み込んでいます…</p>
+  <div id="deckPicker" class="deckPicker"><div class="note">動画を読み込んでいます…</div></div>
+  <div class="deckActions">
+    <button id="deckDrawBtn" class="primary deckDraw" type="button" disabled>🎴 選んだ動画でおみくじを引く</button>
+    <button id="deckAddBtn" class="secondary" type="button">＋ 別の動画を追加</button>
+    <button id="deckManageBtn" class="secondary" type="button">保存データを管理</button>
+  </div>
+  <div id="deckNotice" class="note deckNotice"></div>
+  <div id="deckManage" class="deckManage" hidden>
+    <div id="deckStorage" class="deckStorage">保存容量を確認しています…</div>
+    <div id="deckSources" class="deckSources"><div class="note">追加した動画はここに表示されます。</div></div>
+    <div class="deckBackupActions">
+      <button id="deckBackupBtn" class="secondary" type="button">デッキを書き出す</button>
+      <button id="deckRestoreBtn" class="secondary" type="button">デッキを復元する</button>
+      <button id="deckClearBtn" class="danger" type="button">デッキをすべて削除</button>
+      <input id="deckRestoreInput" type="file" accept="application/json,.json" hidden>
+    </div>
+    <p class="note">元動画そのものは保存しません。候補画像に加えて、「奇跡の一枚」用に長辺420px・12コマの短い連続コマを端末内へ保存します。継続利用する場合はホーム画面への追加と、定期的なデッキの書き出しがおすすめです。</p>
+  </div>
 </section>
 <section id="previewSection" class="card" style="display:none">
   <div class="step">PREVIEW</div><h2 id="previewTitle">自動で作成したおみくじ</h2>
@@ -279,11 +280,11 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <video id="video" playsinline muted preload="metadata" style="display:none"></video><canvas id="captureCanvas" style="display:none"></canvas><canvas id="smallCanvas" width="28" height="28" style="display:none"></canvas>
 </div>
 <div id="bigOverlay"><div id="bigText">大吉！</div></div>
-<script src="./app.js?v=1.1.0-deck4" defer></script>
-<script src="./deck.js?v=1.1.0-deck4" defer></script>
-<script src="./deluxe.js?v=1.1.0-deck4" defer></script>
-<script src="./features.js?v=1.1.0-deck4" defer></script>
-<script src="./hidden-settings.js?v=1.1.0-deck4" defer></script>
+<script src="./app.js?v=1.1.0-deck5" defer></script>
+<script src="./deck.js?v=1.1.0-deck5" defer></script>
+<script src="./deluxe.js?v=1.1.0-deck5" defer></script>
+<script src="./features.js?v=1.1.0-deck5" defer></script>
+<script src="./hidden-settings.js?v=1.1.0-deck5" defer></script>
 <script>
 (()=>{
   const scoreBox=document.getElementById('showScores');

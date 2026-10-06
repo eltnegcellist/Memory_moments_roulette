@@ -162,6 +162,10 @@ seq.forEach(([f,d,w],i)=>tone(f,d,w,name==='大吉'?.12:.08,i%2?'sine':'triangle
 function updatePlayStageAspect(x){
 stage.classList.remove('stageLandscape');
 stage.style.removeProperty('aspect-ratio');
+// A mixed deck must never use a landscape stage when it contains portrait frames.
+// Portrait is intentionally preferred so vertical memories stay large and readable.
+if(x?.deckPreferPortrait)return;
+if(x?.deckMode&&x?.deckAllLandscape===false)return;
 const src=x?.frames?.[0];
 if(!src)return;
 const probe=new Image();

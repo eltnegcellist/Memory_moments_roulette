@@ -21,9 +21,9 @@
 <link rel="apple-touch-icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2">
 <link rel="icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2" type="image/png">
 <title>思い出ルーレットおみくじ</title>
-<link rel="stylesheet" href="./style.css?v=1.1.0-deck6">
-<link rel="stylesheet" href="./deluxe.css?v=1.1.0-deck6">
-<link rel="stylesheet" href="./features.css?v=1.1.0-deck6">
+<link rel="stylesheet" href="./style.css?v=1.1.0-nav1">
+<link rel="stylesheet" href="./deluxe.css?v=1.1.0-nav1">
+<link rel="stylesheet" href="./features.css?v=1.1.0-nav1">
 <style>
 body:not(.show-score-details) .scoreChip,
 body:not(.show-score-details) .scoreDetails,
@@ -36,7 +36,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 </head>
 <body>
 <div class="wrap">
-<header class="hero">
+<header class="hero" data-app-view="home">
   <div class="heroMark" aria-hidden="true"><img src="./icons/memory-roulette-omikuji.png?v=memorybrand2" alt=""></div>
   <div class="heroText">
     <div class="heroTopline"><span class="eyebrow">MEMORY MOMENTS</span><span class="versionBadge" id="labSettingsTrigger" title="5回タップでラボ設定">v1.1.0</span></div>
@@ -45,22 +45,44 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
     <p class="lead">笑顔も、半目も、動きの途中も。写真として選ぶことのなかった一瞬まで、動画には残っています。そんなさまざまな一枚に偶然出会って楽しむアプリです。</p>
   </div>
 </header>
-<section class="conceptCard" aria-label="このアプリのコンセプト">
+<section id="homeActions" class="homeActions" data-app-view="home" aria-label="ルーレットの作り方を選ぶ">
+  <div class="homeChoiceGrid">
+    <button id="homeNewVideoBtn" class="homeChoice homeChoicePrimary" type="button">
+      <span class="homeChoiceIcon" aria-hidden="true">＋</span>
+      <span class="homeChoiceCopy"><strong>新しい動画から作る</strong><small>今選ぶ動画だけですぐにルーレット</small></span>
+      <span class="homeChoiceArrow" aria-hidden="true">›</span>
+    </button>
+    <button id="homePastVideoBtn" class="homeChoice" type="button" data-route="library">
+      <span class="homeChoiceIcon" aria-hidden="true">▦</span>
+      <span class="homeChoiceCopy"><strong>過去の動画から作る</strong><small id="homeSavedVideoCount">保存した動画を選ぶ</small></span>
+      <span class="homeChoiceArrow" aria-hidden="true">›</span>
+    </button>
+  </div>
+  <nav class="homeShortcuts" aria-label="保存した内容">
+    <button type="button" data-route="favorites"><span aria-hidden="true">♡</span><strong>お気に入り</strong><small id="homeFavoriteCount">保存した写真</small></button>
+    <button type="button" data-route="history"><span aria-hidden="true">↺</span><strong>履歴</strong><small id="homeHistoryCount">今回の結果</small></button>
+    <button type="button" data-route="settings"><span aria-hidden="true">⚙</span><strong>設定</strong><small>保存データの管理</small></button>
+  </nav>
+</section>
+<section class="conceptCard" data-app-view="home" aria-label="このアプリのコンセプト">
   <span class="conceptLabel">このアプリが探すもの</span>
   <strong>「一番いい写真」ではなく、動画に隠れたさまざまな一瞬。</strong>
   <p>笑顔も、半目も、動きの途中も、何気ない表情も。写真として選ぶことのなかった一瞬まで、そのまま楽しむためのアプリです。</p>
 </section>
-<button id="howtoOpen" class="howtoBanner" type="button" aria-haspopup="dialog">
+<button id="howtoOpen" class="howtoBanner" data-app-view="home" type="button" aria-haspopup="dialog">
   <span class="howtoBannerIcon" aria-hidden="true">📖</span>
   <span>アプリの使い方を見る</span>
   <span class="howtoBannerArrow" aria-hidden="true">›</span>
 </button>
-<section id="createSection" class="card">
-  <div class="step">1 · ADD MOMENTS</div>
+<section id="createSection" class="card appView" data-app-view="create" hidden>
+  <div class="viewTopbar"><button class="viewBack" type="button" data-nav-back>‹ ホーム</button><span>新しい動画</span></div>
+  <div class="step">NEW VIDEO</div>
   <h2>新しい動画からルーレットを作る</h2>
-  <div class="filebox">
-    <input id="fileInput" type="file" accept="video/*" multiple>
-    <div class="note">1本でも複数本でも選べます。今回アップロードした動画だけを、次のルーレット候補として自動で選びます。以前の動画は、下の動画選択で明示的に選んだときだけ混ざります。処理はブラウザ内だけで行い、元動画は外部へ送信しません。</div>
+  <p class="note viewIntro">今回選んだ動画だけでルーレットを作ります。過去の動画は混ざりません。</p>
+  <div class="filebox newVideoPicker">
+    <input id="fileInput" type="file" accept="video/*" multiple hidden>
+    <button id="createPickBtn" class="primary newVideoPickButton" type="button">動画を選ぶ・選び直す</button>
+    <div class="note">1本でも複数本でも選べます。処理はブラウザ内だけで行い、元動画は外部へ送信しません。</div>
   </div>
   <div id="progressWrap"><div class="progress"><div id="progressBar"></div></div><div id="progressText">準備中...</div></div>
   <details class="opt" id="detailOptions">
@@ -75,43 +97,16 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
     <label class="toggle"><span><b style="display:block;margin-bottom:3px">通常ルーレットにする</b><span class="note">ONにすると、運勢なしの思い出ルーレットとして作ります。豪華演出も自動でOFFになります。</span></span><input id="plainMode" type="checkbox"></label>
     <label class="toggle" style="margin-top:10px"><span><b style="display:block;margin-bottom:3px">運勢サンプルを表示する</b><span class="note">候補確認用のサンプルです。実際の運勢は、ルーレットを止めたときに写真とは独立して抽選します。</span></span><input id="showFortunes" type="checkbox"></label>
 
-    <section id="labSettingsInline" class="labSettingsInline" hidden>
-      <div class="labSettingsInlineHead">
-        <span class="labSettingsInlineBadge">LAB</span>
-        <div>
-          <b>隠し設定</b>
-          <span>実験・確認用の設定です</span>
-        </div>
-      </div>
-      <label class="labSettingsItem">
-        <span><b>特徴度を表示する</b><span class="note">初期値はOFFです。写真の良し悪しではなく、動画内での「くっきり・珍しさ・変化」の違いを見る補助値です。</span></span>
-        <input id="showScores" type="checkbox">
-      </label>
-      <label class="labSettingsItem" id="labDeluxeItem">
-        <span><b>豪華演出モード</b><span class="note">初期値はONです。結果札・光・粒子・効果音などの演出を切り替えます。通常ルーレット時は自動でOFFになります。</span></span>
-        <input id="deluxeMode" type="checkbox" checked>
-      </label>
-      <label class="labSettingsItem labSpecialTestItem">
-        <span><b>特別スローモーションを強制する（実験用）</b><span class="note">特別演出をすぐ確認したいときに使います。通常のおみくじでは確率どおりに動作します。</span></span>
-        <select id="labSpecialMode">
-          <option value="normal" selected>通常（確率どおり）</option>
-          <option value="slow">毎回スローモーション</option>
-          <option value="miracle">奇跡の一枚を毎回表示</option>
-          <option value="reversal">大逆転大吉を毎回表示</option>
-        </select>
-      </label>
-      <div class="labSettingsItem labResetItem">
-        <span><b>この端末のアプリデータを完全初期化</b><span class="note">思い出デッキ・保存済みルーレット・今日の一枚・LAB設定・キャッシュをこの端末から削除します。元に戻せません。</span></span>
-        <button id="labResetAppData" type="button">完全初期化</button>
-      </div>
-    </section>
+    
 
     <div id="labSettingsHint" class="labSettingsHint">LAB設定：画面右上のバージョン表示を5回タップで表示・非表示</div>
   </details>
 </section>
-<section id="deckCard" class="card deckCard">
-  <div class="step">2 · SELECT</div>
-  <h2>ルーレットに使う動画を選ぶ</h2>
+<section id="deckCard" class="card deckCard appView" data-app-view="library" hidden>
+  <div class="viewTopbar"><button class="viewBack" type="button" data-nav-back>‹ ホーム</button><span>過去の動画</span></div>
+  <div class="step">VIDEO LIBRARY</div>
+  <h2>過去の動画からルーレットを作る</h2>
+  <p class="note viewIntro">今回使いたい動画だけを選んでください。1本でも複数本でも選べます。</p>
   <p id="deckStatus" class="deckStatus">保存した動画を読み込んでいます…</p>
   <div class="deckLibraryToolbar">
     <div class="deckLibrarySearch">
@@ -134,39 +129,34 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
     </div>
   </div>
   <div id="deckPicker" class="deckPicker deckPhotoLibrary"><div class="note">動画を読み込んでいます…</div></div>
-  <div class="deckActions">
+  <div class="deckActions deckActionsSticky">
     <button id="deckDrawBtn" class="primary deckDraw" type="button" disabled>🎴 選んだ動画でおみくじを引く</button>
-    <button id="deckAddBtn" class="secondary" type="button">＋ 別の動画を追加</button>
-    <button id="deckManageBtn" class="secondary" type="button">保存データを管理</button>
   </div>
   <div id="deckNotice" class="note deckNotice"></div>
-  <div id="deckManage" class="deckManage" hidden>
-    <div id="deckStorage" class="deckStorage">保存容量を確認しています…</div>
-    <div id="deckSources" class="deckSources deckPhotoLibrary"><div class="note">追加した動画はここに表示されます。</div></div>
-    <div class="deckBackupActions">
-      <button id="deckBackupBtn" class="secondary" type="button">デッキを書き出す</button>
-      <button id="deckRestoreBtn" class="secondary" type="button">デッキを復元する</button>
-      <button id="deckClearBtn" class="danger" type="button">デッキをすべて削除</button>
-      <input id="deckRestoreInput" type="file" accept="application/json,.json" hidden>
-    </div>
-    <p class="note">元動画そのものは保存しません。候補画像に加えて、「奇跡の一枚」用に長辺420px・12コマの短い連続コマを端末内へ保存します。継続利用する場合はホーム画面への追加と、定期的なデッキの書き出しがおすすめです。</p>
-  </div>
+
 </section>
-<section id="previewSection" class="card" style="display:none">
+<section id="previewSection" class="card appView" data-app-view="create" hidden style="display:none">
   <div class="step">PREVIEW</div><h2 id="previewTitle">自動で作成したおみくじ</h2>
   <div id="analysisStatus" class="note analysisStatus" style="display:none"></div><div id="grid" class="grid"></div>
   <div class="row" style="margin-top:13px"><button id="playBtn" class="primary">この内容で遊ぶ</button><button id="reextractBtn" class="secondary">もう一度抽出する</button></div>
   <div class="note" id="previewNote" style="margin-top:8px">保存名は自動で付けます。必要なら保存後に変更できます。</div>
 </section>
-<section class="card"><div class="step">LEGACY SAVED</div><h2>これまでの保存ルーレット</h2><div id="library"><div class="note">まだ保存されていません。</div></div></section>
-<section id="playSection" class="card">
+<section id="legacyLibrarySection" class="card appView" data-app-view="history" hidden>
+  <div class="viewTopbar"><button class="viewBack" type="button" data-nav-back>‹ ホーム</button><span>履歴</span></div>
+  <details class="historyLegacy">
+    <summary>以前保存したルーレット</summary>
+    <p class="note">旧形式で保存したルーレットです。普段は「過去の動画から作る」を使うのがおすすめです。</p>
+    <div id="library"><div class="note">まだ保存されていません。</div></div>
+  </details>
+</section>
+<section id="playSection" class="card appView" data-app-view="play" hidden>
   <div class="step">PLAY</div>
   <div class="playShell"><div id="stage"><img id="playImage" alt=""><div id="fortuneBadge"></div><div id="resultCard"><div id="resultHead">きょうの運勢</div><div id="resultText"></div><div id="message"></div></div><div id="rouletteBadge">タップでストップ</div></div></div>
   <div id="tapHint">画像をタップすると止まります</div><div class="row" style="justify-content:center;margin-top:12px"><button id="backBtn" class="secondary">戻る</button></div>
 </section>
-<section id="labHistorySection" class="card labHistoryCard">
+<section id="labHistorySection" class="card labHistoryCard appView" data-app-view="history" hidden>
   <div class="step">HISTORY / GIF</div>
-  <h2>引いた写真の履歴</h2>
+  <h2>今回引いた写真</h2>
   <p class="note">止まった写真を自動でためます。GIFは同じ元動画から引いた一瞬だけを使い、動画内の時間順に並べます。複数動画のコマは混ぜません。</p>
   <div id="labHistoryEmpty" class="note">まだ履歴はありません。</div>
   <div id="labHistory"></div>
@@ -185,13 +175,62 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
     <a id="labGifDownload" class="labDownload" download="memory-roulette-history.gif">GIFを保存して見る</a>
   </div>
 </section>
-<section id="labCollectionSection" class="card labCollectionCard">
-  <div class="step">COLLECTION</div>
-  <h2>今日の一枚コレクション</h2>
-  <p class="note">結果画面の「今日の一枚に保存」で残した写真です。ブラウザ内に残し、端末へダウンロードした後も「開く」からすぐ確認できます。</p>
+<section id="labCollectionSection" class="card labCollectionCard appView" data-app-view="favorites" hidden>
+  <div class="viewTopbar"><button class="viewBack" type="button" data-nav-back>‹ ホーム</button><span>お気に入り</span></div>
+  <div class="step">FAVORITES</div>
+  <h2>お気に入り</h2>
+  <p class="note">「お気に入りに保存」で残した写真です。見返したい写真だけをここにまとめます。</p>
   <div id="labCollection"><div class="note">まだ保存されていません。</div></div>
 </section>
 
+<section id="settingsSection" class="card appView settingsCard" data-app-view="settings" hidden>
+  <div class="viewTopbar"><button class="viewBack" type="button" data-nav-back>‹ ホーム</button><span>設定</span></div>
+  <div class="step">SETTINGS</div>
+  <h2>設定・データ管理</h2>
+  <p class="note viewIntro">動画の削除やバックアップなど、普段は使わない管理機能をまとめています。</p>
+  <section id="labSettingsInline" class="labSettingsInline" hidden>
+        <div class="labSettingsInlineHead">
+          <span class="labSettingsInlineBadge">LAB</span>
+          <div>
+            <b>隠し設定</b>
+            <span>実験・確認用の設定です</span>
+          </div>
+        </div>
+        <label class="labSettingsItem">
+          <span><b>特徴度を表示する</b><span class="note">初期値はOFFです。写真の良し悪しではなく、動画内での「くっきり・珍しさ・変化」の違いを見る補助値です。</span></span>
+          <input id="showScores" type="checkbox">
+        </label>
+        <label class="labSettingsItem" id="labDeluxeItem">
+          <span><b>豪華演出モード</b><span class="note">初期値はONです。結果札・光・粒子・効果音などの演出を切り替えます。通常ルーレット時は自動でOFFになります。</span></span>
+          <input id="deluxeMode" type="checkbox" checked>
+        </label>
+        <label class="labSettingsItem labSpecialTestItem">
+          <span><b>特別スローモーションを強制する（実験用）</b><span class="note">特別演出をすぐ確認したいときに使います。通常のおみくじでは確率どおりに動作します。</span></span>
+          <select id="labSpecialMode">
+            <option value="normal" selected>通常（確率どおり）</option>
+            <option value="slow">毎回スローモーション</option>
+            <option value="miracle">奇跡の一枚を毎回表示</option>
+            <option value="reversal">大逆転大吉を毎回表示</option>
+          </select>
+        </label>
+        <div class="labSettingsItem labResetItem">
+          <span><b>この端末のアプリデータを完全初期化</b><span class="note">思い出デッキ・保存済みルーレット・今日の一枚・LAB設定・キャッシュをこの端末から削除します。元に戻せません。</span></span>
+          <button id="labResetAppData" type="button">完全初期化</button>
+        </div>
+      </section>
+  <div id="deckManage" class="deckManage">
+    <div id="deckStorage" class="deckStorage">保存容量を確認しています…</div>
+    <h3 class="settingsSubhead">保存済み動画</h3>
+    <div id="deckSources" class="deckSources deckPhotoLibrary"><div class="note">追加した動画はここに表示されます。</div></div>
+    <div class="deckBackupActions">
+      <button id="deckBackupBtn" class="secondary" type="button">デッキを書き出す</button>
+      <button id="deckRestoreBtn" class="secondary" type="button">デッキを復元する</button>
+      <button id="deckClearBtn" class="danger" type="button">保存済み動画をすべて削除</button>
+      <input id="deckRestoreInput" type="file" accept="application/json,.json" hidden>
+    </div>
+    <p class="note">元動画そのものは保存しません。候補画像と「奇跡の一枚」用の短い連続コマを端末内へ保存します。継続利用する場合は定期的なデッキの書き出しがおすすめです。</p>
+  </div>
+</section>
 
 <div id="howtoModal" aria-hidden="true">
   <div class="howtoPanel" role="dialog" aria-modal="true" aria-labelledby="howtoTitle">
@@ -300,11 +339,12 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <video id="video" playsinline muted preload="metadata" style="display:none"></video><canvas id="captureCanvas" style="display:none"></canvas><canvas id="smallCanvas" width="28" height="28" style="display:none"></canvas>
 </div>
 <div id="bigOverlay"><div id="bigText">大吉！</div></div>
-<script src="./app.js?v=1.1.0-deck6" defer></script>
-<script src="./deck.js?v=1.1.0-deck6" defer></script>
-<script src="./deluxe.js?v=1.1.0-deck6" defer></script>
-<script src="./features.js?v=1.1.0-deck6" defer></script>
-<script src="./hidden-settings.js?v=1.1.0-deck6" defer></script>
+<script src="./navigation.js?v=1.1.0-nav1" defer></script>
+<script src="./app.js?v=1.1.0-nav1" defer></script>
+<script src="./deck.js?v=1.1.0-nav1" defer></script>
+<script src="./deluxe.js?v=1.1.0-nav1" defer></script>
+<script src="./features.js?v=1.1.0-nav1" defer></script>
+<script src="./hidden-settings.js?v=1.1.0-nav1" defer></script>
 <script>
 (()=>{
   const scoreBox=document.getElementById('showScores');

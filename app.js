@@ -180,6 +180,7 @@ probe.onload=()=>{
 probe.src=src;
 }
 function preparePlay(x){
+window.__memoryNavigate?.('play');
 activeCreation=x; running=false; clearInterval(timer); currentIndex=0;
 updatePlayStageAspect(x);
 playSection.style.display='block';
@@ -216,6 +217,6 @@ fileInput.addEventListener('change',()=>{ if(fileInput.files?.length){ currentCr
 reextractBtn.addEventListener('click',()=>{ if(lastFile){ currentCreation=null; extractFromCurrentFile(); } });
 playBtn.addEventListener('click',()=>{ if(!selectedFrames.length) return; unlockAudio(); currentCreation=makeCreation(); preparePlay(currentCreation); dbPut(currentCreation).then(refreshLibrary).catch(()=>{}); });
 stage.addEventListener('pointerdown',e=>{ e.preventDefault(); if(!primed) unlockAudio(); if(running) stopRun(); else startRun(); },{passive:false});
-$('backBtn').addEventListener('click',()=>{ clearInterval(timer); running=false; playSection.style.display='none'; window.scrollTo({top:0,behavior:'smooth'}); });
+$('backBtn').addEventListener('click',()=>{ clearInterval(timer); running=false; playSection.style.display='none'; if(window.__memoryBackFromPlay)window.__memoryBackFromPlay();else window.__memoryNavigate?.('home'); });
 updatePreviewMeta(); refreshLibrary();
 if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});

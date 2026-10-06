@@ -735,3 +735,30 @@ body.howto-open{overflow:hidden}
   .deckVideoInfo strong{font-size:8.7px}
   .deckVideoDate{font-size:8.5px}
 }
+
+
+/* v1.1 focused navigation */
+[data-app-view][hidden]{display:none!important}
+.homeActions{margin:14px 0 16px}
+.homeChoiceGrid{display:grid;gap:12px}
+.homeChoice{width:100%;display:grid;grid-template-columns:48px minmax(0,1fr) 22px;align-items:center;gap:12px;text-align:left;padding:17px 16px;border:1px solid #eadbd3;border-radius:20px;background:#fff;box-shadow:0 8px 24px #5b3a2412;color:#513d34}
+.homeChoicePrimary{background:linear-gradient(135deg,#fff7fa,#fff4e9);border-color:#efc6cf}
+.homeChoiceIcon{width:44px;height:44px;display:grid;place-items:center;border-radius:14px;background:#f6ebe7;font-size:24px;font-weight:900}
+.homeChoicePrimary .homeChoiceIcon{background:linear-gradient(135deg,var(--pink),var(--orange));color:#fff}
+.homeChoiceCopy{display:grid;gap:3px;min-width:0}.homeChoiceCopy strong{font-size:17px}.homeChoiceCopy small{font-size:11px;line-height:1.4;color:var(--muted)}
+.homeChoiceArrow{font-size:30px;line-height:1;color:#ad8d7d}
+.homeShortcuts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.homeShortcuts button{display:grid;place-items:center;gap:3px;min-height:74px;padding:9px 5px;border-radius:16px;background:#f8f3ef;color:#604b40}
+.homeShortcuts button>span{font-size:20px}.homeShortcuts strong{font-size:11px}.homeShortcuts small{font-size:8px;line-height:1.25;color:var(--muted);text-align:center}
+.viewTopbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:-2px 0 16px;padding-bottom:10px;border-bottom:1px solid #eee2db}
+.viewTopbar>span{font-size:12px;font-weight:900;color:#7d695f;letter-spacing:.04em}.viewBack{padding:8px 11px;border-radius:999px;background:#f3ece7;color:#604b40;font-size:12px}
+.viewIntro{margin:0 0 14px}
+.newVideoPicker{text-align:center}.newVideoPickButton{width:100%;font-size:15px}
+.deckCard[data-app-view="library"] .deckPhotoLibrary{max-height:none;overflow:visible}
+.deckCard[data-app-view="library"]{padding-bottom:88px}
+.deckCard[data-app-view="library"] .deckLibraryToolbar{position:sticky;top:0;z-index:15;background:rgba(255,255,255,.96);padding:8px 0;backdrop-filter:blur(10px)}
+.deckActionsSticky{position:sticky;bottom:calc(10px + env(safe-area-inset-bottom));z-index:30;margin-top:14px;padding:8px;border-radius:20px;background:rgba(255,247,239,.94);box-shadow:0 8px 26px #0002;backdrop-filter:blur(12px)}
+.deckActionsSticky .deckDraw{width:100%}
+.historyLegacy{border:0;padding:0}.historyLegacy summary{cursor:pointer;font-weight:900;color:#604b40;padding:8px 0}.historyLegacy[open] summary{margin-bottom:10px}
+.settingsCard .deckManage{display:grid!important;margin-top:14px}.settingsSubhead{margin:16px 0 8px;font-size:15px}.settingsCard .deckPhotoLibrary{max-height:min(52vh,520px)}
+@media (max-width:520px){.homeChoice{padding:15px 13px}.homeShortcuts small{display:none}.homeShortcuts button{min-height:62px}.deckCard[data-app-view="library"]{padding-left:12px;padding-right:12px}}

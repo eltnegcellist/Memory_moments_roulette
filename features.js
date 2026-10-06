@@ -233,7 +233,7 @@ extra.innerHTML=
   '<button id="labReplaySpecial" type="button">✨ 奇跡のリプレイ</button>'+
   '<button id="labSaveSpecialMovieResult" type="button">🎬 この演出をムービー保存</button>'+
   '<div id="labMovieResultStatus" aria-live="polite"></div>'+
-  '<button id="labSavePhoto" type="button">♡ 今日の一枚に保存</button>';
+  '<button id="labSavePhoto" type="button">♡ お気に入りに保存</button>';
 resultCardEl.appendChild(extra);
 const specialEmblem=extra.querySelector('#labSpecialEmblem');
 const luckyEl=extra.querySelector('#labLucky');
@@ -1493,6 +1493,8 @@ function syncGifSourceChooser(){
 }
 function renderHistory(){
   historyEl.innerHTML='';
+  const homeHistoryCount=document.getElementById('homeHistoryCount');
+  if(homeHistoryCount)homeHistoryCount.textContent=history.length?history.length+'件':'まだありません';
   historyEmpty.style.display=history.length?'none':'block';
   clearHistoryBtn.disabled=!history.length;
 
@@ -1591,7 +1593,7 @@ function showHistoryEntry(x){
       specialLine.style.display='block';
     }
 
-    saveBtn.textContent='♡ 今日の一枚に保存';
+    saveBtn.textContent='♡ お気に入りに保存';
     saveBtn.disabled=false;
     extra.style.display='block';
     rouletteBadgeEl.style.display='none';
@@ -1602,6 +1604,7 @@ function showHistoryEntry(x){
 
   tapHintEl.textContent='履歴を表示中。写真をタップするとルーレットを再開します';
   dockResult();
+  window.__memoryNavigate?.('play');
   document.getElementById('playSection')?.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function clearGifResult(){
@@ -1647,7 +1650,7 @@ function showLabResult(){
   specialLine.style.display='none';
   specialLine.className='';
   replaySpecialBtn.style.display='none';
-  saveBtn.textContent='♡ 今日の一枚に保存';
+  saveBtn.textContent='♡ お気に入りに保存';
   saveBtn.disabled=false;
   extra.style.display='block';
 
@@ -2097,6 +2100,8 @@ async function downloadDailyPhoto(item){
 }
 async function renderCollection(){
   const all=await labAll();
+  const homeFavoriteCount=document.getElementById('homeFavoriteCount');
+  if(homeFavoriteCount)homeFavoriteCount.textContent=all.length?all.length+'枚保存':'まだありません';
   collectionEl.innerHTML='';
   if(!all.length){
     collectionEl.innerHTML='<div class="note">まだ保存されていません。</div>';

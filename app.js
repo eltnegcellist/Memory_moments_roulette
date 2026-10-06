@@ -121,7 +121,7 @@ grid.appendChild(d);
 }
 function makeCreation(){ const mode=modeName(); const id=currentCreation?.id || ('r'+Date.now()+Math.random().toString(36).slice(2,8)); return { id, title: currentCreation?.title || autoTitle(mode), createdAt: currentCreation?.createdAt || Date.now(), updatedAt: Date.now(), sourceKey: currentSourceKey, mode, frames: selectedFrames.map(f=>f.dataUrl), fortunes: mode==='omikuji' ? selectedFortunes.slice() : [], times: selectedFrames.map(f=>f.time), appeal: mode==='omikuji' ? selectedAppealDetails.map(x=>({score:x.score,clarityScore:x.clarityScore,rarityScore:x.rarityScore,changeScore:x.changeScore})) : [] }; }
 const DBNAME='babyExpressionRouletteDB', STORE='creations';
-function openDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DBNAME,2);r.onupgradeneeded=()=>{
+function openDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DBNAME,3);r.onupgradeneeded=()=>{
   const db=r.result;
   if(!db.objectStoreNames.contains(STORE))db.createObjectStore(STORE,{keyPath:'id'});
   if(!db.objectStoreNames.contains('deckSources')){
@@ -133,6 +133,7 @@ function openDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open(D
     s.createIndex('sourceVideoId','sourceVideoId',{unique:false});
   }
   if(!db.objectStoreNames.contains('deckMeta'))db.createObjectStore('deckMeta',{keyPath:'key'});
+  if(!db.objectStoreNames.contains('deckReplays'))db.createObjectStore('deckReplays',{keyPath:'id'});
 };r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
 async function dbPut(x){const db=await openDB();return new Promise((res,rej)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(x);tx.oncomplete=res;tx.onerror=()=>rej(tx.error)})}
 async function dbAll(){const db=await openDB();return new Promise((res,rej)=>{const r=db.transaction(STORE).objectStore(STORE).getAll();r.onsuccess=()=>res(r.result.sort((a,b)=>(b.updatedAt||b.createdAt)-(a.updatedAt||a.createdAt)));r.onerror=()=>rej(r.error)})}

@@ -12,6 +12,7 @@ const REPLAY_SECONDS=3.0;
 const EARLY_REPLAY_SECONDS=2.5;
 const deckCard=document.getElementById('deckCard');
 const deckStatus=document.getElementById('deckStatus');
+const deckPicker=document.getElementById('deckPicker');
 const deckNotice=document.getElementById('deckNotice');
 const deckDrawBtn=document.getElementById('deckDrawBtn');
 const deckAddBtn=document.getElementById('deckAddBtn');
@@ -23,9 +24,17 @@ const deckBackupBtn=document.getElementById('deckBackupBtn');
 const deckRestoreBtn=document.getElementById('deckRestoreBtn');
 const deckRestoreInput=document.getElementById('deckRestoreInput');
 const deckClearBtn=document.getElementById('deckClearBtn');
-if(!deckCard||!deckDrawBtn||!deckAddBtn||!deckManage||!deckSources)return;
+const deckSearch=document.getElementById('deckSearch');
+const deckSort=document.getElementById('deckSort');
+const deckSelectionStatus=document.getElementById('deckSelectionStatus');
+const deckSelectAllBtn=document.getElementById('deckSelectAllBtn');
+const deckClearSelectionBtn=document.getElementById('deckClearSelectionBtn');
+if(!deckCard||!deckDrawBtn||!deckAddBtn||!deckManage||!deckSources||!deckPicker)return;
 
 let processing=false;
+const selectedSourceIds=new Set();
+let deckSelection={mode:'all',ids:[]};
+let lastDeckSnapshot={sources:[],count:0,bytes:0};
 
 async function getAll(store){
   const db=await openDB();
@@ -62,6 +71,83 @@ function approxDataUrlBytes(s){
   if(!s)return 0;
   const comma=s.indexOf(',');
   return Math.ceil((s.length-(comma>=0?comma+1:0))*0.75);
+}
+function sourceMomentDate(src){
+  const t=Number(src?.lastModified)||Number(src?.addedAt)||Date.now();
+  return new Date(t);
+}
+function sourceMonthKey(src){
+  const d=sourceMomentDate(src);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+}
+function sourceMonthLabel(src){
+  const d=sourceMomentDate(src);
+  return d.getFullYear()+'年'+(d.getMonth()+1)+'月';
+}
+function formatDuration(seconds){
+  const s=Math.max(0,Math.round(Number(seconds)||0));
+  const m=Math.floor(s/60),r=s%60;
+  return m+':'+String(r).padStart(2,'0');
+}
+async function firstFrameForSource(sourceId){
+  const db=await openDB();
+  return new Promise((res,rej)=>{
+    const idx=db.transaction(FRAME_STORE,'readonly').objectStore(FRAME_STORE).index('sourceVideoId');
+    const r=idx.openCursor(IDBKeyRange.only(sourceId));
+    r.onsuccess=()=>res(r.result?.value||null);
+    r.onerror=()=>rej(r.error);
+  });
+}
+async function makeSourceThumbnail(dataUrl){
+  if(!dataUrl)return null;
+  const img=await new Promise((res,rej)=>{
+    const x=new Image();x.onload=()=>res(x);x.onerror=()=>rej(new Error('thumbnail image error'));x.src=dataUrl;
+  });
+  const maxEdge=320;
+  const scale=Math.min(1,maxEdge/Math.max(img.naturalWidth||1,img.naturalHeight||1));
+  const canvas=document.createElement('canvas');
+  canvas.width=Math.max(2,Math.round((img.naturalWidth||1)*scale));
+  canvas.height=Math.max(2,Math.round((img.naturalHeight||1)*scale));
+  const cx=canvas.getContext('2d');
+  cx.drawImage(img,0,0,canvas.width,canvas.height);
+  let out=canvas.toDataURL('image/webp',.68);
+  if(!out.startsWith('data:image/webp'))out=canvas.toDataURL('image/jpeg',.68);
+  return {dataUrl:out,size:approxDataUrlBytes(out),width:canvas.width,height:canvas.height};
+}
+async function ensureSourceThumbnail(src,img){
+  if(src.thumbnailData){img.src=src.thumbnailData;return;}
+  try{
+    const first=await firstFrameForSource(src.id);
+    if(!first?.imageData)return;
+    const thumb=await makeSourceThumbnail(first.imageData);
+    if(!thumb)return;
+    img.src=thumb.dataUrl;
+    src.thumbnailData=thumb.dataUrl;
+    src.thumbnailSize=thumb.size;
+    src.thumbnailWidth=thumb.width;
+    src.thumbnailHeight=thumb.height;
+    src.storageBytes=(Number(src.storageBytes)||0)+thumb.size;
+    const db=await openDB();
+    const tx=db.transaction(SOURCE_STORE,'readwrite');
+    tx.objectStore(SOURCE_STORE).put(src);
+  }catch(e){}
+}
+async function normalizeSelection(sources){
+  const ids=new Set(sources.map(s=>s.id));
+  const saved=await metaGet('sourceSelection');
+  if(!saved||saved.mode==='all')return {mode:'all',ids:[]};
+  const clean=(saved.ids||[]).filter(id=>ids.has(id));
+  return {mode:'custom',ids:clean};
+}
+function selectedSourceSet(sources){
+  if(deckSelection.mode==='all')return new Set(sources.map(s=>s.id));
+  return new Set(deckSelection.ids||[]);
+}
+async function saveDeckSelection(){
+  await metaPut('sourceSelection',deckSelection);
+}
+function selectedCount(sources){
+  return deckSelection.mode==='all'?sources.length:(deckSelection.ids||[]).filter(id=>sources.some(s=>s.id===id)).length;
 }
 function deckTargetCount(duration){
   const manual=frameCountEl?.value&&frameCountEl.value!=='auto'?Number(frameCountEl.value):null;
@@ -228,16 +314,48 @@ async function storageText(localBytes){
 }
 async function renderDeck(){
   const s=await stats();
+  const validIds=new Set(s.sources.map(x=>x.id));
+  for(const id of [...selectedSourceIds])if(!validIds.has(id))selectedSourceIds.delete(id);
+  const selected=s.sources.filter(x=>selectedSourceIds.has(x.id));
   deckStatus.textContent=s.count
-    ? s.sources.length+'本の動画から '+s.count+'個の一瞬を保存しています。'
-    : 'まだ思い出デッキはありません。動画を追加すると、次回からすぐにおみくじを引けます。';
-  deckDrawBtn.disabled=!s.count||processing;
+    ? s.sources.length+'本の動画から '+s.count+'個の一瞬を保存しています。'+(selected.length?' 現在 '+selected.length+'本を選択中です。':' ルーレットに使う動画を選んでください。')
+    : 'まだ保存した動画はありません。上の「新しい動画からルーレットを作る」から追加してください。';
+  deckDrawBtn.disabled=!selected.length||processing;
   deckStorage.textContent=await storageText(s.bytes);
+
+  deckPicker.innerHTML='';
+  const sortedSources=[...s.sources].sort((a,b)=>(b.addedAt||0)-(a.addedAt||0));
+  if(!sortedSources.length){
+    deckPicker.innerHTML='<div class="note">追加した動画がここに並びます。</div>';
+  }else{
+    sortedSources.forEach(src=>{
+      const row=document.createElement('label');
+      row.className='deckPickRow';
+      const check=document.createElement('input');
+      check.type='checkbox';
+      check.checked=selectedSourceIds.has(src.id);
+      check.addEventListener('change',()=>{
+        if(check.checked)selectedSourceIds.add(src.id);
+        else selectedSourceIds.delete(src.id);
+        renderDeck().catch(console.error);
+      });
+      const main=document.createElement('div');
+      main.className='deckSourceMain';
+      const name=document.createElement('strong');
+      name.textContent=src.fileName||'動画';
+      const meta=document.createElement('span');
+      meta.textContent=(Number(src.candidateCount)||0)+'個の一瞬 ・ '+new Date(src.addedAt||Date.now()).toLocaleDateString('ja-JP');
+      main.append(name,meta);
+      row.append(check,main);
+      deckPicker.appendChild(row);
+    });
+  }
+
   deckSources.innerHTML='';
-  if(!s.sources.length){
+  if(!sortedSources.length){
     deckSources.innerHTML='<div class="note">追加した動画はここに表示されます。</div>';
   }else{
-    s.sources.sort((a,b)=>(b.addedAt||0)-(a.addedAt||0)).forEach(src=>{
+    sortedSources.forEach(src=>{
       const row=document.createElement('div');
       row.className='deckSourceRow';
       const main=document.createElement('div');
@@ -262,6 +380,7 @@ async function renderDeck(){
   }
 }
 async function deleteSource(sourceId){
+  selectedSourceIds.delete(sourceId);
   const db=await openDB();
   await new Promise((res,rej)=>{
     const tx=db.transaction([SOURCE_STORE,FRAME_STORE,REPLAY_STORE],'readwrite');
@@ -325,7 +444,7 @@ async function extractOne(file,overallIndex,total){
   const fingerprint=hashString([file.name,file.size,file.lastModified,Math.round(duration*1000)].join('|'));
   const existing=await existingSource(fingerprint);
   if(existing){
-    if(await sourceHasReplay(existing.id))return {duplicate:true,name:file.name,count:0};
+    if(await sourceHasReplay(existing.id))return {duplicate:true,name:file.name,count:0,sourceId:existing.id};
     await deleteSource(existing.id);
   }
   const before=await stats();
@@ -392,7 +511,7 @@ async function extractOne(file,overallIndex,total){
   source.storageBytes=frames.reduce((n,x)=>n+(Number(x.imageSize)||0)+(Number(x.replaySize)||0),0);
   source.replaySpec={edge:REPLAY_EDGE,frames:REPLAY_FRAME_COUNT,quality:REPLAY_QUALITY,seconds:REPLAY_SECONDS};
   await saveSourceAndFrames(source,frames,replays);
-  return {duplicate:false,name:file.name,count:frames.length};
+  return {duplicate:false,name:file.name,count:frames.length,sourceId};
 }
 async function requestPersistence(){
   if(!navigator.storage?.persist)return false;
@@ -408,10 +527,12 @@ window.__memoryDeckHandleFiles=async files=>{
   progressBar.style.width='3%';
   let added=0,duplicates=0,failed=0;
   const errors=[];
+  const batchSourceIds=[];
   try{
     for(let i=0;i<files.length;i++){
       try{
         const r=await extractOne(files[i],i+1,files.length);
+        if(r.sourceId)batchSourceIds.push(r.sourceId);
         if(r.duplicate)duplicates++;else added+=r.count;
       }catch(e){
         failed++;
@@ -419,10 +540,15 @@ window.__memoryDeckHandleFiles=async files=>{
       }
     }
     await requestPersistence();
+    if(batchSourceIds.length){
+      selectedSourceIds.clear();
+      batchSourceIds.forEach(id=>selectedSourceIds.add(id));
+    }
     progressBar.style.width='100%';
     let msg=added+'個の一瞬を思い出デッキに追加しました。';
     if(duplicates)msg+=' '+duplicates+'本は追加済みのためスキップしました。';
     if(failed)msg+=' '+failed+'本は処理できませんでした。';
+    if(batchSourceIds.length)msg+=' 今回選んだ動画だけをルーレット候補にしています。';
     progressText.textContent=msg;
     const standalone=window.matchMedia?.('(display-mode: standalone)')?.matches||navigator.standalone===true;
     let notice=errors.length?errors.join(' / '):msg;
@@ -479,16 +605,21 @@ window.__memoryDeckResolveStop=(creation,fallback)=>{
   const ix=ids.indexOf(id);
   return ix>=0?ix:fallback;
 };
-async function buildDeckCreation(){
-  const [frames,sources]=await Promise.all([getAll(FRAME_STORE),getAll(SOURCE_STORE)]);
+async function buildDeckCreation(sourceIds){
+  const [allFrames,sources]=await Promise.all([getAll(FRAME_STORE),getAll(SOURCE_STORE)]);
+  const wanted=new Set(sourceIds||[]);
+  const frames=allFrames.filter(x=>wanted.has(x.sourceVideoId));
   if(!frames.length)return null;
   const sourceNames=new Map(sources.map(x=>[x.id,x.fileName||'動画']));
   const ids=frames.map(x=>x.id);
   const drawState=await preparedDrawState(ids);
   const mode=modeName();
+  const selectedNames=[...new Set(frames.map(x=>sourceNames.get(x.sourceVideoId)||'動画'))];
+  const hasPortrait=frames.some(x=>(Number(x.height)||0)>(Number(x.width)||0)*1.12);
+  const allLandscape=frames.every(x=>(Number(x.width)||0)>(Number(x.height)||0)*1.12);
   return {
     id:'deck-'+Date.now(),
-    title:'思い出おみくじデッキ',
+    title:selectedNames.length===1?selectedNames[0]:(selectedNames.length+'本の思い出おみくじ'),
     createdAt:Date.now(),updatedAt:Date.now(),sourceKey:null,mode,deckMode:true,
     frames:frames.map(x=>x.imageData),
     fortunes:mode==='omikuji'?frames.map(()=>drawFortune()):[],
@@ -499,12 +630,14 @@ async function buildDeckCreation(){
     deckSourceNames:frames.map(x=>sourceNames.get(x.sourceVideoId)||'動画'),
     deckReplayModes:frames.map(x=>x.replayMode||null),
     deckReplaySpans:frames.map(x=>Number(x.replaySpan)||0),
-    deckDrawState:drawState
+    deckDrawState:drawState,
+    deckPreferPortrait:hasPortrait,
+    deckAllLandscape:allLandscape
   };
 }
 deckDrawBtn.addEventListener('click',async()=>{
   if(processing)return;
-  const creation=await buildDeckCreation();
+  const creation=await buildDeckCreation([...selectedSourceIds]);
   if(!creation)return;
   unlockAudio();
   currentCreation=null;
@@ -513,7 +646,7 @@ deckDrawBtn.addEventListener('click',async()=>{
 deckAddBtn.addEventListener('click',()=>fileInput.click());
 deckManageBtn.addEventListener('click',()=>{
   deckManage.hidden=!deckManage.hidden;
-  deckManageBtn.textContent=deckManage.hidden?'デッキを管理':'管理を閉じる';
+  deckManageBtn.textContent=deckManage.hidden?'保存データを管理':'管理を閉じる';
 });
 async function backupDeck(){
   const [sources,frames,replays,drawState]=await Promise.all([getAll(SOURCE_STORE),getAll(FRAME_STORE),getAll(REPLAY_STORE),metaGet('drawState')]);

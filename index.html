@@ -21,9 +21,9 @@
 <link rel="apple-touch-icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2">
 <link rel="icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2" type="image/png">
 <title>思い出ルーレットおみくじ</title>
-<link rel="stylesheet" href="./style.css?v=1.1.0-deck5">
-<link rel="stylesheet" href="./deluxe.css?v=1.1.0-deck5">
-<link rel="stylesheet" href="./features.css?v=1.1.0-deck5">
+<link rel="stylesheet" href="./style.css?v=1.1.0-deck6">
+<link rel="stylesheet" href="./deluxe.css?v=1.1.0-deck6">
+<link rel="stylesheet" href="./features.css?v=1.1.0-deck6">
 <style>
 body:not(.show-score-details) .scoreChip,
 body:not(.show-score-details) .scoreDetails,
@@ -113,7 +113,27 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <div class="step">2 · SELECT</div>
   <h2>ルーレットに使う動画を選ぶ</h2>
   <p id="deckStatus" class="deckStatus">保存した動画を読み込んでいます…</p>
-  <div id="deckPicker" class="deckPicker"><div class="note">動画を読み込んでいます…</div></div>
+  <div class="deckLibraryToolbar">
+    <div class="deckLibrarySearch">
+      <span aria-hidden="true">⌕</span>
+      <input id="deckSearch" type="search" placeholder="過去の動画を検索" autocomplete="off">
+    </div>
+    <select id="deckSort" aria-label="動画の並び順">
+      <option value="newest" selected>新しい順</option>
+      <option value="oldest">古い順</option>
+    </select>
+  </div>
+  <div class="deckSelectionBar">
+    <div>
+      <strong id="deckSelectionStatus">動画を選択してください</strong>
+      <span>写真アプリのようにサムネイルをタップして、今回使う動画を選べます。</span>
+    </div>
+    <div class="deckSelectionActions">
+      <button id="deckSelectAllBtn" class="secondary" type="button">すべて選択</button>
+      <button id="deckClearSelectionBtn" class="secondary" type="button">選択を解除</button>
+    </div>
+  </div>
+  <div id="deckPicker" class="deckPicker deckPhotoLibrary"><div class="note">動画を読み込んでいます…</div></div>
   <div class="deckActions">
     <button id="deckDrawBtn" class="primary deckDraw" type="button" disabled>🎴 選んだ動画でおみくじを引く</button>
     <button id="deckAddBtn" class="secondary" type="button">＋ 別の動画を追加</button>
@@ -122,7 +142,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <div id="deckNotice" class="note deckNotice"></div>
   <div id="deckManage" class="deckManage" hidden>
     <div id="deckStorage" class="deckStorage">保存容量を確認しています…</div>
-    <div id="deckSources" class="deckSources"><div class="note">追加した動画はここに表示されます。</div></div>
+    <div id="deckSources" class="deckSources deckPhotoLibrary"><div class="note">追加した動画はここに表示されます。</div></div>
     <div class="deckBackupActions">
       <button id="deckBackupBtn" class="secondary" type="button">デッキを書き出す</button>
       <button id="deckRestoreBtn" class="secondary" type="button">デッキを復元する</button>
@@ -203,15 +223,15 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
       <article class="howtoStep">
         <div class="howtoNum">2</div>
         <div class="howtoCopy">
-          <h3>デッキにためる</h3>
-          <p>切り出した一瞬は端末内に保存されます。次にアプリを開いたときは、動画を選び直さなくてもデッキからすぐに遊べます。</p>
+          <h3>過去の動画をサムネイルから選ぶ</h3>
+          <p>保存した動画は撮影時期ごとのサムネイル一覧で見返せます。検索や新しい順・古い順を使い、今回のおみくじに使う動画だけをタップして選べます。</p>
         </div>
         <div class="howtoMock mockPreview" aria-hidden="true">
-          <div class="mockLabel">MY DECK</div>
+          <div class="mockLabel">VIDEO LIBRARY</div>
           <div class="mockThumbGrid">
-            <i>😊</i><i>😮</i><i>🙂</i><i>😴</i><i>😆</i><i>🥺</i>
+            <i>▶️</i><i>▶️</i><i>▶️</i><i>▶️</i><i>▶️</i><i>▶️</i>
           </div>
-          <div class="mockPrimary">🎴 おみくじを引く</div>
+          <div class="mockPrimary">選んだ動画でおみくじを引く</div>
         </div>
       </article>
 
@@ -280,11 +300,11 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <video id="video" playsinline muted preload="metadata" style="display:none"></video><canvas id="captureCanvas" style="display:none"></canvas><canvas id="smallCanvas" width="28" height="28" style="display:none"></canvas>
 </div>
 <div id="bigOverlay"><div id="bigText">大吉！</div></div>
-<script src="./app.js?v=1.1.0-deck5" defer></script>
-<script src="./deck.js?v=1.1.0-deck5" defer></script>
-<script src="./deluxe.js?v=1.1.0-deck5" defer></script>
-<script src="./features.js?v=1.1.0-deck5" defer></script>
-<script src="./hidden-settings.js?v=1.1.0-deck5" defer></script>
+<script src="./app.js?v=1.1.0-deck6" defer></script>
+<script src="./deck.js?v=1.1.0-deck6" defer></script>
+<script src="./deluxe.js?v=1.1.0-deck6" defer></script>
+<script src="./features.js?v=1.1.0-deck6" defer></script>
+<script src="./hidden-settings.js?v=1.1.0-deck6" defer></script>
 <script>
 (()=>{
   const scoreBox=document.getElementById('showScores');

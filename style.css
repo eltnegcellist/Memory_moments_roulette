@@ -398,6 +398,7 @@ body.howto-open{overflow:hidden}
   font-size:11.5px;
   line-height:1.65;
 }
+.conceptCard p+p{margin-top:8px}
 @media(max-width:520px){
   .conceptCard{padding:12px 13px;border-radius:17px}
   .conceptCard strong{font-size:14px}

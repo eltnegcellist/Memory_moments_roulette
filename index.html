@@ -122,27 +122,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <div id="deckNotice" class="note deckNotice"></div>
   <div id="deckManage" class="deckManage" hidden>
     <div id="deckStorage" class="deckStorage">保存容量を確認しています…</div>
-    <div class="deckLibraryToolbar">
-      <div class="deckLibrarySearch">
-        <span aria-hidden="true">⌕</span>
-        <input id="deckSearch" type="search" placeholder="動画名で検索" autocomplete="off">
-      </div>
-      <select id="deckSort" aria-label="動画の並び順">
-        <option value="newest" selected>新しい順</option>
-        <option value="oldest">古い順</option>
-      </select>
-    </div>
-    <div class="deckSelectionBar">
-      <div>
-        <strong id="deckSelectionStatus">すべての動画を抽選対象にしています</strong>
-        <span>サムネイルをタップすると、次のおみくじに使う動画を選べます。</span>
-      </div>
-      <div class="deckSelectionActions">
-        <button id="deckSelectAllBtn" class="secondary" type="button">すべて選択</button>
-        <button id="deckClearSelectionBtn" class="secondary" type="button">選択を解除</button>
-      </div>
-    </div>
-    <div id="deckSources" class="deckSources deckPhotoLibrary"><div class="note">追加した動画はここに表示されます。</div></div>
+    <div id="deckSources" class="deckSources"><div class="note">追加した動画はここに表示されます。</div></div>
     <div class="deckBackupActions">
       <button id="deckBackupBtn" class="secondary" type="button">デッキを書き出す</button>
       <button id="deckRestoreBtn" class="secondary" type="button">デッキを復元する</button>

@@ -58,6 +58,7 @@ function toggleLab(){
   labVisible=!labVisible;
   renderLabVisibility();
   if(labVisible){
+    window.__memoryNavigate?.('settings');
     detailOptions.open=true;
     inline.classList.remove('justUnlocked');
     void inline.offsetWidth;
@@ -100,7 +101,7 @@ deluxeMode.addEventListener('change',()=>{
 });
 plainMode.addEventListener('change',syncDeluxeForMode);
 resetAppDataBtn?.addEventListener('click',()=>{
-  const ok=confirm('この端末の「思い出ルーレットおみくじ」の思い出デッキ・保存済みルーレット・今日の一枚・LAB設定・キャッシュをすべて削除します。元に戻せません。完全初期化しますか？');
+  const ok=confirm('この端末の「思い出ルーレットおみくじ」の思い出デッキ・保存済みルーレット・お気に入り・LAB設定・キャッシュをすべて削除します。元に戻せません。完全初期化しますか？');
   if(!ok)return;
   try{sessionStorage.setItem('baby-roulette-reset-authorized','1');}catch(e){}
   location.href='./reset.html?from=lab&ts='+Date.now();

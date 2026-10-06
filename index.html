@@ -97,36 +97,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
     <label class="toggle"><span><b style="display:block;margin-bottom:3px">通常ルーレットにする</b><span class="note">ONにすると、運勢なしの思い出ルーレットとして作ります。豪華演出も自動でOFFになります。</span></span><input id="plainMode" type="checkbox"></label>
     <label class="toggle" style="margin-top:10px"><span><b style="display:block;margin-bottom:3px">運勢サンプルを表示する</b><span class="note">候補確認用のサンプルです。実際の運勢は、ルーレットを止めたときに写真とは独立して抽選します。</span></span><input id="showFortunes" type="checkbox"></label>
 
-    <section id="labSettingsInline" class="labSettingsInline" hidden>
-      <div class="labSettingsInlineHead">
-        <span class="labSettingsInlineBadge">LAB</span>
-        <div>
-          <b>隠し設定</b>
-          <span>実験・確認用の設定です</span>
-        </div>
-      </div>
-      <label class="labSettingsItem">
-        <span><b>特徴度を表示する</b><span class="note">初期値はOFFです。写真の良し悪しではなく、動画内での「くっきり・珍しさ・変化」の違いを見る補助値です。</span></span>
-        <input id="showScores" type="checkbox">
-      </label>
-      <label class="labSettingsItem" id="labDeluxeItem">
-        <span><b>豪華演出モード</b><span class="note">初期値はONです。結果札・光・粒子・効果音などの演出を切り替えます。通常ルーレット時は自動でOFFになります。</span></span>
-        <input id="deluxeMode" type="checkbox" checked>
-      </label>
-      <label class="labSettingsItem labSpecialTestItem">
-        <span><b>特別スローモーションを強制する（実験用）</b><span class="note">特別演出をすぐ確認したいときに使います。通常のおみくじでは確率どおりに動作します。</span></span>
-        <select id="labSpecialMode">
-          <option value="normal" selected>通常（確率どおり）</option>
-          <option value="slow">毎回スローモーション</option>
-          <option value="miracle">奇跡の一枚を毎回表示</option>
-          <option value="reversal">大逆転大吉を毎回表示</option>
-        </select>
-      </label>
-      <div class="labSettingsItem labResetItem">
-        <span><b>この端末のアプリデータを完全初期化</b><span class="note">思い出デッキ・保存済みルーレット・今日の一枚・LAB設定・キャッシュをこの端末から削除します。元に戻せません。</span></span>
-        <button id="labResetAppData" type="button">完全初期化</button>
-      </div>
-    </section>
+    
 
     <div id="labSettingsHint" class="labSettingsHint">LAB設定：画面右上のバージョン表示を5回タップで表示・非表示</div>
   </details>
@@ -208,7 +179,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <div class="viewTopbar"><button class="viewBack" type="button" data-nav-back>‹ ホーム</button><span>お気に入り</span></div>
   <div class="step">FAVORITES</div>
   <h2>お気に入り</h2>
-  <p class="note">「今日の一枚に保存」で残した写真です。見返したい写真だけをここにまとめます。</p>
+  <p class="note">「お気に入りに保存」で残した写真です。見返したい写真だけをここにまとめます。</p>
   <div id="labCollection"><div class="note">まだ保存されていません。</div></div>
 </section>
 
@@ -217,6 +188,36 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <div class="step">SETTINGS</div>
   <h2>設定・データ管理</h2>
   <p class="note viewIntro">動画の削除やバックアップなど、普段は使わない管理機能をまとめています。</p>
+  <section id="labSettingsInline" class="labSettingsInline" hidden>
+        <div class="labSettingsInlineHead">
+          <span class="labSettingsInlineBadge">LAB</span>
+          <div>
+            <b>隠し設定</b>
+            <span>実験・確認用の設定です</span>
+          </div>
+        </div>
+        <label class="labSettingsItem">
+          <span><b>特徴度を表示する</b><span class="note">初期値はOFFです。写真の良し悪しではなく、動画内での「くっきり・珍しさ・変化」の違いを見る補助値です。</span></span>
+          <input id="showScores" type="checkbox">
+        </label>
+        <label class="labSettingsItem" id="labDeluxeItem">
+          <span><b>豪華演出モード</b><span class="note">初期値はONです。結果札・光・粒子・効果音などの演出を切り替えます。通常ルーレット時は自動でOFFになります。</span></span>
+          <input id="deluxeMode" type="checkbox" checked>
+        </label>
+        <label class="labSettingsItem labSpecialTestItem">
+          <span><b>特別スローモーションを強制する（実験用）</b><span class="note">特別演出をすぐ確認したいときに使います。通常のおみくじでは確率どおりに動作します。</span></span>
+          <select id="labSpecialMode">
+            <option value="normal" selected>通常（確率どおり）</option>
+            <option value="slow">毎回スローモーション</option>
+            <option value="miracle">奇跡の一枚を毎回表示</option>
+            <option value="reversal">大逆転大吉を毎回表示</option>
+          </select>
+        </label>
+        <div class="labSettingsItem labResetItem">
+          <span><b>この端末のアプリデータを完全初期化</b><span class="note">思い出デッキ・保存済みルーレット・今日の一枚・LAB設定・キャッシュをこの端末から削除します。元に戻せません。</span></span>
+          <button id="labResetAppData" type="button">完全初期化</button>
+        </div>
+      </section>
   <div id="deckManage" class="deckManage">
     <div id="deckStorage" class="deckStorage">保存容量を確認しています…</div>
     <h3 class="settingsSubhead">保存済み動画</h3>

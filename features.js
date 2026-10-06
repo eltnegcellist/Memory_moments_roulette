@@ -1493,6 +1493,8 @@ function syncGifSourceChooser(){
 }
 function renderHistory(){
   historyEl.innerHTML='';
+  const homeHistoryCount=document.getElementById('homeHistoryCount');
+  if(homeHistoryCount)homeHistoryCount.textContent=history.length?history.length+'件':'まだありません';
   historyEmpty.style.display=history.length?'none':'block';
   clearHistoryBtn.disabled=!history.length;
 
@@ -1602,6 +1604,7 @@ function showHistoryEntry(x){
 
   tapHintEl.textContent='履歴を表示中。写真をタップするとルーレットを再開します';
   dockResult();
+  window.__memoryNavigate?.('play');
   document.getElementById('playSection')?.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function clearGifResult(){
@@ -2097,6 +2100,8 @@ async function downloadDailyPhoto(item){
 }
 async function renderCollection(){
   const all=await labAll();
+  const homeFavoriteCount=document.getElementById('homeFavoriteCount');
+  if(homeFavoriteCount)homeFavoriteCount.textContent=all.length?all.length+'枚保存':'まだありません';
   collectionEl.innerHTML='';
   if(!all.length){
     collectionEl.innerHTML='<div class="note">まだ保存されていません。</div>';

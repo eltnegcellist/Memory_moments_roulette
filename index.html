@@ -21,9 +21,9 @@
 <link rel="apple-touch-icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2">
 <link rel="icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2" type="image/png">
 <title>思い出ルーレットおみくじ</title>
-<link rel="stylesheet" href="./style.css?v=1.1.0-nav1">
-<link rel="stylesheet" href="./deluxe.css?v=1.1.0-nav1">
-<link rel="stylesheet" href="./features.css?v=1.1.0-nav1">
+<link rel="stylesheet" href="./style.css?v=1.1.0-nav2">
+<link rel="stylesheet" href="./deluxe.css?v=1.1.0-nav2">
+<link rel="stylesheet" href="./features.css?v=1.1.0-nav2">
 <style>
 body:not(.show-score-details) .scoreChip,
 body:not(.show-score-details) .scoreDetails,
@@ -34,7 +34,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 .labSettingsHint{margin-top:14px;text-align:right;font-size:10px;line-height:1.4;color:rgba(92,72,60,.56)}
 </style>
 </head>
-<body>
+<body data-app-view="home">
 <div class="wrap">
 <header class="hero" data-app-view="home">
   <div class="heroMark" aria-hidden="true"><img src="./icons/memory-roulette-omikuji.png?v=memorybrand2" alt=""></div>
@@ -74,7 +74,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <span>アプリの使い方を見る</span>
   <span class="howtoBannerArrow" aria-hidden="true">›</span>
 </button>
-<section id="createSection" class="card appView" data-app-view="create" hidden>
+<section id="createSection" class="card appView" data-app-view="create">
   <div class="viewTopbar"><button class="viewBack" type="button" data-nav-back>‹ ホーム</button><span>新しい動画</span></div>
   <div class="step">NEW VIDEO</div>
   <h2>新しい動画からルーレットを作る</h2>
@@ -102,7 +102,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
     <div id="labSettingsHint" class="labSettingsHint">LAB設定：画面右上のバージョン表示を5回タップで表示・非表示</div>
   </details>
 </section>
-<section id="deckCard" class="card deckCard appView" data-app-view="library" hidden>
+<section id="deckCard" class="card deckCard appView" data-app-view="library">
   <div class="viewTopbar"><button class="viewBack" type="button" data-nav-back>‹ ホーム</button><span>過去の動画</span></div>
   <div class="step">VIDEO LIBRARY</div>
   <h2>過去の動画からルーレットを作る</h2>
@@ -135,13 +135,13 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <div id="deckNotice" class="note deckNotice"></div>
 
 </section>
-<section id="previewSection" class="card appView" data-app-view="create" hidden style="display:none">
+<section id="previewSection" class="card appView" data-app-view="create" style="display:none">
   <div class="step">PREVIEW</div><h2 id="previewTitle">自動で作成したおみくじ</h2>
   <div id="analysisStatus" class="note analysisStatus" style="display:none"></div><div id="grid" class="grid"></div>
   <div class="row" style="margin-top:13px"><button id="playBtn" class="primary">この内容で遊ぶ</button><button id="reextractBtn" class="secondary">もう一度抽出する</button></div>
   <div class="note" id="previewNote" style="margin-top:8px">保存名は自動で付けます。必要なら保存後に変更できます。</div>
 </section>
-<section id="legacyLibrarySection" class="card appView" data-app-view="history" hidden>
+<section id="legacyLibrarySection" class="card appView" data-app-view="history">
   <div class="viewTopbar"><button class="viewBack" type="button" data-nav-back>‹ ホーム</button><span>履歴</span></div>
   <details class="historyLegacy">
     <summary>以前保存したルーレット</summary>
@@ -149,12 +149,12 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
     <div id="library"><div class="note">まだ保存されていません。</div></div>
   </details>
 </section>
-<section id="playSection" class="card appView" data-app-view="play" hidden>
+<section id="playSection" class="card appView" data-app-view="play">
   <div class="step">PLAY</div>
   <div class="playShell"><div id="stage"><img id="playImage" alt=""><div id="fortuneBadge"></div><div id="resultCard"><div id="resultHead">きょうの運勢</div><div id="resultText"></div><div id="message"></div></div><div id="rouletteBadge">タップでストップ</div></div></div>
   <div id="tapHint">画像をタップすると止まります</div><div class="row" style="justify-content:center;margin-top:12px"><button id="backBtn" class="secondary">戻る</button></div>
 </section>
-<section id="labHistorySection" class="card labHistoryCard appView" data-app-view="history" hidden>
+<section id="labHistorySection" class="card labHistoryCard appView" data-app-view="history">
   <div class="step">HISTORY / GIF</div>
   <h2>今回引いた写真</h2>
   <p class="note">止まった写真を自動でためます。GIFは同じ元動画から引いた一瞬だけを使い、動画内の時間順に並べます。複数動画のコマは混ぜません。</p>
@@ -175,7 +175,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
     <a id="labGifDownload" class="labDownload" download="memory-roulette-history.gif">GIFを保存して見る</a>
   </div>
 </section>
-<section id="labCollectionSection" class="card labCollectionCard appView" data-app-view="favorites" hidden>
+<section id="labCollectionSection" class="card labCollectionCard appView" data-app-view="favorites">
   <div class="viewTopbar"><button class="viewBack" type="button" data-nav-back>‹ ホーム</button><span>お気に入り</span></div>
   <div class="step">FAVORITES</div>
   <h2>お気に入り</h2>
@@ -183,7 +183,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <div id="labCollection"><div class="note">まだ保存されていません。</div></div>
 </section>
 
-<section id="settingsSection" class="card appView settingsCard" data-app-view="settings" hidden>
+<section id="settingsSection" class="card appView settingsCard" data-app-view="settings">
   <div class="viewTopbar"><button class="viewBack" type="button" data-nav-back>‹ ホーム</button><span>設定</span></div>
   <div class="step">SETTINGS</div>
   <h2>設定・データ管理</h2>
@@ -339,12 +339,12 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <video id="video" playsinline muted preload="metadata" style="display:none"></video><canvas id="captureCanvas" style="display:none"></canvas><canvas id="smallCanvas" width="28" height="28" style="display:none"></canvas>
 </div>
 <div id="bigOverlay"><div id="bigText">大吉！</div></div>
-<script src="./navigation.js?v=1.1.0-nav1" defer></script>
-<script src="./app.js?v=1.1.0-nav1" defer></script>
-<script src="./deck.js?v=1.1.0-nav1" defer></script>
-<script src="./deluxe.js?v=1.1.0-nav1" defer></script>
-<script src="./features.js?v=1.1.0-nav1" defer></script>
-<script src="./hidden-settings.js?v=1.1.0-nav1" defer></script>
+<script src="./navigation.js?v=1.1.0-nav2" defer></script>
+<script src="./app.js?v=1.1.0-nav2" defer></script>
+<script src="./deck.js?v=1.1.0-nav2" defer></script>
+<script src="./deluxe.js?v=1.1.0-nav2" defer></script>
+<script src="./features.js?v=1.1.0-nav2" defer></script>
+<script src="./hidden-settings.js?v=1.1.0-nav2" defer></script>
 <script>
 (()=>{
   const scoreBox=document.getElementById('showScores');

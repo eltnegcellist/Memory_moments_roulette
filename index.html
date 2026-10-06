@@ -21,9 +21,9 @@
 <link rel="apple-touch-icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2">
 <link rel="icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2" type="image/png">
 <title>思い出ルーレットおみくじ</title>
-<link rel="stylesheet" href="./style.css?v=1.1.0-deck3">
-<link rel="stylesheet" href="./deluxe.css?v=1.1.0-deck3">
-<link rel="stylesheet" href="./features.css?v=1.1.0-deck3">
+<link rel="stylesheet" href="./style.css?v=1.1.0-deck4">
+<link rel="stylesheet" href="./deluxe.css?v=1.1.0-deck4">
+<link rel="stylesheet" href="./features.css?v=1.1.0-deck4">
 <style>
 body:not(.show-score-details) .scoreChip,
 body:not(.show-score-details) .scoreDetails,
@@ -74,7 +74,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
       <button id="deckClearBtn" class="danger" type="button">デッキをすべて削除</button>
       <input id="deckRestoreInput" type="file" accept="application/json,.json" hidden>
     </div>
-    <p class="note">元動画そのものはデッキに保存しません。候補の一瞬と、元動画名・動画内の時刻などの情報を端末内に保存します。継続利用する場合はホーム画面への追加と、定期的なデッキの書き出しがおすすめです。</p>
+    <p class="note">元動画そのものは保存しません。候補画像に加えて、「奇跡の一枚」用に長辺420px・12コマの短い連続コマを端末内へ保存します。継続利用する場合はホーム画面への追加と、定期的なデッキの書き出しがおすすめです。</p>
   </div>
 </section>
 <section id="createSection" class="card">
@@ -279,11 +279,11 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <video id="video" playsinline muted preload="metadata" style="display:none"></video><canvas id="captureCanvas" style="display:none"></canvas><canvas id="smallCanvas" width="28" height="28" style="display:none"></canvas>
 </div>
 <div id="bigOverlay"><div id="bigText">大吉！</div></div>
-<script src="./app.js?v=1.1.0-deck3" defer></script>
-<script src="./deck.js?v=1.1.0-deck3" defer></script>
-<script src="./deluxe.js?v=1.1.0-deck3" defer></script>
-<script src="./features.js?v=1.1.0-deck3" defer></script>
-<script src="./hidden-settings.js?v=1.1.0-deck3" defer></script>
+<script src="./app.js?v=1.1.0-deck4" defer></script>
+<script src="./deck.js?v=1.1.0-deck4" defer></script>
+<script src="./deluxe.js?v=1.1.0-deck4" defer></script>
+<script src="./features.js?v=1.1.0-deck4" defer></script>
+<script src="./hidden-settings.js?v=1.1.0-deck4" defer></script>
 <script>
 (()=>{
   const scoreBox=document.getElementById('showScores');

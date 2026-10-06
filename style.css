@@ -417,10 +417,33 @@ body.howto-open{overflow:hidden}
   line-height:1.65;
 }
 
-.deckPicker{display:grid;gap:8px;margin:10px 0 13px}
-.deckPickRow{display:flex;align-items:center;gap:10px;padding:10px 11px;border:1px solid #eaded7;border-radius:14px;background:#fff;cursor:pointer;transition:border-color .16s,box-shadow .16s,background .16s}
-.deckPickRow input{width:19px;height:19px;flex:0 0 auto;accent-color:#d95f80}
-.deckPickRow:has(input:checked){border-color:#df91a5;background:#fff7f9;box-shadow:0 5px 15px rgba(141,70,89,.09)}
+.deckPicker{
+  display:grid;
+  gap:8px;
+  margin:10px 0 13px;
+}
+.deckPickRow{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 11px;
+  border:1px solid #eaded7;
+  border-radius:14px;
+  background:#fff;
+  cursor:pointer;
+  transition:border-color .16s,box-shadow .16s,background .16s;
+}
+.deckPickRow input{
+  width:19px;
+  height:19px;
+  flex:0 0 auto;
+  accent-color:#d95f80;
+}
+.deckPickRow:has(input:checked){
+  border-color:#df91a5;
+  background:#fff7f9;
+  box-shadow:0 5px 15px rgba(141,70,89,.09);
+}
 .deckActions{
   display:flex;
   gap:8px;
@@ -498,4 +521,217 @@ body.howto-open{overflow:hidden}
   .deckActions .secondary{width:100%;padding-inline:10px}
   .deckSourceRow{align-items:flex-start;flex-direction:column}
   .deckSourceRow .danger{align-self:flex-end}
+}
+
+
+/* v1.1 large-deck photo library */
+.deckLibraryToolbar{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:8px;
+  align-items:center;
+  margin:10px 0 8px;
+}
+.deckLibrarySearch{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  min-width:0;
+  padding:0 10px;
+  border:1px solid #dfd2ca;
+  border-radius:12px;
+  background:#fff;
+}
+.deckLibrarySearch span{font-size:17px;color:#8b7468}
+.deckLibrarySearch input{
+  width:100%;
+  min-width:0;
+  padding:10px 0;
+  border:0;
+  outline:0;
+  background:transparent;
+  font-size:12px;
+}
+.deckLibraryToolbar select{
+  max-width:120px;
+  padding:10px 9px;
+  font-size:11px;
+}
+.deckSelectionBar{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:flex-start;
+  margin-bottom:10px;
+  padding:10px 11px;
+  border-radius:14px;
+  background:#faf4f0;
+}
+.deckSelectionBar>div:first-child{display:grid;gap:3px;min-width:0}
+.deckSelectionBar strong{font-size:11px}
+.deckSelectionBar span{font-size:9.5px;line-height:1.45;color:#7d695f}
+.deckSelectionActions{display:flex;gap:5px;flex:0 0 auto}
+.deckSelectionActions .secondary{padding:7px 9px;font-size:9px}
+.deckPhotoLibrary{
+  display:block;
+  max-height:min(57vh,560px);
+  overflow:auto;
+  overscroll-behavior:contain;
+  padding:1px 2px 4px;
+  margin:7px 0 13px;
+  scrollbar-gutter:stable;
+}
+.deckMonthGroup{margin:0 0 15px}
+.deckMonthHead{
+  position:sticky;
+  top:0;
+  z-index:3;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:8px 2px 6px;
+  background:linear-gradient(180deg,#fffaf7 76%,rgba(255,250,247,.92));
+}
+.deckMonthHead strong{font-size:13px}
+.deckMonthHead span{font-size:9px;color:#8b7468}
+.deckVideoGrid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:7px;
+}
+.deckVideoTile{
+  position:relative;
+  min-width:0;
+  border-radius:12px;
+  background:#fff;
+}
+.deckVideoPick{
+  display:block;
+  width:100%;
+  padding:0;
+  text-align:left;
+  border-radius:12px;
+  background:#fff;
+  overflow:hidden;
+  color:inherit;
+  box-shadow:0 3px 10px rgba(67,42,31,.07);
+  border:2px solid transparent;
+}
+.deckVideoPick[disabled]{opacity:1;cursor:default}
+.deckVideoThumb{
+  position:relative;
+  width:100%;
+  aspect-ratio:1/1;
+  overflow:hidden;
+  background:linear-gradient(145deg,#eee4df,#f7efea);
+}
+.deckVideoThumb img{
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:cover;
+}
+.deckVideoIcon{
+  position:absolute;
+  left:7px;
+  bottom:7px;
+  width:22px;
+  height:22px;
+  display:grid;
+  place-items:center;
+  border-radius:999px;
+  background:rgba(0,0,0,.58);
+  color:#fff;
+  font-size:9px;
+}
+.deckVideoDuration{
+  position:absolute;
+  right:6px;
+  bottom:6px;
+  padding:3px 5px;
+  border-radius:6px;
+  background:rgba(0,0,0,.63);
+  color:#fff;
+  font-size:8px;
+  font-weight:900;
+}
+.deckVideoCheck{
+  position:absolute;
+  right:7px;
+  top:7px;
+  width:23px;
+  height:23px;
+  display:grid;
+  place-items:center;
+  border-radius:999px;
+  background:rgba(255,255,255,.88);
+  color:#9e8a80;
+  border:1px solid rgba(255,255,255,.75);
+  font-size:11px;
+  font-weight:1000;
+}
+.deckVideoTile.selected .deckVideoPick{
+  border-color:#dd6c8b;
+  box-shadow:0 5px 15px rgba(158,71,94,.15);
+}
+.deckVideoTile.selected .deckVideoCheck{
+  background:#d95f80;
+  color:#fff;
+  border-color:#d95f80;
+}
+.deckVideoInfo{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  gap:1px 5px;
+  padding:6px 6px 7px;
+  min-width:0;
+}
+.deckVideoDate{
+  grid-row:1/3;
+  align-self:start;
+  color:#b55e74;
+  font-size:9px;
+  font-weight:1000;
+}
+.deckVideoInfo strong{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:9.5px;
+  line-height:1.25;
+}
+.deckVideoInfo small{
+  color:#8a756b;
+  font-size:8px;
+}
+.deckVideoDelete{
+  position:absolute;
+  left:6px;
+  top:6px;
+  z-index:4;
+  width:24px;
+  height:24px;
+  padding:0;
+  border-radius:999px;
+  background:rgba(77,49,42,.76);
+  color:#fff;
+  font-size:15px;
+  line-height:1;
+}
+.deckManage .deckVideoCheck{display:none}
+.deckManage .deckVideoTile.selected .deckVideoPick{border-color:transparent}
+.deckManage .deckPhotoLibrary{max-height:min(45vh,430px)}
+@media(max-width:620px){
+  .deckVideoGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:420px){
+  .deckLibraryToolbar{grid-template-columns:minmax(0,1fr) 96px}
+  .deckSelectionBar{display:grid}
+  .deckSelectionActions{width:100%}
+  .deckSelectionActions .secondary{flex:1}
+  .deckVideoGrid{gap:5px}
+  .deckVideoInfo{padding:5px}
+  .deckVideoInfo strong{font-size:8.7px}
+  .deckVideoDate{font-size:8.5px}
 }

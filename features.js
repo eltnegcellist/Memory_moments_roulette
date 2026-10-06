@@ -233,7 +233,7 @@ extra.innerHTML=
   '<button id="labReplaySpecial" type="button">✨ 奇跡のリプレイ</button>'+
   '<button id="labSaveSpecialMovieResult" type="button">🎬 この演出をムービー保存</button>'+
   '<div id="labMovieResultStatus" aria-live="polite"></div>'+
-  '<button id="labSavePhoto" type="button">♡ 今日の一枚に保存</button>';
+  '<button id="labSavePhoto" type="button">♡ お気に入りに保存</button>';
 resultCardEl.appendChild(extra);
 const specialEmblem=extra.querySelector('#labSpecialEmblem');
 const luckyEl=extra.querySelector('#labLucky');
@@ -1593,7 +1593,7 @@ function showHistoryEntry(x){
       specialLine.style.display='block';
     }
 
-    saveBtn.textContent='♡ 今日の一枚に保存';
+    saveBtn.textContent='♡ お気に入りに保存';
     saveBtn.disabled=false;
     extra.style.display='block';
     rouletteBadgeEl.style.display='none';
@@ -1650,7 +1650,7 @@ function showLabResult(){
   specialLine.style.display='none';
   specialLine.className='';
   replaySpecialBtn.style.display='none';
-  saveBtn.textContent='♡ 今日の一枚に保存';
+  saveBtn.textContent='♡ お気に入りに保存';
   saveBtn.disabled=false;
   extra.style.display='block';
 

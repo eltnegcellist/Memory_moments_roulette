@@ -24,17 +24,10 @@ const deckBackupBtn=document.getElementById('deckBackupBtn');
 const deckRestoreBtn=document.getElementById('deckRestoreBtn');
 const deckRestoreInput=document.getElementById('deckRestoreInput');
 const deckClearBtn=document.getElementById('deckClearBtn');
-const deckSearch=document.getElementById('deckSearch');
-const deckSort=document.getElementById('deckSort');
-const deckSelectionStatus=document.getElementById('deckSelectionStatus');
-const deckSelectAllBtn=document.getElementById('deckSelectAllBtn');
-const deckClearSelectionBtn=document.getElementById('deckClearSelectionBtn');
 if(!deckCard||!deckDrawBtn||!deckAddBtn||!deckManage||!deckSources||!deckPicker)return;
 
 let processing=false;
 const selectedSourceIds=new Set();
-let deckSelection={mode:'all',ids:[]};
-let lastDeckSnapshot={sources:[],count:0,bytes:0};
 
 async function getAll(store){
   const db=await openDB();
@@ -71,83 +64,6 @@ function approxDataUrlBytes(s){
   if(!s)return 0;
   const comma=s.indexOf(',');
   return Math.ceil((s.length-(comma>=0?comma+1:0))*0.75);
-}
-function sourceMomentDate(src){
-  const t=Number(src?.lastModified)||Number(src?.addedAt)||Date.now();
-  return new Date(t);
-}
-function sourceMonthKey(src){
-  const d=sourceMomentDate(src);
-  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
-}
-function sourceMonthLabel(src){
-  const d=sourceMomentDate(src);
-  return d.getFullYear()+'年'+(d.getMonth()+1)+'月';
-}
-function formatDuration(seconds){
-  const s=Math.max(0,Math.round(Number(seconds)||0));
-  const m=Math.floor(s/60),r=s%60;
-  return m+':'+String(r).padStart(2,'0');
-}
-async function firstFrameForSource(sourceId){
-  const db=await openDB();
-  return new Promise((res,rej)=>{
-    const idx=db.transaction(FRAME_STORE,'readonly').objectStore(FRAME_STORE).index('sourceVideoId');
-    const r=idx.openCursor(IDBKeyRange.only(sourceId));
-    r.onsuccess=()=>res(r.result?.value||null);
-    r.onerror=()=>rej(r.error);
-  });
-}
-async function makeSourceThumbnail(dataUrl){
-  if(!dataUrl)return null;
-  const img=await new Promise((res,rej)=>{
-    const x=new Image();x.onload=()=>res(x);x.onerror=()=>rej(new Error('thumbnail image error'));x.src=dataUrl;
-  });
-  const maxEdge=320;
-  const scale=Math.min(1,maxEdge/Math.max(img.naturalWidth||1,img.naturalHeight||1));
-  const canvas=document.createElement('canvas');
-  canvas.width=Math.max(2,Math.round((img.naturalWidth||1)*scale));
-  canvas.height=Math.max(2,Math.round((img.naturalHeight||1)*scale));
-  const cx=canvas.getContext('2d');
-  cx.drawImage(img,0,0,canvas.width,canvas.height);
-  let out=canvas.toDataURL('image/webp',.68);
-  if(!out.startsWith('data:image/webp'))out=canvas.toDataURL('image/jpeg',.68);
-  return {dataUrl:out,size:approxDataUrlBytes(out),width:canvas.width,height:canvas.height};
-}
-async function ensureSourceThumbnail(src,img){
-  if(src.thumbnailData){img.src=src.thumbnailData;return;}
-  try{
-    const first=await firstFrameForSource(src.id);
-    if(!first?.imageData)return;
-    const thumb=await makeSourceThumbnail(first.imageData);
-    if(!thumb)return;
-    img.src=thumb.dataUrl;
-    src.thumbnailData=thumb.dataUrl;
-    src.thumbnailSize=thumb.size;
-    src.thumbnailWidth=thumb.width;
-    src.thumbnailHeight=thumb.height;
-    src.storageBytes=(Number(src.storageBytes)||0)+thumb.size;
-    const db=await openDB();
-    const tx=db.transaction(SOURCE_STORE,'readwrite');
-    tx.objectStore(SOURCE_STORE).put(src);
-  }catch(e){}
-}
-async function normalizeSelection(sources){
-  const ids=new Set(sources.map(s=>s.id));
-  const saved=await metaGet('sourceSelection');
-  if(!saved||saved.mode==='all')return {mode:'all',ids:[]};
-  const clean=(saved.ids||[]).filter(id=>ids.has(id));
-  return {mode:'custom',ids:clean};
-}
-function selectedSourceSet(sources){
-  if(deckSelection.mode==='all')return new Set(sources.map(s=>s.id));
-  return new Set(deckSelection.ids||[]);
-}
-async function saveDeckSelection(){
-  await metaPut('sourceSelection',deckSelection);
-}
-function selectedCount(sources){
-  return deckSelection.mode==='all'?sources.length:(deckSelection.ids||[]).filter(id=>sources.some(s=>s.id===id)).length;
 }
 function deckTargetCount(duration){
   const manual=frameCountEl?.value&&frameCountEl.value!=='auto'?Number(frameCountEl.value):null;
@@ -366,16 +282,12 @@ async function renderDeck(){
       meta.textContent=(Number(src.candidateCount)||0)+'個の一瞬 ・ '+formatBytes(Number(src.storageBytes)||0)+' ・ '+new Date(src.addedAt||Date.now()).toLocaleDateString('ja-JP');
       main.append(name,meta);
       const del=document.createElement('button');
-      del.className='danger';
-      del.type='button';
-      del.textContent='この動画分を削除';
+      del.className='danger'; del.type='button'; del.textContent='この動画分を削除';
       del.onclick=async()=>{
         if(!confirm('「'+(src.fileName||'この動画')+'」から作った一瞬をデッキから削除しますか？'))return;
-        await deleteSource(src.id);
-        await renderDeck();
+        await deleteSource(src.id); await renderDeck();
       };
-      row.append(main,del);
-      deckSources.appendChild(row);
+      row.append(main,del); deckSources.appendChild(row);
     });
   }
 }
@@ -540,10 +452,7 @@ window.__memoryDeckHandleFiles=async files=>{
       }
     }
     await requestPersistence();
-    if(batchSourceIds.length){
-      selectedSourceIds.clear();
-      batchSourceIds.forEach(id=>selectedSourceIds.add(id));
-    }
+    if(batchSourceIds.length){selectedSourceIds.clear();batchSourceIds.forEach(id=>selectedSourceIds.add(id));}
     progressBar.style.width='100%';
     let msg=added+'個の一瞬を思い出デッキに追加しました。';
     if(duplicates)msg+=' '+duplicates+'本は追加済みのためスキップしました。';

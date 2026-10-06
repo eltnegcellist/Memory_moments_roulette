@@ -29,7 +29,8 @@ const deckSort=document.getElementById('deckSort');
 const deckSelectionStatus=document.getElementById('deckSelectionStatus');
 const deckSelectAllBtn=document.getElementById('deckSelectAllBtn');
 const deckClearSelectionBtn=document.getElementById('deckClearSelectionBtn');
-if(!deckCard||!deckDrawBtn||!deckAddBtn||!deckManage||!deckSources||!deckPicker)return;
+const homeSavedVideoCount=document.getElementById('homeSavedVideoCount');
+if(!deckCard||!deckDrawBtn||!deckManage||!deckSources||!deckPicker)return;
 
 let processing=false;
 const selectedSourceIds=new Set();
@@ -175,7 +176,7 @@ async function loadSelectedSources(sources){
   if(Array.isArray(saved)){
     saved.filter(id=>valid.has(id)).forEach(id=>selectedSourceIds.add(id));
   }else{
-    sources.forEach(s=>selectedSourceIds.add(s.id));
+    selectedSourceIds.clear();
   }
 }
 async function saveSelectedSources(){
@@ -192,6 +193,7 @@ function updateSelectionStatus(sources){
           ? 'すべての'+n+'本を選択中'
           : n+' / '+sources.length+'本を選択中';
   }
+  if(homeSavedVideoCount)homeSavedVideoCount.textContent=sources.length?sources.length+'本の保存済み動画から選ぶ':'まだ保存した動画はありません';
   deckDrawBtn.disabled=!n||processing;
   deckDrawBtn.textContent=n>0&&n<sources.length?'🎴 選んだ'+n+'本でおみくじを引く':'🎴 選んだ動画でおみくじを引く';
 }
@@ -680,7 +682,14 @@ window.__memoryDeckHandleFiles=async files=>{
     deckNotice.textContent=notice;
     deckNotice.className='note deckNotice '+(failed?'warn':'ok');
     await renderDeck();
-    deckCard.scrollIntoView({behavior:'smooth',block:'start'});
+    if(batchSourceIds.length){
+      const creation=await buildDeckCreation(batchSourceIds);
+      if(creation){
+        window.__memoryNavigate?.('play');
+        currentCreation=null;
+        preparePlay(creation);
+      }
+    }
   }finally{
     processing=false;
     fileInput.disabled=false;
@@ -764,8 +773,8 @@ deckDrawBtn.addEventListener('click',async()=>{
   currentCreation=null;
   preparePlay(creation);
 });
-deckAddBtn.addEventListener('click',()=>fileInput.click());
-deckManageBtn.addEventListener('click',()=>{
+deckAddBtn?.addEventListener('click',()=>fileInput.click());
+deckManageBtn?.addEventListener('click',()=>{
   deckManage.hidden=!deckManage.hidden;
   deckManageBtn.textContent=deckManage.hidden?'保存データを管理':'管理を閉じる';
 });
@@ -895,5 +904,13 @@ document.addEventListener('visibilitychange',()=>{
   }
 });
 requestPersistence().catch(()=>{});
+window.__memoryDeckRender=()=>renderDeck();
+window.__memoryDeckStartSelection=async()=>{
+  selectedSourceIds.clear();
+  selectionLoaded=true;
+  await saveSelectedSources();
+  renderSourceLibraries();
+  updateSelectionStatus(lastDeckSources);
+};
 renderDeck().catch(err=>{console.error(err);deckStatus.textContent='デッキ情報を読み込めませんでした。';});
 })();

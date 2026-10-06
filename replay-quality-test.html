@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>奇跡リプレイ 低解像度比較テスト</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#342720;background:#fff8f3}
+*{box-sizing:border-box}body{margin:0}.wrap{max-width:880px;margin:auto;padding:20px 14px 60px}
+h1{font-size:24px;margin:0 0 8px}.lead{color:#715e54;line-height:1.7;margin:0 0 18px}
+.card{background:#fff;border:1px solid #eadbd2;border-radius:18px;padding:16px;margin:12px 0;box-shadow:0 7px 22px rgba(65,42,28,.06)}
+input[type=file]{width:100%}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.row>*{min-width:0}
+button{border:0;border-radius:12px;padding:11px 14px;font-weight:800;cursor:pointer}.primary{background:#7b4535;color:#fff}.secondary{background:#f2e8e2;color:#5d4036}
+button:disabled{opacity:.45}.target{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;margin-top:14px}.target input{width:100%}
+.note{font-size:12px;line-height:1.65;color:#7b685e}.status{font-weight:800;margin-top:10px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+.sample{border:1px solid #e8d8cf;border-radius:16px;padding:10px;background:#fff}
+.sample h2{font-size:15px;margin:0 0 8px}.stage{position:relative;background:#201c1a;border-radius:12px;overflow:hidden;aspect-ratio:3/4;display:grid;place-items:center}
+.stage img{max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain}.badge{position:absolute;left:8px;bottom:8px;background:rgba(0,0,0,.62);color:#fff;padding:5px 7px;border-radius:8px;font-size:10px;font-weight:800}
+.stats{font-size:11px;line-height:1.55;color:#6e5b52;margin-top:8px}.play{width:100%;margin-top:8px}
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.metric{background:#fff8f4;border-radius:12px;padding:10px}.metric b{display:block;font-size:17px}.metric span{font-size:10px;color:#7c675c}
+.hidden{display:none}
+@media(max-width:680px){.grid{grid-template-columns:1fr}.sample{display:grid;grid-template-columns:120px 1fr;gap:10px}.sample h2{grid-column:1/-1}.stage{aspect-ratio:3/4}.play{align-self:end}.summary{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>奇跡の一枚：低解像度リプレイ比較</h1>
+<p class="lead">手元の動画だけをブラウザ内で処理して、現行仕様に近い「約3秒前 → 停止位置、0.42倍相当」を小さなWebP連続コマで再現します。動画の冒頭2.5秒未満を選んだ場合だけ、停止位置より後ろを取得して逆再生します。</p>
+
+<section class="card">
+  <input id="file" type="file" accept="video/*">
+  <div id="controls" class="hidden">
+    <div class="target">
+      <input id="target" type="range" min="0" step="0.05">
+      <b id="targetLabel">0.0秒</b>
+    </div>
+    <p class="note">比較する停止位置を選んでください。3秒より後ろの位置なら「前3秒」を保存します。</p>
+    <div class="row">
+      <button id="make" class="primary">240 / 320 / 420px を比較する</button>
+      <button id="stop" class="secondary" disabled>再生を止める</button>
+    </div>
+    <div id="status" class="status"></div>
+  </div>
+</section>
+
+<section id="summaryCard" class="card hidden">
+  <h2 style="margin-top:0">容量の目安</h2>
+  <div id="summary" class="summary"></div>
+  <p class="note">100動画の推計は「1動画12候補 × 100本」で、この奇跡リプレイ用データだけを持つ場合です。通常の停止画像の容量は含みません。</p>
+</section>
+
+<section id="results" class="grid"></section>
+<video id="video" playsinline muted preload="metadata" style="display:none"></video>
+<canvas id="canvas" style="display:none"></canvas>
+</div>
+<script>
+(()=>{
+const LEAD=3.0, RATE=.42, EARLY=2.5, COUNT=15, QUALITY=.72;
+const sizes=[240,320,420];
+const file=document.getElementById('file'), video=document.getElementById('video'), canvas=document.getElementById('canvas');
+const target=document.getElementById('target'), targetLabel=document.getElementById('targetLabel'), controls=document.getElementById('controls');
+const make=document.getElementById('make'), stop=document.getElementById('stop'), status=document.getElementById('status'), results=document.getElementById('results');
+const summaryCard=document.getElementById('summaryCard'), summary=document.getElementById('summary');
+let url=null, playToken=0, sets=new Map();
+
+function once(el,event,timeout=7000){
+  return new Promise((res,rej)=>{
+    let done=false;
+    const finish=(ok,v)=>{if(done)return;done=true;clearTimeout(to);el.removeEventListener(event,on);ok?res(v):rej(v)};
+    const on=()=>finish(true);
+    const to=setTimeout(()=>finish(false,new Error(event+' timeout')),timeout);
+    el.addEventListener(event,on,{once:true});
+  });
+}
+async function seek(t){
+  const safe=Math.max(0,Math.min((video.duration||0)-.04,t));
+  if(Math.abs(video.currentTime-safe)>.02){
+    video.currentTime=safe;
+    try{await once(video,'seeked',5000)}catch(e){}
+  }
+  await new Promise(r=>setTimeout(r,35));
+}
+function bytes(dataUrl){
+  const i=dataUrl.indexOf(',');
+  return Math.ceil((dataUrl.length-(i+1))*0.75);
+}
+function fmt(n){
+  if(n<1024)return n+' B';
+  if(n<1024*1024)return (n/1024).toFixed(1)+' KB';
+  return (n/1024/1024).toFixed(1)+' MB';
+}
+function plan(){
+  const t=Number(target.value)||0;
+  const early=t<EARLY;
+  const start=early?t:Math.max(0,t-LEAD);
+  const end=early?Math.min(video.duration-.04,t+LEAD):t;
+  return {target:t,early,start,end,span:Math.max(.04,end-start)};
+}
+async function captureSet(maxEdge){
+  const p=plan();
+  const vw=Math.max(1,video.videoWidth||1), vh=Math.max(1,video.videoHeight||1);
+  const scale=Math.min(1,maxEdge/Math.max(vw,vh));
+  canvas.width=Math.max(2,Math.round(vw*scale));
+  canvas.height=Math.max(2,Math.round(vh*scale));
+  const ctx=canvas.getContext('2d');
+  const frames=[];
+  let total=0;
+  for(let i=0;i<COUNT;i++){
+    const q=COUNT===1?0:i/(COUNT-1);
+    const t=p.start+p.span*q;
+    status.textContent=maxEdge+'px: '+(i+1)+' / '+COUNT+' コマを作成中…';
+    await seek(t);
+    ctx.drawImage(video,0,0,canvas.width,canvas.height);
+    let data=canvas.toDataURL('image/webp',QUALITY);
+    if(!data.startsWith('data:image/webp'))data=canvas.toDataURL('image/jpeg',QUALITY);
+    frames.push(data);
+    total+=bytes(data);
+  }
+  if(p.early)frames.reverse();
+  return {maxEdge,frames,total,width:canvas.width,height:canvas.height,plan:p};
+}
+function makeCard(set){
+  const article=document.createElement('article');
+  article.className='sample';
+  article.innerHTML='<h2>'+set.maxEdge+'px</h2><div class="stage"><img alt=""><span class="badge">0.42×相当</span></div><div><div class="stats"></div><button class="primary play">この画質で再生</button></div>';
+  const img=article.querySelector('img');
+  img.src=set.frames[0];
+  article.querySelector('.stats').innerHTML=
+    '保存サイズ：<b>'+fmt(set.total)+'</b><br>'+
+    '1コマ平均：約'+fmt(Math.round(set.total/set.frames.length))+'<br>'+
+    set.width+' × '+set.height+' / '+set.frames.length+'コマ';
+  article.querySelector('.play').onclick=()=>playSet(set,img,article.querySelector('.badge'));
+  return article;
+}
+async function playSet(set,img,badge){
+  const token=++playToken;
+  stop.disabled=false;
+  const sourceSeconds=set.plan.span;
+  const totalMs=(sourceSeconds/RATE)*1000;
+  const hold=Math.max(80,totalMs/set.frames.length);
+  badge.textContent=set.plan.early?'↶ REVERSE 0.42×相当':'0.42×相当';
+  for(let i=0;i<set.frames.length;i++){
+    if(token!==playToken)break;
+    img.src=set.frames[i];
+    await new Promise(r=>setTimeout(r,hold));
+  }
+  if(token===playToken){
+    badge.textContent='奇跡の一枚';
+    stop.disabled=true;
+  }
+}
+function renderSummary(){
+  summary.innerHTML='';
+  for(const set of sets.values()){
+    const candidate100=set.total*12*100;
+    const div=document.createElement('div');
+    div.className='metric';
+    div.innerHTML='<b>'+set.maxEdge+'px</b><span>1候補 '+fmt(set.total)+'<br>100動画（12候補/本） 約'+fmt(candidate100)+'</span>';
+    summary.appendChild(div);
+  }
+  summaryCard.classList.remove('hidden');
+}
+file.addEventListener('change',async()=>{
+  const f=file.files?.[0];if(!f)return;
+  playToken++;
+  if(url)URL.revokeObjectURL(url);
+  url=URL.createObjectURL(f);video.src=url;video.load();
+  try{
+    if(video.readyState<1)await once(video,'loadedmetadata',10000);
+    target.max=Math.max(0,video.duration-.05);
+    const d=video.duration;
+    target.value=Math.min(d-.05,Math.max(Math.min(3.2,d*.5),Math.min(d-.05,1)));
+    controls.classList.remove('hidden');
+    target.dispatchEvent(new Event('input'));
+    status.textContent='動画を読み込みました。停止位置を選んで比較を作成できます。';
+    results.innerHTML='';summaryCard.classList.add('hidden');sets.clear();
+  }catch(e){status.textContent='動画を読み込めませんでした: '+e.message}
+});
+target.addEventListener('input',()=>{
+  const p=plan();
+  targetLabel.textContent=p.target.toFixed(1)+'秒';
+  status.textContent=p.early?'冒頭付近なので、停止位置より後ろ約3秒を取得して逆再生します。':'停止位置より前の約3秒を取得します。';
+});
+make.addEventListener('click',async()=>{
+  playToken++;stop.disabled=true;make.disabled=true;results.innerHTML='';summaryCard.classList.add('hidden');sets.clear();
+  try{
+    for(const s of sizes){
+      const set=await captureSet(s);sets.set(s,set);results.appendChild(makeCard(set));
+    }
+    renderSummary();
+    status.textContent='比較を作成しました。各カードの「この画質で再生」で見比べられます。';
+  }catch(e){status.textContent='比較を作成できませんでした: '+e.message}
+  make.disabled=false;
+});
+stop.addEventListener('click',()=>{playToken++;stop.disabled=true;status.textContent='再生を止めました。'});
+})();
+</script>
+</body>
+</html>

@@ -338,7 +338,8 @@ function fillMiracleSparkles(kind='miracle'){
 
 function specialMovieTimeline(kind,replay=null){
   const target=Math.max(0,Number(replay?.targetTime)||MIRACLE_REPLAY_LEAD_SECONDS);
-  const lead=Math.min(MIRACLE_REPLAY_LEAD_SECONDS,Math.max(.04,target));
+  const storedSpan=Number(replay?.replaySpan)||0;
+  const lead=storedSpan>0?Math.min(MIRACLE_REPLAY_LEAD_SECONDS,storedSpan):Math.min(MIRACLE_REPLAY_LEAD_SECONDS,Math.max(.04,target));
   const slow=Math.max(.35,lead/MIRACLE_REPLAY_RATE);
   const intro=kind==='reversal'?.78:.52;
   const final=4.20;
@@ -373,7 +374,7 @@ function specialMovieSupported(){
     typeof HTMLCanvasElement.prototype.captureStream==='function';
 }
 function specialMovieExportKey(replay){
-  return replay?[(replay.kind||''),Number(replay.targetTime||0).toFixed(3),replay.index??''].join('|'):'';
+  return replay?[(replay.kind||''),Number(replay.targetTime||0).toFixed(3),replay.index??'',replay.replayCandidateId||''].join('|'):'';
 }
 function specialMovieFilename(kind){
   const label=kind==='reversal'?'daigyakuten-daikichi':'kiseki-no-ichimai';
@@ -554,13 +555,21 @@ function drawMovieAura(ctx,w,h,kind,progress,flash=0){
   ctx.restore();
 }
 function drawSpecialMovieFrame(ctx,state){
-  const {kind,t,timeline,still,video,videoReady,particles,w,h}=state;
+  const {kind,t,timeline,still,video,videoReady,replayImages,particles,w,h}=state;
   const spec=specialSequenceSpec(kind,{targetTime:state.targetTime});
   const slowStart=timeline.intro;
   const slowEnd=timeline.intro+timeline.slow;
   const finalStart=slowEnd;
   let source=still;
-  if(t>=slowStart&&t<slowEnd&&video&&videoReady()&&video.readyState>=2)source=video;
+  if(t>=slowStart&&t<slowEnd){
+    if(video&&videoReady()&&video.readyState>=2){
+      source=video;
+    }else if(Array.isArray(replayImages)&&replayImages.length){
+      const p=(t-slowStart)/Math.max(.01,timeline.slow);
+      const ix=Math.max(0,Math.min(replayImages.length-1,Math.floor(p*replayImages.length)));
+      source=replayImages[ix]||still;
+    }
+  }
 
   if(t<slowStart){
     drawMovieMedia(ctx,still,w,h,1,kind==='reversal'?.58:.30);
@@ -631,6 +640,13 @@ async function renderSpecialMovie(kind,replay,onProgress){
 
   const timeline=specialMovieTimeline(kind,replay);
   const still=await loadImage(replay.frameSrc);
+  let storedReplay=null;
+  if(replay.replayCandidateId&&typeof window.__memoryDeckLoadReplay==='function'){
+    try{storedReplay=await window.__memoryDeckLoadReplay(replay.replayCandidateId);}catch(e){}
+  }
+  const replayImages=Array.isArray(storedReplay?.frames)
+    ? (await Promise.all(storedReplay.frames.map(src=>loadImage(src).catch(()=>null)))).filter(Boolean)
+    : [];
   const portrait=still.naturalHeight>=still.naturalWidth;
   const w=portrait?720:1280;
   const h=portrait?1280:720;
@@ -680,6 +696,7 @@ async function renderSpecialMovie(kind,replay,onProgress){
         drawSpecialMovieFrame(ctx,{
           kind,t,timeline,still,video:movieVideo,
           videoReady:()=>!videoFailed,
+          replayImages,
           particles,w,h
         });
         const percent=Math.min(99,Math.floor(t/timeline.total*100));
@@ -697,7 +714,7 @@ async function renderSpecialMovie(kind,replay,onProgress){
     const blob=await finished;
     onProgress?.(100);
     if(!blob.size)throw new Error('生成したムービーが空でした');
-    return {blob,usedSource:!!movieVideo&&!videoFailed,width:w,height:h};
+    return {blob,usedSource:(!!movieVideo&&!videoFailed)||replayImages.length>=2,width:w,height:h};
   }finally{
     try{
       if(recorder.state!=='inactive')recorder.stop();
@@ -1123,6 +1140,36 @@ async function runReverseSourceReplay(targetTime,token){
   return await replayReverseTowardTarget(replaySourceUrl(),targetTime,token);
 }
 
+async function replayStoredDeckFrames(token){
+  const candidateId=activeCreation?.deckCandidateIds?.[currentIndex];
+  if(!candidateId||typeof window.__memoryDeckLoadReplay!=='function')return false;
+  let stored=null;
+  try{stored=await window.__memoryDeckLoadReplay(candidateId);}catch(e){return false;}
+  if(token!==miracleSequenceToken)return false;
+  const seq=stored?.frames;
+  if(!Array.isArray(seq)||seq.length<2)return false;
+  const mode=stored.mode||activeCreation?.deckReplayModes?.[currentIndex]||'forward';
+  const span=Math.max(.04,Number(stored.span)||Number(activeCreation?.deckReplaySpans?.[currentIndex])||MIRACLE_REPLAY_LEAD_SECONDS);
+  miracleVideo.style.display='none';
+  miracleStill.style.display='block';
+  miracleReplayLabel.textContent=mode==='reverse'?'↶ REVERSE 0.42× REPLAY':'0.42× SLOW REPLAY';
+  miracleKicker.textContent='奇跡の瞬間へ';
+  miracleSub.textContent=mode==='reverse'?'逆再生で近づいています':'保存した連続コマをスロー再生中';
+  const totalMs=(span/Math.max(.1,MIRACLE_REPLAY_RATE))*1000;
+  const hold=Math.max(120,Math.min(850,totalMs/seq.length));
+  let shown=0;
+  for(const src of seq){
+    if(token!==miracleSequenceToken)return false;
+    if(!src)continue;
+    miracleStill.src=src;
+    miracleBackdropImage.src=src;
+    shown++;
+    await sleep(hold);
+  }
+  const ok=shown>=2&&token===miracleSequenceToken;
+  diag('stored-deck-replay-end',{ok,mode,framesShown:shown,span,candidateId});
+  return ok;
+}
 async function replayReverseFramesFallback(targetTime,token){
   const target=Math.max(0,Number(targetTime)||0);
   if(target>=EARLY_REPLAY_THRESHOLD){
@@ -1165,12 +1212,22 @@ async function replayReverseFramesFallback(targetTime,token){
   return ok;
 }
 async function executeReplayPlan(targetTime,token,frameSrc){
-  const plan=replayPlan(targetTime,replaySourceAvailable());
+  const storedDeckReplay=!!(
+    activeCreation?.deckMode&&
+    activeCreation?.deckCandidateIds?.[currentIndex]&&
+    Number(activeCreation?.deckReplaySpans?.[currentIndex])>0&&
+    typeof window.__memoryDeckLoadReplay==='function'
+  );
+  const plan=storedDeckReplay
+    ? {route:'stored-deck-frames',early:(activeCreation?.deckReplayModes?.[currentIndex]==='reverse'),targetTime:Math.max(0,Number(targetTime)||0)}
+    : replayPlan(targetTime,replaySourceAvailable());
   lastReplayPlan=plan;
   diag('plan',{...plan,sourceState:safeReplayState()});
 
   let replayed=false;
-  if(plan.route==='reverse-source'){
+  if(plan.route==='stored-deck-frames'){
+    replayed=await replayStoredDeckFrames(token);
+  }else if(plan.route==='reverse-source'){
     replayed=await runReverseSourceReplay(targetTime,token);
     if(!replayed&&token===miracleSequenceToken){
       diag('fallback',{from:'reverse-source',to:'reverse-frames',targetTime:plan.targetTime});
@@ -1472,6 +1529,9 @@ function addHistory(item){
     deckMode:!!activeCreation?.deckMode,
     sourceVideoId:activeCreation?.deckSourceIds?.[currentIndex]||null,
     sourceName:activeCreation?.deckSourceNames?.[currentIndex]||null,
+    replayCandidateId:activeCreation?.deckCandidateIds?.[currentIndex]||null,
+    replayMode:activeCreation?.deckReplayModes?.[currentIndex]||null,
+    replaySpan:activeCreation?.deckReplaySpans?.[currentIndex]||0,
     drawnAt:Date.now()
   });
   if(history.length>40)history.shift();
@@ -1520,7 +1580,10 @@ function showHistoryEntry(x){
     renderLucky(currentLab.lucky);
 
     if(x.special){
-      currentMiracleReplay={kind:x.special,frameSrc:x.image,targetTime:x.targetTime??x.time,index:x.index,fortune:x.fortune||null};
+      currentMiracleReplay={
+        kind:x.special,frameSrc:x.image,targetTime:x.targetTime??x.time,index:x.index,fortune:x.fortune||null,
+        replayCandidateId:x.replayCandidateId||null,replayMode:x.replayMode||null,replaySpan:x.replaySpan||0
+      };
       replaySpecialBtn.style.display='block';
       movieResultBtn.style.display='block';
       specialLine.textContent=x.special==='reversal'?'🌈 大逆転！奇跡の一枚':'✨ 奇跡の一枚';
@@ -1594,7 +1657,10 @@ function showLabResult(){
       frameSrc:playImageEl.currentSrc||playImageEl.src,
       targetTime:Number.isFinite(targetTime)?targetTime:currentIndex,
       index:currentIndex,
-      fortune
+      fortune,
+      replayCandidateId:activeCreation?.deckCandidateIds?.[currentIndex]||null,
+      replayMode:activeCreation?.deckReplayModes?.[currentIndex]||null,
+      replaySpan:activeCreation?.deckReplaySpans?.[currentIndex]||0
     };
     replaySpecialBtn.style.display='block';
   }

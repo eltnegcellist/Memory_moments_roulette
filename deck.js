@@ -24,10 +24,29 @@ const deckBackupBtn=document.getElementById('deckBackupBtn');
 const deckRestoreBtn=document.getElementById('deckRestoreBtn');
 const deckRestoreInput=document.getElementById('deckRestoreInput');
 const deckClearBtn=document.getElementById('deckClearBtn');
+const deckSearch=document.getElementById('deckSearch');
+const deckSort=document.getElementById('deckSort');
+const deckSelectionStatus=document.getElementById('deckSelectionStatus');
+const deckSelectAllBtn=document.getElementById('deckSelectAllBtn');
+const deckClearSelectionBtn=document.getElementById('deckClearSelectionBtn');
 if(!deckCard||!deckDrawBtn||!deckAddBtn||!deckManage||!deckSources||!deckPicker)return;
 
 let processing=false;
 const selectedSourceIds=new Set();
+const thumbnailJobs=new Map();
+const thumbnailTargets=new WeakMap();
+const thumbnailObserver=typeof IntersectionObserver!=='undefined'
+  ? new IntersectionObserver(entries=>{
+      for(const entry of entries){
+        if(!entry.isIntersecting)continue;
+        const src=thumbnailTargets.get(entry.target);
+        thumbnailObserver.unobserve(entry.target);
+        if(src)ensureSourceThumbnail(src,entry.target);
+      }
+    },{rootMargin:'320px 0px'})
+  : null;
+let selectionLoaded=false;
+let lastDeckSources=[];
 
 async function getAll(store){
   const db=await openDB();
@@ -64,6 +83,117 @@ function approxDataUrlBytes(s){
   if(!s)return 0;
   const comma=s.indexOf(',');
   return Math.ceil((s.length-(comma>=0?comma+1:0))*0.75);
+}
+function sourceMomentDate(src){
+  const t=Number(src?.lastModified)||Number(src?.addedAt)||Date.now();
+  return new Date(t);
+}
+function sourceMonthKey(src){
+  const d=sourceMomentDate(src);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+}
+function sourceMonthLabel(src){
+  const d=sourceMomentDate(src);
+  return d.getFullYear()+'年'+(d.getMonth()+1)+'月';
+}
+function formatDuration(seconds){
+  const s=Math.max(0,Math.round(Number(seconds)||0));
+  const m=Math.floor(s/60),r=s%60;
+  return m+':'+String(r).padStart(2,'0');
+}
+async function firstFrameForSource(sourceId){
+  const db=await openDB();
+  return new Promise((res,rej)=>{
+    const idx=db.transaction(FRAME_STORE,'readonly').objectStore(FRAME_STORE).index('sourceVideoId');
+    const r=idx.openCursor(IDBKeyRange.only(sourceId));
+    r.onsuccess=()=>res(r.result?.value||null);
+    r.onerror=()=>rej(r.error);
+  });
+}
+async function makeSourceThumbnail(dataUrl){
+  if(!dataUrl)return null;
+  const img=await new Promise((res,rej)=>{
+    const x=new Image();x.onload=()=>res(x);x.onerror=()=>rej(new Error('thumbnail image error'));x.src=dataUrl;
+  });
+  const maxEdge=320;
+  const scale=Math.min(1,maxEdge/Math.max(img.naturalWidth||1,img.naturalHeight||1));
+  const canvas=document.createElement('canvas');
+  canvas.width=Math.max(2,Math.round((img.naturalWidth||1)*scale));
+  canvas.height=Math.max(2,Math.round((img.naturalHeight||1)*scale));
+  const cx=canvas.getContext('2d');
+  cx.drawImage(img,0,0,canvas.width,canvas.height);
+  let out=canvas.toDataURL('image/webp',.68);
+  if(!out.startsWith('data:image/webp'))out=canvas.toDataURL('image/jpeg',.68);
+  return {dataUrl:out,size:approxDataUrlBytes(out),width:canvas.width,height:canvas.height};
+}
+async function ensureSourceThumbnail(src,img){
+  if(src.thumbnailData){img.src=src.thumbnailData;return;}
+  let job=thumbnailJobs.get(src.id);
+  if(!job){
+    job=(async()=>{
+      const first=await firstFrameForSource(src.id);
+      if(!first?.imageData)return null;
+      const thumb=await makeSourceThumbnail(first.imageData);
+      if(!thumb)return null;
+      src.thumbnailData=thumb.dataUrl;
+      src.thumbnailSize=thumb.size;
+      src.thumbnailWidth=thumb.width;
+      src.thumbnailHeight=thumb.height;
+      src.storageBytes=(Number(src.storageBytes)||0)+thumb.size;
+      const db=await openDB();
+      await new Promise((res,rej)=>{
+        const tx=db.transaction(SOURCE_STORE,'readwrite');
+        tx.objectStore(SOURCE_STORE).put(src);
+        tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);
+      });
+      return thumb.dataUrl;
+    })().finally(()=>thumbnailJobs.delete(src.id));
+    thumbnailJobs.set(src.id,job);
+  }
+  try{
+    const data=await job;
+    if(data&&img.isConnected)img.src=data;
+  }catch(e){}
+}
+function loadSourceThumbnail(src,img){
+  if(src.thumbnailData){img.src=src.thumbnailData;return;}
+  if(thumbnailObserver){
+    thumbnailTargets.set(img,src);
+    thumbnailObserver.observe(img);
+  }else{
+    ensureSourceThumbnail(src,img);
+  }
+}
+async function loadSelectedSources(sources){
+  const valid=new Set(sources.map(s=>s.id));
+  if(selectionLoaded){
+    for(const id of [...selectedSourceIds])if(!valid.has(id))selectedSourceIds.delete(id);
+    return;
+  }
+  selectionLoaded=true;
+  const saved=await metaGet('selectedSourceIds');
+  if(Array.isArray(saved)){
+    saved.filter(id=>valid.has(id)).forEach(id=>selectedSourceIds.add(id));
+  }else{
+    sources.forEach(s=>selectedSourceIds.add(s.id));
+  }
+}
+async function saveSelectedSources(){
+  await metaPut('selectedSourceIds',[...selectedSourceIds]);
+}
+function updateSelectionStatus(sources){
+  const n=sources.filter(s=>selectedSourceIds.has(s.id)).length;
+  if(deckSelectionStatus){
+    deckSelectionStatus.textContent=!sources.length
+      ? '動画がありません'
+      : n===0
+        ? '動画が選択されていません'
+        : n===sources.length
+          ? 'すべての'+n+'本を選択中'
+          : n+' / '+sources.length+'本を選択中';
+  }
+  deckDrawBtn.disabled=!n||processing;
+  deckDrawBtn.textContent=n>0&&n<sources.length?'🎴 選んだ'+n+'本でおみくじを引く':'🎴 選んだ動画でおみくじを引く';
 }
 function deckTargetCount(duration){
   const manual=frameCountEl?.value&&frameCountEl.value!=='auto'?Number(frameCountEl.value):null;
@@ -190,8 +320,9 @@ async function stats(){
   }
   for(const src of sources){
     const x=bySource.get(src.id)||{count:0,bytes:0};
-    if(src.candidateCount!==x.count||src.storageBytes!==x.bytes){
-      src.candidateCount=x.count;src.storageBytes=x.bytes;
+    const totalBytes=x.bytes+(Number(src.thumbnailSize)||0);
+    if(src.candidateCount!==x.count||src.storageBytes!==totalBytes){
+      src.candidateCount=x.count;src.storageBytes=totalBytes;
       try{
         const db=await openDB();
         const tx=db.transaction(SOURCE_STORE,'readwrite');
@@ -228,71 +359,136 @@ async function storageText(localBytes){
     return 'デッキ '+formatBytes(localBytes)+(quota?' ・ 端末保存 '+formatBytes(usage)+' / '+formatBytes(quota):'')+(persistent?' ・ 保存保護あり':' ・ 通常保存');
   }catch(e){return 'デッキ '+formatBytes(localBytes);}
 }
+function filteredSortedSources(sources){
+  const q=(deckSearch?.value||'').trim().toLowerCase();
+  const newest=(deckSort?.value||'newest')!=='oldest';
+  return sources
+    .filter(src=>!q||(src.fileName||'').toLowerCase().includes(q))
+    .sort((a,b)=>{
+      const d=sourceMomentDate(a)-sourceMomentDate(b);
+      return newest?-d:d;
+    });
+}
+function makeSourceTile(src,{selectable=false,manageable=false}={}){
+  const card=document.createElement('article');
+  card.className='deckVideoTile'+(selectedSourceIds.has(src.id)?' selected':'');
+  card.dataset.sourceId=src.id;
+
+  const choose=document.createElement('button');
+  choose.type='button';
+  choose.className='deckVideoPick';
+  choose.setAttribute('aria-pressed',selectedSourceIds.has(src.id)?'true':'false');
+  choose.setAttribute('aria-label',(src.fileName||'動画')+(selectedSourceIds.has(src.id)?' 選択済み':' 選択する'));
+
+  const media=document.createElement('div');
+  media.className='deckVideoThumb';
+  const img=document.createElement('img');
+  img.alt='';
+  if(src.thumbnailData)img.src=src.thumbnailData;
+  else ensureSourceThumbnail(src,img);
+  const play=document.createElement('span');
+  play.className='deckVideoIcon';
+  play.textContent='▶';
+  const check=document.createElement('span');
+  check.className='deckVideoCheck';
+  check.textContent='✓';
+  const duration=document.createElement('span');
+  duration.className='deckVideoDuration';
+  duration.textContent=formatDuration(src.duration);
+  media.append(img,play,check,duration);
+
+  const info=document.createElement('div');
+  info.className='deckVideoInfo';
+  const date=document.createElement('span');
+  date.className='deckVideoDate';
+  date.textContent=sourceMomentDate(src).toLocaleDateString('ja-JP',{month:'numeric',day:'numeric'});
+  const name=document.createElement('strong');
+  name.textContent=src.fileName||'動画';
+  const meta=document.createElement('small');
+  meta.textContent=(Number(src.candidateCount)||0)+'個の一瞬';
+  info.append(date,name,meta);
+  choose.append(media,info);
+
+  if(selectable){
+    choose.onclick=async()=>{
+      if(selectedSourceIds.has(src.id))selectedSourceIds.delete(src.id);
+      else selectedSourceIds.add(src.id);
+      await saveSelectedSources();
+      updateSelectionStatus(lastDeckSources);
+      renderSourceLibraries();
+    };
+  }else{
+    choose.disabled=true;
+    choose.setAttribute('aria-disabled','true');
+  }
+  card.appendChild(choose);
+
+  if(manageable){
+    const del=document.createElement('button');
+    del.type='button';
+    del.className='deckVideoDelete';
+    del.setAttribute('aria-label',(src.fileName||'動画')+'をデッキから削除');
+    del.textContent='×';
+    del.onclick=async e=>{
+      e.preventDefault();e.stopPropagation();
+      if(!confirm('「'+(src.fileName||'この動画')+'」から作った一瞬をデッキから削除しますか？'))return;
+      await deleteSource(src.id);
+      await renderDeck();
+    };
+    card.appendChild(del);
+  }
+  return card;
+}
+function renderGroupedLibrary(container,sources,options){
+  container.innerHTML='';
+  const visible=filteredSortedSources(sources);
+  if(!visible.length){
+    container.innerHTML='<div class="note">'+(sources.length?'検索条件に合う動画がありません。':'追加した動画がここに並びます。')+'</div>';
+    return;
+  }
+  let currentKey=null,grid=null;
+  for(const src of visible){
+    const key=sourceMonthKey(src);
+    if(key!==currentKey){
+      currentKey=key;
+      const section=document.createElement('section');
+      section.className='deckMonthGroup';
+      const head=document.createElement('div');
+      head.className='deckMonthHead';
+      const title=document.createElement('strong');
+      title.textContent=sourceMonthLabel(src);
+      const count=document.createElement('span');
+      count.textContent=visible.filter(x=>sourceMonthKey(x)===key).length+'本';
+      head.append(title,count);
+      grid=document.createElement('div');
+      grid.className='deckVideoGrid';
+      section.append(head,grid);
+      container.appendChild(section);
+    }
+    grid.appendChild(makeSourceTile(src,options));
+  }
+}
+function renderSourceLibraries(){
+  renderGroupedLibrary(deckPicker,lastDeckSources,{selectable:true,manageable:false});
+  renderGroupedLibrary(deckSources,lastDeckSources,{selectable:false,manageable:true});
+}
 async function renderDeck(){
   const s=await stats();
+  lastDeckSources=s.sources;
+  await loadSelectedSources(s.sources);
   const validIds=new Set(s.sources.map(x=>x.id));
   for(const id of [...selectedSourceIds])if(!validIds.has(id))selectedSourceIds.delete(id);
   const selected=s.sources.filter(x=>selectedSourceIds.has(x.id));
   deckStatus.textContent=s.count
     ? s.sources.length+'本の動画から '+s.count+'個の一瞬を保存しています。'+(selected.length?' 現在 '+selected.length+'本を選択中です。':' ルーレットに使う動画を選んでください。')
     : 'まだ保存した動画はありません。上の「新しい動画からルーレットを作る」から追加してください。';
-  deckDrawBtn.disabled=!selected.length||processing;
+  updateSelectionStatus(s.sources);
   deckStorage.textContent=await storageText(s.bytes);
-
-  deckPicker.innerHTML='';
-  const sortedSources=[...s.sources].sort((a,b)=>(b.addedAt||0)-(a.addedAt||0));
-  if(!sortedSources.length){
-    deckPicker.innerHTML='<div class="note">追加した動画がここに並びます。</div>';
-  }else{
-    sortedSources.forEach(src=>{
-      const row=document.createElement('label');
-      row.className='deckPickRow';
-      const check=document.createElement('input');
-      check.type='checkbox';
-      check.checked=selectedSourceIds.has(src.id);
-      check.addEventListener('change',()=>{
-        if(check.checked)selectedSourceIds.add(src.id);
-        else selectedSourceIds.delete(src.id);
-        renderDeck().catch(console.error);
-      });
-      const main=document.createElement('div');
-      main.className='deckSourceMain';
-      const name=document.createElement('strong');
-      name.textContent=src.fileName||'動画';
-      const meta=document.createElement('span');
-      meta.textContent=(Number(src.candidateCount)||0)+'個の一瞬 ・ '+new Date(src.addedAt||Date.now()).toLocaleDateString('ja-JP');
-      main.append(name,meta);
-      row.append(check,main);
-      deckPicker.appendChild(row);
-    });
-  }
-
-  deckSources.innerHTML='';
-  if(!sortedSources.length){
-    deckSources.innerHTML='<div class="note">追加した動画はここに表示されます。</div>';
-  }else{
-    sortedSources.forEach(src=>{
-      const row=document.createElement('div');
-      row.className='deckSourceRow';
-      const main=document.createElement('div');
-      main.className='deckSourceMain';
-      const name=document.createElement('strong');
-      name.textContent=src.fileName||'動画';
-      const meta=document.createElement('span');
-      meta.textContent=(Number(src.candidateCount)||0)+'個の一瞬 ・ '+formatBytes(Number(src.storageBytes)||0)+' ・ '+new Date(src.addedAt||Date.now()).toLocaleDateString('ja-JP');
-      main.append(name,meta);
-      const del=document.createElement('button');
-      del.className='danger'; del.type='button'; del.textContent='この動画分を削除';
-      del.onclick=async()=>{
-        if(!confirm('「'+(src.fileName||'この動画')+'」から作った一瞬をデッキから削除しますか？'))return;
-        await deleteSource(src.id); await renderDeck();
-      };
-      row.append(main,del); deckSources.appendChild(row);
-    });
-  }
+  renderSourceLibraries();
 }
 async function deleteSource(sourceId){
   selectedSourceIds.delete(sourceId);
+  await saveSelectedSources();
   const db=await openDB();
   await new Promise((res,rej)=>{
     const tx=db.transaction([SOURCE_STORE,FRAME_STORE,REPLAY_STORE],'readwrite');
@@ -420,7 +616,14 @@ async function extractOne(file,overallIndex,total){
   }
   if(!frames.length)throw new Error('デッキの保存容量が上限に達しています');
   source.candidateCount=frames.length;
-  source.storageBytes=frames.reduce((n,x)=>n+(Number(x.imageSize)||0)+(Number(x.replaySize)||0),0);
+  const thumb=await makeSourceThumbnail(frames[0]?.imageData).catch(()=>null);
+  if(thumb){
+    source.thumbnailData=thumb.dataUrl;
+    source.thumbnailSize=thumb.size;
+    source.thumbnailWidth=thumb.width;
+    source.thumbnailHeight=thumb.height;
+  }
+  source.storageBytes=frames.reduce((n,x)=>n+(Number(x.imageSize)||0)+(Number(x.replaySize)||0),0)+(Number(source.thumbnailSize)||0);
   source.replaySpec={edge:REPLAY_EDGE,frames:REPLAY_FRAME_COUNT,quality:REPLAY_QUALITY,seconds:REPLAY_SECONDS};
   await saveSourceAndFrames(source,frames,replays);
   return {duplicate:false,name:file.name,count:frames.length,sourceId};
@@ -452,7 +655,12 @@ window.__memoryDeckHandleFiles=async files=>{
       }
     }
     await requestPersistence();
-    if(batchSourceIds.length){selectedSourceIds.clear();batchSourceIds.forEach(id=>selectedSourceIds.add(id));}
+    if(batchSourceIds.length){
+      selectedSourceIds.clear();
+      batchSourceIds.forEach(id=>selectedSourceIds.add(id));
+      selectionLoaded=true;
+      await saveSelectedSources();
+    }
     progressBar.style.width='100%';
     let msg=added+'個の一瞬を思い出デッキに追加しました。';
     if(duplicates)msg+=' '+duplicates+'本は追加済みのためスキップしました。';
@@ -515,9 +723,13 @@ window.__memoryDeckResolveStop=(creation,fallback)=>{
   return ix>=0?ix:fallback;
 };
 async function buildDeckCreation(sourceIds){
-  const [allFrames,sources]=await Promise.all([getAll(FRAME_STORE),getAll(SOURCE_STORE)]);
-  const wanted=new Set(sourceIds||[]);
-  const frames=allFrames.filter(x=>wanted.has(x.sourceVideoId));
+  const wanted=[...new Set(sourceIds||[])];
+  if(!wanted.length)return null;
+  const [frameGroups,sources]=await Promise.all([
+    Promise.all(wanted.map(id=>framesForSource(id))),
+    getAll(SOURCE_STORE)
+  ]);
+  const frames=frameGroups.flat();
   if(!frames.length)return null;
   const sourceNames=new Map(sources.map(x=>[x.id,x.fileName||'動画']));
   const ids=frames.map(x=>x.id);
@@ -560,7 +772,7 @@ deckManageBtn.addEventListener('click',()=>{
 async function backupDeck(){
   const [sources,frames,replays,drawState]=await Promise.all([getAll(SOURCE_STORE),getAll(FRAME_STORE),getAll(REPLAY_STORE),metaGet('drawState')]);
   if(!frames.length){alert('バックアップする思い出デッキがありません。');return;}
-  const payload={format:'memory-moments-roulette-deck',version:2,exportedAt:new Date().toISOString(),sources,frames,replays,drawState};
+  const payload={format:'memory-moments-roulette-deck',version:3,exportedAt:new Date().toISOString(),sources,frames,replays,drawState,selectedSourceIds:[...selectedSourceIds]};
   const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
@@ -605,7 +817,7 @@ async function restoreDeck(file){
         accepted.push({frame:clean,replay:replayRecord});count++;bytes+=b;added++;
       }
       if(accepted.length){
-        const storageBytes=accepted.reduce((n,x)=>n+(Number(x.frame.imageSize)||0)+(Number(x.frame.replaySize)||0),0);
+        const storageBytes=accepted.reduce((n,x)=>n+(Number(x.frame.imageSize)||0)+(Number(x.frame.replaySize)||0),0)+(Number(src.thumbnailSize)||0);
         ss.put({...src,candidateCount:accepted.length,storageBytes});
         accepted.forEach(x=>{fs.put(x.frame);if(x.replay)rs.put(x.replay);});
       }
@@ -623,6 +835,13 @@ async function restoreDeck(file){
   }else{
     await metaPut('drawState',{universeIds:[],remainingIds:[],cycle:1});
   }
+  if(cur.count===0&&Array.isArray(payload.selectedSourceIds)){
+    selectedSourceIds.clear();
+    const afterSourceIds=new Set((await getAll(SOURCE_STORE)).map(s=>s.id));
+    payload.selectedSourceIds.filter(id=>afterSourceIds.has(id)).forEach(id=>selectedSourceIds.add(id));
+    selectionLoaded=true;
+    await saveSelectedSources();
+  }
   await requestPersistence();
   await renderDeck();
   deckNotice.textContent=added+'個の一瞬をバックアップから復元しました。';
@@ -639,6 +858,9 @@ deckClearBtn?.addEventListener('click',async()=>{
     tx.objectStore(META_STORE).delete('drawState');
     tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);
   });
+  selectedSourceIds.clear();
+  selectionLoaded=true;
+  await saveSelectedSources();
   deckNotice.textContent='思い出デッキを削除しました。';
   deckNotice.className='note deckNotice';
   await renderDeck();
@@ -650,6 +872,21 @@ deckRestoreInput?.addEventListener('change',async()=>{
   if(!f)return;
   try{await restoreDeck(f);}catch(e){alert('復元できませんでした: '+(e?.message||e));}
   deckRestoreInput.value='';
+});
+deckSearch?.addEventListener('input',()=>renderSourceLibraries());
+deckSort?.addEventListener('change',()=>renderSourceLibraries());
+deckSelectAllBtn?.addEventListener('click',async()=>{
+  selectedSourceIds.clear();
+  lastDeckSources.forEach(s=>selectedSourceIds.add(s.id));
+  await saveSelectedSources();
+  updateSelectionStatus(lastDeckSources);
+  renderSourceLibraries();
+});
+deckClearSelectionBtn?.addEventListener('click',async()=>{
+  selectedSourceIds.clear();
+  await saveSelectedSources();
+  updateSelectionStatus(lastDeckSources);
+  renderSourceLibraries();
 });
 document.addEventListener('visibilitychange',()=>{
   if(processing&&document.hidden){

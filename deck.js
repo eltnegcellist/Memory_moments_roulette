@@ -25,7 +25,6 @@ const deckRestoreBtn=document.getElementById('deckRestoreBtn');
 const deckRestoreInput=document.getElementById('deckRestoreInput');
 const deckClearBtn=document.getElementById('deckClearBtn');
 const deckSearch=document.getElementById('deckSearch');
-const deckSearchBtn=document.getElementById('deckSearchBtn');
 const deckSort=document.getElementById('deckSort');
 const deckSelectionStatus=document.getElementById('deckSelectionStatus');
 const deckSelectAllBtn=document.getElementById('deckSelectAllBtn');
@@ -1062,7 +1061,6 @@ deckRestoreInput?.addEventListener('change',async()=>{
 });
 deckSearch?.addEventListener('input',()=>renderSourceLibraries());
 deckSearch?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();renderSourceLibraries();}});
-deckSearchBtn?.addEventListener('click',()=>{renderSourceLibraries();deckSearch?.focus();});
 deckSort?.addEventListener('change',()=>renderSourceLibraries());
 deckSelectAllBtn?.addEventListener('click',async()=>{
   selectedSourceIds.clear();

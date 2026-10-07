@@ -776,7 +776,6 @@ async function captureReplayBurstBackground(v,canvas,cx,targetTime){
   const frames=[];
   let bytes=0;
   for(let i=0;i<REPLAY_FRAME_COUNT;i++){
-    await waitUntilVisible();
     const p=REPLAY_FRAME_COUNT===1?0:i/(REPLAY_FRAME_COUNT-1);
     await backgroundSeekTo(v,timing.start+timing.span*p);
     cx.drawImage(v,0,0,canvas.width,canvas.height);

@@ -1212,15 +1212,19 @@ async function replayReverseFramesFallback(targetTime,token){
   return ok;
 }
 async function executeReplayPlan(targetTime,token,frameSrc){
+  const deckCandidateId=activeCreation?.deckCandidateIds?.[currentIndex];
   const storedDeckReplay=!!(
     activeCreation?.deckMode&&
-    activeCreation?.deckCandidateIds?.[currentIndex]&&
+    deckCandidateId&&
     Number(activeCreation?.deckReplaySpans?.[currentIndex])>0&&
     typeof window.__memoryDeckLoadReplay==='function'
   );
+  const pendingDeckReplay=!!(activeCreation?.deckMode&&deckCandidateId&&!storedDeckReplay);
   const plan=storedDeckReplay
     ? {route:'stored-deck-frames',early:(activeCreation?.deckReplayModes?.[currentIndex]==='reverse'),targetTime:Math.max(0,Number(targetTime)||0)}
-    : replayPlan(targetTime,replaySourceAvailable());
+    : pendingDeckReplay
+      ? {route:'photo-only',early:false,targetTime:Math.max(0,Number(targetTime)||0),pending:true}
+      : replayPlan(targetTime,replaySourceAvailable());
   lastReplayPlan=plan;
   diag('plan',{...plan,sourceState:safeReplayState()});
 
@@ -1250,9 +1254,16 @@ async function executeReplayPlan(targetTime,token,frameSrc){
     miracleStill.style.display='block';
     miracleStill.src=frameSrc;
     miracleBackdropImage.src=frameSrc;
-    miracleReplayLabel.textContent='REPLAY unavailable';
-    miracleSub.textContent=plan.early?'逆再生を準備できませんでした':'元動画の連続スローを開始できませんでした';
-    await sleep(700);
+    miracleReplayLabel.textContent='SPECIAL PHOTO';
+    miracleSub.textContent=plan.pending?'仕上げ処理中のため、この一枚をゆっくり表示します':'この一枚をゆっくり表示します';
+    try{
+      miracleStill.getAnimations?.().forEach(x=>x.cancel());
+      miracleStill.animate?.(
+        [{transform:'scale(1.015)'},{transform:'scale(1.075)'}],
+        {duration:1050,easing:'ease-out',fill:'forwards'}
+      );
+    }catch(e){}
+    await sleep(850);
   }
 
   diag('replay-finished',{ok:replayed,route:plan.route,targetTime:plan.targetTime});

@@ -42,8 +42,10 @@ clearTimeout(photoFocusTimer);photoFocusTimer=null;
 Object.values(clsMap).forEach(c=>stage.classList.remove(c));
 stage.classList.remove('result-reveal','photo-focus');
 document.querySelectorAll('.fxParticle').forEach(e=>e.remove());
+document.querySelectorAll('.confetti').forEach(e=>e.remove());
 bigOverlay.classList.remove('show','deluxe');
 }
+window.__memoryStopRouletteEffects=()=>clearFx();
 function focusPhoto(){
 stage.classList.remove('result-reveal');
 stage.classList.add('photo-focus');
@@ -99,6 +101,7 @@ stopRun=function(){
     playSound('吉');
   }
   tapHint.textContent='もう一度タップすると再開します';
+  window.__memoryOnRouletteStopped?.();
 };
 
 const photoViewer=document.createElement('div');

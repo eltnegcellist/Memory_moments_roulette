@@ -248,7 +248,15 @@ fileInput.addEventListener('change',()=>{ if(fileInput.files?.length){ currentCr
 reextractBtn.addEventListener('click',()=>{ if(lastFile){ currentCreation=null; extractFromCurrentFile(); } });
 playBtn.addEventListener('click',()=>{ if(!selectedFrames.length) return; unlockAudio(); currentCreation=makeCreation(); persistCreation(currentCreation).catch(e=>console.error('roulette history save failed',e)); preparePlay(currentCreation); });
 stage.addEventListener('pointerdown',e=>{ e.preventDefault(); if(!primed) unlockAudio(); if(running) stopRun(); else startRun(); },{passive:false});
-$('backBtn').addEventListener('click',()=>{ clearInterval(timer); running=false; playSection.style.display='none'; if(window.__memoryBackFromPlay)window.__memoryBackFromPlay();else window.__memoryNavigate?.('home'); });
+$('backBtn').addEventListener('click',()=>{
+  clearInterval(timer); timer=null; running=false; stage.classList.remove('pulse');
+  window.__memoryStopRouletteEffects?.();
+  document.querySelectorAll('.confetti').forEach(e=>e.remove());
+  bigOverlay.classList.remove('show');
+  try{if(audioCtx&&audioCtx.state==='running')audioCtx.suspend();}catch(e){}
+  playSection.style.display='none';
+  if(window.__memoryBackFromPlay)window.__memoryBackFromPlay();else window.__memoryNavigate?.('home');
+});
 async function restoreLastRouletteAfterReload(){
   if(location.hash!=='#play'||activeCreation?.frames?.length)return;
   try{

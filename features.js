@@ -1732,6 +1732,13 @@ window.__memoryOnRoulettePrepared=x=>{
   clearGifResult();
   primeMiracleReplaySource(x);
 };
+window.__memoryOnRouletteExit=()=>{
+  clearTimeout(dockTimer);dockTimer=null;
+  clearTimeout(rareTimer);rareTimer=null;
+  clearSpecial();
+  undockResult();
+  stageGesture=null;
+};
 
 saveBtn.addEventListener('pointerdown',async e=>{
   e.preventDefault();

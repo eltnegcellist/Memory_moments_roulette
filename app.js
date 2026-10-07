@@ -251,6 +251,7 @@ stage.addEventListener('pointerdown',e=>{ e.preventDefault(); if(!primed) unlock
 $('backBtn').addEventListener('click',()=>{
   clearInterval(timer); timer=null; running=false; stage.classList.remove('pulse');
   window.__memoryStopRouletteEffects?.();
+  window.__memoryOnRouletteExit?.();
   document.querySelectorAll('.confetti').forEach(e=>e.remove());
   bigOverlay.classList.remove('show');
   try{if(audioCtx&&audioCtx.state==='running')audioCtx.suspend();}catch(e){}

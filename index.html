@@ -21,9 +21,9 @@
 <link rel="apple-touch-icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2">
 <link rel="icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2" type="image/png">
 <title>思い出ルーレットおみくじ</title>
-<link rel="stylesheet" href="./style.css?v=1.1.0-fast4">
-<link rel="stylesheet" href="./deluxe.css?v=1.1.0-fast4">
-<link rel="stylesheet" href="./features.css?v=1.1.0-fast4">
+<link rel="stylesheet" href="./style.css?v=1.1.0-history2">
+<link rel="stylesheet" href="./deluxe.css?v=1.1.0-history2">
+<link rel="stylesheet" href="./features.css?v=1.1.0-history2">
 <style>
 body:not(.show-score-details) .scoreChip,
 body:not(.show-score-details) .scoreDetails,
@@ -60,7 +60,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   </div>
   <nav class="homeShortcuts" aria-label="保存した内容">
     <button type="button" data-route="favorites"><span aria-hidden="true">♡</span><strong>お気に入り</strong><small id="homeFavoriteCount">保存した写真</small></button>
-    <button type="button" data-route="history"><span aria-hidden="true">↺</span><strong>履歴</strong><small id="homeHistoryCount">今回の結果</small></button>
+    <button type="button" data-route="history"><span aria-hidden="true">↺</span><strong>履歴</strong><small id="homeHistoryCount">作ったルーレット</small></button>
     <button type="button" data-route="settings"><span aria-hidden="true">⚙</span><strong>設定</strong><small>ルーレット・データ</small></button>
   </nav>
 </section>
@@ -133,18 +133,18 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 </section>
 <section id="legacyLibrarySection" class="card appView" data-app-view="history">
   <div class="viewTopbar"><button class="viewBack" type="button" data-nav-back>‹ ホーム</button><span>履歴</span></div>
-  <details class="historyLegacy">
-    <summary>以前保存したルーレット</summary>
-    <p class="note">旧形式で保存したルーレットです。普段は「過去の動画から作る」を使うのがおすすめです。</p>
-    <div id="library"><div class="note">まだ保存されていません。</div></div>
-  </details>
+  <div class="historyLegacy">
+    <h2>作ったルーレット</h2>
+    <p class="note">新しい形式も含め、作ったルーレットをこの端末に保存します。「遊ぶ」を押すと、そのルーレットをすぐにもう一度回せます。</p>
+    <div id="library"><div class="note">まだ作ったルーレットはありません。</div></div>
+  </div>
 </section>
 <section id="playSection" class="card appView" data-app-view="play">
   <div class="step">PLAY</div>
   <div class="playShell"><div id="stage"><img id="playImage" alt=""><div id="fortuneBadge"></div><div id="resultCard"><div id="resultHead">きょうの運勢</div><div id="resultText"></div><div id="message"></div></div><div id="rouletteBadge">タップでストップ</div></div></div>
   <div id="tapHint">画像をタップすると止まります</div><div class="row" style="justify-content:center;margin-top:12px"><button id="backBtn" class="secondary">戻る</button></div>
 </section>
-<section id="labHistorySection" class="card labHistoryCard appView" data-app-view="history">
+<section id="labHistorySection" class="card labHistoryCard appView" data-app-view="play">
   <div class="step">HISTORY / GIF</div>
   <h2>今回引いた写真</h2>
   <p class="note">止まった写真を自動でためます。GIFは同じ元動画から引いた一瞬だけを使い、動画内の時間順に並べます。複数動画のコマは混ぜません。</p>
@@ -358,12 +358,12 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <video id="video" playsinline muted preload="metadata" style="display:none"></video><canvas id="captureCanvas" style="display:none"></canvas><canvas id="smallCanvas" width="28" height="28" style="display:none"></canvas>
 </div>
 <div id="bigOverlay"><div id="bigText">大吉！</div></div>
-<script src="./navigation.js?v=1.1.0-fast4" defer></script>
-<script src="./app.js?v=1.1.0-fast4" defer></script>
-<script src="./deck.js?v=1.1.0-fast4" defer></script>
-<script src="./deluxe.js?v=1.1.0-fast4" defer></script>
-<script src="./features.js?v=1.1.0-fast4" defer></script>
-<script src="./hidden-settings.js?v=1.1.0-fast4" defer></script>
+<script src="./navigation.js?v=1.1.0-history2" defer></script>
+<script src="./app.js?v=1.1.0-history2" defer></script>
+<script src="./deck.js?v=1.1.0-history2" defer></script>
+<script src="./deluxe.js?v=1.1.0-history2" defer></script>
+<script src="./features.js?v=1.1.0-history2" defer></script>
+<script src="./hidden-settings.js?v=1.1.0-history2" defer></script>
 <script>
 (()=>{
   const scoreBox=document.getElementById('showScores');

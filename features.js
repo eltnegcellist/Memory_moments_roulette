@@ -1493,8 +1493,6 @@ function syncGifSourceChooser(){
 }
 function renderHistory(){
   historyEl.innerHTML='';
-  const homeHistoryCount=document.getElementById('homeHistoryCount');
-  if(homeHistoryCount)homeHistoryCount.textContent=history.length?history.length+'件':'まだありません';
   historyEmpty.style.display=history.length?'none':'block';
   clearHistoryBtn.disabled=!history.length;
 
@@ -1514,6 +1512,20 @@ function renderHistory(){
     historyEl.appendChild(card);
   });
   syncGifSourceChooser();
+}
+function persistDrawHistory(){
+  if(!activeCreation?.id)return;
+  activeCreation.drawHistory=history.map(x=>{const y={...x};delete y.image;return y;});
+  activeCreation.updatedAt=Date.now();
+  if(typeof dbPut==='function')dbPut(activeCreation).catch(e=>console.error('draw history save failed',e));
+}
+function restoreDrawHistory(x){
+  const saved=Array.isArray(x?.drawHistory)?x.drawHistory:[];
+  history=saved.slice(-40).map(entry=>{
+    const idx=Number.isInteger(entry.index)?entry.index:null;
+    return {...entry,image:entry.image||(idx!==null?x?.frames?.[idx]:null)||''};
+  }).filter(entry=>entry.image);
+  renderHistory();
 }
 function addHistory(item){
   const time=Number(activeCreation?.times?.[currentIndex]);
@@ -1538,6 +1550,7 @@ function addHistory(item){
   });
   if(history.length>40)history.shift();
   renderHistory();
+  persistDrawHistory();
 }
 function showHistoryEntry(x){
   clearInterval(timer);
@@ -1708,25 +1721,15 @@ window.addEventListener('pointercancel',e=>{
   if(stageGesture&&e.pointerId===stageGesture.id)stageGesture=null;
 },true);
 
-const previousStop=stopRun;
-stopRun=function(){
-  previousStop();
-  setTimeout(showLabResult,40);
-};
-const previousStart=startRun;
-startRun=function(withSound=true){
+window.__memoryOnRouletteStopped=()=>setTimeout(showLabResult,40);
+window.__memoryOnRouletteStarted=()=>{
   clearLab();
   if(resultHeadEl)resultHeadEl.textContent='きょうの運勢';
-  previousStart(withSound);
 };
-
-const previousPrepare=preparePlay;
-preparePlay=function(x){
+window.__memoryOnRoulettePrepared=x=>{
   clearLab();
-  history=[];
-  renderHistory();
+  restoreDrawHistory(x);
   clearGifResult();
-  previousPrepare(x);
   primeMiracleReplaySource(x);
 };
 
@@ -1761,6 +1764,7 @@ saveBtn.addEventListener('pointerdown',async e=>{
 
 clearHistoryBtn.addEventListener('click',()=>{
   history=[];
+  if(activeCreation?.id){activeCreation.drawHistory=[];activeCreation.updatedAt=Date.now();if(typeof dbPut==='function')dbPut(activeCreation).catch(e=>console.error('draw history clear failed',e));}
   renderHistory();
   clearGifResult();
   gifStatus.style.display='none';

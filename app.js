@@ -143,6 +143,7 @@ grid.appendChild(d);
 }
 function makeCreation(){ const mode=modeName(); const id=currentCreation?.id || ('r'+Date.now()+Math.random().toString(36).slice(2,8)); return { id, title: currentCreation?.title || autoTitle(mode), createdAt: currentCreation?.createdAt || Date.now(), updatedAt: Date.now(), sourceKey: currentSourceKey, mode, frames: selectedFrames.map(f=>f.dataUrl), fortunes: mode==='omikuji' ? selectedFortunes.slice() : [], times: selectedFrames.map(f=>f.time), appeal: mode==='omikuji' ? selectedAppealDetails.map(x=>({score:x.score,clarityScore:x.clarityScore,rarityScore:x.rarityScore,changeScore:x.changeScore})) : [] }; }
 const DBNAME='babyExpressionRouletteDB', STORE='creations';
+const LAST_ROULETTE_KEY='memory-moments-last-roulette-v1';
 function openDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DBNAME,3);r.onupgradeneeded=()=>{
   const db=r.result;
   if(!db.objectStoreNames.contains(STORE))db.createObjectStore(STORE,{keyPath:'id'});
@@ -158,10 +159,13 @@ function openDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open(D
   if(!db.objectStoreNames.contains('deckReplays'))db.createObjectStore('deckReplays',{keyPath:'id'});
 };r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
 async function dbPut(x){const db=await openDB();return new Promise((res,rej)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(x);tx.oncomplete=res;tx.onerror=()=>rej(tx.error)})}
+async function dbGet(id){if(!id)return null;const db=await openDB();return new Promise((res,rej)=>{const r=db.transaction(STORE).objectStore(STORE).get(id);r.onsuccess=()=>res(r.result||null);r.onerror=()=>rej(r.error)})}
+function rememberLastRoulette(x){if(!x?.id)return;try{localStorage.setItem(LAST_ROULETTE_KEY,x.id);}catch(e){}}
+async function persistCreation(x){if(!x?.id||!Array.isArray(x.frames)||!x.frames.length)return;await dbPut(x);rememberLastRoulette(x);refreshLibrary().catch(e=>console.error('roulette history refresh failed',e));}
 async function dbAll(){const db=await openDB();return new Promise((res,rej)=>{const r=db.transaction(STORE).objectStore(STORE).getAll();r.onsuccess=()=>res(r.result.sort((a,b)=>(b.updatedAt||b.createdAt)-(a.updatedAt||a.createdAt)));r.onerror=()=>rej(r.error)})}
 async function dbDelete(id){const db=await openDB();return new Promise((res,rej)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).delete(id);tx.oncomplete=res;tx.onerror=()=>rej(tx.error)})}
-async function refreshLibrary(){ const all=await dbAll(); library.innerHTML=''; if(!all.length){ library.innerHTML='<div class="note">まだ保存されていません。</div>'; return; } all.forEach(x=>{ const el=document.createElement('div'); el.className='saved'; el.innerHTML=`<img src="${x.frames[0]}"><div class="savedMain"><div class="savedTitle"></div><div class="savedMeta">${x.mode==='omikuji'?'おみくじ':'通常ルーレット'} ・ ${new Date(x.updatedAt||x.createdAt).toLocaleString('ja-JP')} ・ ${x.frames.length}枚</div><div class="savedBtns"><button class="primary open">遊ぶ</button><button class="secondary renameToggle">名前変更</button><button class="danger del">削除</button></div><div class="renameRow" style="display:none"><input type="text" value=""><button class="secondary saveName">保存</button></div></div>`; el.querySelector('.savedTitle').textContent=x.title; el.querySelector('.renameRow input').value=x.title; el.querySelector('.open').onclick=()=>{ unlockAudio(); preparePlay(x); }; el.querySelector('.renameToggle').onclick=()=>{ const row=el.querySelector('.renameRow'); row.style.display=row.style.display==='none'?'flex':'none'; }; el.querySelector('.saveName').onclick=async()=>{ const nx=(el.querySelector('.renameRow input').value||'').trim(); if(!nx) return; x.title=nx; x.updatedAt=Date.now(); await dbPut(x); refreshLibrary(); }; el.querySelector('.del').onclick=async()=>{ if(confirm('削除しますか？')){ await dbDelete(x.id); refreshLibrary(); } }; library.appendChild(el); }); }
-async function saveCurrentCreation(){ currentCreation=makeCreation(); await dbPut(currentCreation); await refreshLibrary(); }
+async function refreshLibrary(){ const all=await dbAll(); const homeHistoryCount=$("homeHistoryCount"); if(homeHistoryCount)homeHistoryCount.textContent=all.length?all.length+'件のルーレット':'まだありません'; library.innerHTML=''; if(!all.length){ library.innerHTML='<div class="note">まだ作ったルーレットはありません。</div>'; return; } all.forEach(x=>{ const el=document.createElement('div'); el.className='saved'; el.innerHTML=`<img src="${x.frames[0]}"><div class="savedMain"><div class="savedTitle"></div><div class="savedMeta">${x.mode==='omikuji'?'おみくじ':'通常ルーレット'} ・ ${new Date(x.updatedAt||x.createdAt).toLocaleString('ja-JP')} ・ ${x.frames.length}枚</div><div class="savedBtns"><button class="primary open">遊ぶ</button><button class="secondary renameToggle">名前変更</button><button class="danger del">削除</button></div><div class="renameRow" style="display:none"><input type="text" value=""><button class="secondary saveName">保存</button></div></div>`; el.querySelector('.savedTitle').textContent=x.title; el.querySelector('.renameRow input').value=x.title; el.querySelector('.open').onclick=()=>{ unlockAudio(); preparePlay(x); }; el.querySelector('.renameToggle').onclick=()=>{ const row=el.querySelector('.renameRow'); row.style.display=row.style.display==='none'?'flex':'none'; }; el.querySelector('.saveName').onclick=async()=>{ const nx=(el.querySelector('.renameRow input').value||'').trim(); if(!nx) return; x.title=nx; x.updatedAt=Date.now(); await dbPut(x); refreshLibrary(); }; el.querySelector('.del').onclick=async()=>{ if(confirm('削除しますか？')){ await dbDelete(x.id); refreshLibrary(); } }; library.appendChild(el); }); }
+async function saveCurrentCreation(){ currentCreation=makeCreation(); await persistCreation(currentCreation); }
 let audioCtx=null;
 function ensureAudio(){
 if(!audioCtx){ const Ctx=window.AudioContext||window.webkitAudioContext; if(Ctx) audioCtx=new Ctx(); }
@@ -205,17 +209,19 @@ probe.src=src;
 }
 function preparePlay(x){
 window.__memoryNavigate?.('play');
+rememberLastRoulette(x);
 activeCreation=x; running=false; clearInterval(timer); currentIndex=0;
 updatePlayStageAspect(x);
 playSection.style.display='block';
 fortuneBadge.style.display='none'; resultCard.style.display='none';
 rouletteBadge.style.display='block'; rouletteBadge.textContent='タップでストップ';
 tapHint.textContent='画像をタップすると止まります'; playImage.src=x.frames[0];
+window.__memoryOnRoulettePrepared?.(x);
 playSection.scrollIntoView({behavior:'smooth'});
 startRun(false);
 }
 function showRandom(){ const arr=activeCreation.frames; if(!arr?.length) return; let n=currentIndex; while(arr.length>1 && n===currentIndex) n=Math.floor(Math.random()*arr.length); currentIndex=n; playImage.src=arr[n]; }
-function startRun(withSound=true){ running=true; stage.classList.add('pulse'); fortuneBadge.style.display='none'; resultCard.style.display='none'; rouletteBadge.style.display='block'; rouletteBadge.textContent='タップでストップ'; tapHint.textContent='画像をタップすると止まります'; showRandom(); clearInterval(timer); timer=setInterval(showRandom,75); if(withSound) playSound('start'); }
+function startRun(withSound=true){ running=true; window.__memoryOnRouletteStarted?.(); stage.classList.add('pulse'); fortuneBadge.style.display='none'; resultCard.style.display='none'; rouletteBadge.style.display='block'; rouletteBadge.textContent='タップでストップ'; tapHint.textContent='画像をタップすると止まります'; showRandom(); clearInterval(timer); timer=setInterval(showRandom,75); if(withSound) playSound('start'); }
 function stopRun(){
 running=false; clearInterval(timer); timer=null; stage.classList.remove('pulse');
 if(activeCreation?.deckMode&&typeof window.__memoryDeckResolveStop==='function'){
@@ -235,12 +241,25 @@ if(activeCreation.mode==='omikuji'){
   rouletteBadge.style.display='block'; rouletteBadge.textContent='この瞬間！'; playSound('吉');
 }
 tapHint.textContent='もう一度タップすると再開します';
+window.__memoryOnRouletteStopped?.();
 }
 function celebrate(){ bigOverlay.classList.remove('show'); void bigOverlay.offsetWidth; bigOverlay.classList.add('show'); const pal=['#ffd700','#fff0a0','#fff','#ff5a61','#ff9d00']; for(let i=0;i<90;i++){ const e=document.createElement('div'); e.className='confetti'; e.style.left=Math.random()*100+'vw'; e.style.width=7+Math.random()*9+'px'; e.style.height=10+Math.random()*18+'px'; e.style.background=pal[Math.floor(Math.random()*pal.length)]; e.style.animationDuration=1.8+Math.random()*1.6+'s'; e.style.animationDelay=Math.random()*.3+'s'; document.body.appendChild(e); setTimeout(()=>e.remove(),3800); } if(navigator.vibrate) navigator.vibrate([100,60,140,70,260]); playSound('大吉'); setTimeout(()=>bigOverlay.classList.remove('show'),2500); }
 fileInput.addEventListener('change',()=>{ if(fileInput.files?.length){ currentCreation=null; if(typeof window.__memoryDeckHandleFiles==='function'){ window.__memoryDeckHandleFiles(Array.from(fileInput.files)); return; } extractFromCurrentFile(); } });
 reextractBtn.addEventListener('click',()=>{ if(lastFile){ currentCreation=null; extractFromCurrentFile(); } });
-playBtn.addEventListener('click',()=>{ if(!selectedFrames.length) return; unlockAudio(); currentCreation=makeCreation(); preparePlay(currentCreation); dbPut(currentCreation).then(refreshLibrary).catch(()=>{}); });
+playBtn.addEventListener('click',()=>{ if(!selectedFrames.length) return; unlockAudio(); currentCreation=makeCreation(); persistCreation(currentCreation).catch(e=>console.error('roulette history save failed',e)); preparePlay(currentCreation); });
 stage.addEventListener('pointerdown',e=>{ e.preventDefault(); if(!primed) unlockAudio(); if(running) stopRun(); else startRun(); },{passive:false});
 $('backBtn').addEventListener('click',()=>{ clearInterval(timer); running=false; playSection.style.display='none'; if(window.__memoryBackFromPlay)window.__memoryBackFromPlay();else window.__memoryNavigate?.('home'); });
+async function restoreLastRouletteAfterReload(){
+  if(location.hash!=='#play'||activeCreation?.frames?.length)return;
+  try{
+    let saved=null,lastId=null;
+    try{lastId=localStorage.getItem(LAST_ROULETTE_KEY);}catch(e){}
+    if(lastId)saved=await dbGet(lastId);
+    if(!saved){const all=await dbAll();saved=all[0]||null;}
+    if(saved?.frames?.length){preparePlay(saved);return;}
+  }catch(e){console.error('last roulette restore failed',e);}
+  window.__memoryNavigate?.('home',{replace:true});
+}
 updatePreviewMeta(); refreshLibrary();
+window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>restoreLastRouletteAfterReload(),0));
 if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});

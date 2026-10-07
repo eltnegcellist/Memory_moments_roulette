@@ -206,19 +206,26 @@ async function saveSelectedSources(){
   await metaPut('selectedSourceIds',[...selectedSourceIds]);
 }
 function updateSelectionStatus(sources){
-  const n=sources.filter(s=>selectedSourceIds.has(s.id)).length;
+  const list=Array.isArray(sources)?sources:[];
+  const n=list.filter(s=>selectedSourceIds.has(s.id)).length;
+  const momentCount=list.reduce((total,s)=>total+(Number(s.candidateCount)||0),0);
+  if(deckStatus){
+    deckStatus.textContent=list.length
+      ? list.length+'本の動画から '+momentCount+'個の一瞬を保存しています。'+(n?' 現在 '+n+'本を選択中です。':' ルーレットに使う動画を選んでください。')
+      : 'まだ保存した動画はありません。上の「新しい動画からルーレットを作る」から追加してください。';
+  }
   if(deckSelectionStatus){
-    deckSelectionStatus.textContent=!sources.length
+    deckSelectionStatus.textContent=!list.length
       ? '動画がありません'
       : n===0
         ? '動画が選択されていません'
-        : n===sources.length
+        : n===list.length
           ? 'すべての'+n+'本を選択中'
-          : n+' / '+sources.length+'本を選択中';
+          : n+' / '+list.length+'本を選択中';
   }
-  if(homeSavedVideoCount)homeSavedVideoCount.textContent=sources.length?sources.length+'本の保存済み動画から選ぶ':'まだ保存した動画はありません';
+  if(homeSavedVideoCount)homeSavedVideoCount.textContent=list.length?list.length+'本の保存済み動画から選ぶ':'まだ保存した動画はありません';
   deckDrawBtn.disabled=!n||processing;
-  deckDrawBtn.textContent=n>0&&n<sources.length?'🎴 選んだ'+n+'本でおみくじを引く':'🎴 選んだ動画でおみくじを引く';
+  deckDrawBtn.textContent=n>0&&n<list.length?'🎴 選んだ'+n+'本でおみくじを引く':'🎴 選んだ動画でおみくじを引く';
 }
 function deckTargetCount(duration){
   const manual=frameCountEl?.value&&frameCountEl.value!=='auto'?Number(frameCountEl.value):null;
@@ -509,10 +516,6 @@ async function renderDeck(){
   await loadSelectedSources(s.sources);
   const validIds=new Set(s.sources.map(x=>x.id));
   for(const id of [...selectedSourceIds])if(!validIds.has(id))selectedSourceIds.delete(id);
-  const selected=s.sources.filter(x=>selectedSourceIds.has(x.id));
-  deckStatus.textContent=s.count
-    ? s.sources.length+'本の動画から '+s.count+'個の一瞬を保存しています。'+(selected.length?' 現在 '+selected.length+'本を選択中です。':' ルーレットに使う動画を選んでください。')
-    : 'まだ保存した動画はありません。上の「新しい動画からルーレットを作る」から追加してください。';
   updateSelectionStatus(s.sources);
   if(deckStorage)deckStorage.textContent=await storageText(s.bytes);
   renderSourceLibraries();

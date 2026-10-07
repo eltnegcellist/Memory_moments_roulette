@@ -59,6 +59,17 @@ p{font-size:14px;line-height:1.7;margin:0}
     try{localKeys.forEach(k=>localStorage.removeItem(k));}catch(e){}
     try{sessionStorage.clear();}catch(e){}
 
+    try{
+      if(navigator.storage?.getDirectory){
+        const root=await navigator.storage.getDirectory();
+        for await(const [name] of root.entries()){
+          if(name.startsWith('memory-moments-source-')){
+            try{await root.removeEntry(name);}catch(e){}
+          }
+        }
+      }
+    }catch(e){}
+
     const deleted=await Promise.all(dbNames.map(deleteDb));
     if(deleted.every(Boolean)){
       status.textContent='完全初期化しました。最新版を開きます。';

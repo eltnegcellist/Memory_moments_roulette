@@ -1,6 +1,5 @@
 (()=>{
 const trigger=document.getElementById('labSettingsTrigger');
-const detailOptions=document.getElementById('detailOptions');
 const inline=document.getElementById('labSettingsInline');
 const hint=document.getElementById('labSettingsHint');
 const scoreBox=document.getElementById('showScores');
@@ -9,7 +8,7 @@ const deluxeItem=document.getElementById('labDeluxeItem');
 const specialMode=document.getElementById('labSpecialMode');
 const plainMode=document.getElementById('plainMode');
 const resetAppDataBtn=document.getElementById('labResetAppData');
-if(!trigger||!detailOptions||!inline||!scoreBox||!deluxeMode||!specialMode||!plainMode)return;
+if(!trigger||!inline||!scoreBox||!deluxeMode||!specialMode||!plainMode)return;
 
 const KEY='baby-roulette-hidden-settings-v29';
 const LEGACY_KEY='baby-roulette-hidden-settings-v27';
@@ -59,7 +58,6 @@ function toggleLab(){
   renderLabVisibility();
   if(labVisible){
     window.__memoryNavigate?.('settings');
-    detailOptions.open=true;
     inline.classList.remove('justUnlocked');
     void inline.offsetWidth;
     inline.classList.add('justUnlocked');

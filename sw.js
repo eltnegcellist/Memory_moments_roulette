@@ -1,5 +1,5 @@
-const CACHE='baby-roulette-pages-1.1.0-history4';
-const ASSETS=['./','./index.html','./style.css?v=1.1.0-history4','./deluxe.css?v=1.1.0-history4','./features.css?v=1.1.0-history4','./navigation.js?v=1.1.0-history4','./app.js?v=1.1.0-history4','./deck.js?v=1.1.0-history4','./deluxe.js?v=1.1.0-history4','./features.js?v=1.1.0-history4','./hidden-settings.js?v=1.1.0-history4','./manifest.webmanifest?v=memorybrand2','./icons/memory-roulette-omikuji.png?v=memorybrand2'];
+const CACHE='baby-roulette-pages-1.1.0-resume1';
+const ASSETS=['./','./index.html','./style.css?v=1.1.0-resume1','./deluxe.css?v=1.1.0-resume1','./features.css?v=1.1.0-resume1','./navigation.js?v=1.1.0-resume1','./app.js?v=1.1.0-resume1','./deck.js?v=1.1.0-resume1','./deluxe.js?v=1.1.0-resume1','./features.js?v=1.1.0-resume1','./hidden-settings.js?v=1.1.0-resume1','./manifest.webmanifest?v=memorybrand2','./icons/memory-roulette-omikuji.png?v=memorybrand2'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(fetch(e.request).then(r=>{const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy)).catch(()=>{});return r;}).catch(()=>caches.match(e.request).then(r=>r||caches.match('./index.html'))));});

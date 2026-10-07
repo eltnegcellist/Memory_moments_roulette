@@ -21,9 +21,9 @@
 <link rel="apple-touch-icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2">
 <link rel="icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2" type="image/png">
 <title>思い出ルーレットおみくじ</title>
-<link rel="stylesheet" href="./style.css?v=1.1.0-fast1">
-<link rel="stylesheet" href="./deluxe.css?v=1.1.0-fast1">
-<link rel="stylesheet" href="./features.css?v=1.1.0-fast1">
+<link rel="stylesheet" href="./style.css?v=1.1.0-history1">
+<link rel="stylesheet" href="./deluxe.css?v=1.1.0-history1">
+<link rel="stylesheet" href="./features.css?v=1.1.0-history1">
 <style>
 body:not(.show-score-details) .scoreChip,
 body:not(.show-score-details) .scoreDetails,
@@ -149,11 +149,11 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 </section>
 <section id="legacyLibrarySection" class="card appView" data-app-view="history">
   <div class="viewTopbar"><button class="viewBack" type="button" data-nav-back>‹ ホーム</button><span>履歴</span></div>
-  <details class="historyLegacy">
-    <summary>以前保存したルーレット</summary>
-    <p class="note">旧形式で保存したルーレットです。普段は「過去の動画から作る」を使うのがおすすめです。</p>
-    <div id="library"><div class="note">まだ保存されていません。</div></div>
-  </details>
+  <div class="historyLegacy">
+    <h2>作ったルーレット</h2>
+    <p class="note">新しい形式も含め、作ったルーレットをこの端末に保存します。「遊ぶ」を押すと、そのルーレットをすぐにもう一度回せます。</p>
+    <div id="library"><div class="note">まだ作ったルーレットはありません。</div></div>
+  </div>
 </section>
 <section id="playSection" class="card appView" data-app-view="play">
   <div class="step">PLAY</div>
@@ -344,12 +344,12 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <video id="video" playsinline muted preload="metadata" style="display:none"></video><canvas id="captureCanvas" style="display:none"></canvas><canvas id="smallCanvas" width="28" height="28" style="display:none"></canvas>
 </div>
 <div id="bigOverlay"><div id="bigText">大吉！</div></div>
-<script src="./navigation.js?v=1.1.0-fast1" defer></script>
-<script src="./app.js?v=1.1.0-fast1" defer></script>
-<script src="./deck.js?v=1.1.0-fast1" defer></script>
-<script src="./deluxe.js?v=1.1.0-fast1" defer></script>
-<script src="./features.js?v=1.1.0-fast1" defer></script>
-<script src="./hidden-settings.js?v=1.1.0-fast1" defer></script>
+<script src="./navigation.js?v=1.1.0-history1" defer></script>
+<script src="./app.js?v=1.1.0-history1" defer></script>
+<script src="./deck.js?v=1.1.0-history1" defer></script>
+<script src="./deluxe.js?v=1.1.0-history1" defer></script>
+<script src="./features.js?v=1.1.0-history1" defer></script>
+<script src="./hidden-settings.js?v=1.1.0-history1" defer></script>
 <script>
 (()=>{
   const scoreBox=document.getElementById('showScores');

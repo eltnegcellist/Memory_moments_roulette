@@ -25,6 +25,7 @@ const deckRestoreBtn=document.getElementById('deckRestoreBtn');
 const deckRestoreInput=document.getElementById('deckRestoreInput');
 const deckClearBtn=document.getElementById('deckClearBtn');
 const deckSearch=document.getElementById('deckSearch');
+const deckSearchBtn=document.getElementById('deckSearchBtn');
 const deckSort=document.getElementById('deckSort');
 const deckSelectionStatus=document.getElementById('deckSelectionStatus');
 const deckSelectAllBtn=document.getElementById('deckSelectAllBtn');
@@ -51,6 +52,7 @@ const thumbnailObserver=typeof IntersectionObserver!=='undefined'
   : null;
 let selectionLoaded=false;
 let lastDeckSources=[];
+let replayQueue=Promise.resolve();
 
 async function getAll(store){
   const db=await openDB();
@@ -94,11 +96,12 @@ function sourceMomentDate(src){
 }
 function sourceDisplayName(src){
   const d=sourceMomentDate(src);
-  return (d.getMonth()+1)+'月'+d.getDate()+'日に追加した動画';
+  const md=(d.getMonth()+1)+'/'+d.getDate();
+  const hm=d.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+  return md+' '+hm;
 }
 function sourceDisplayTime(src){
-  const d=sourceMomentDate(src);
-  return d.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+  return sourceDisplayName(src);
 }
 function sourceSearchText(src){
   const d=sourceMomentDate(src);
@@ -106,7 +109,8 @@ function sourceSearchText(src){
     src?.fileName||'',
     sourceDisplayName(src),
     (d.getMonth()+1)+'/'+d.getDate(),
-    d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate()
+    d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate(),
+    sourceDisplayTime(src)
   ].join(' ').toLowerCase();
 }
 function sourceMonthKey(src){
@@ -373,13 +377,13 @@ function formatBytes(n){
   return (n/1024/1024).toFixed(1)+'MB';
 }
 async function storageText(localBytes){
-  if(!navigator.storage?.estimate)return 'デッキ '+formatBytes(localBytes);
+  if(!navigator.storage?.estimate)return '保存済み動画 '+formatBytes(localBytes);
   try{
     const e=await navigator.storage.estimate();
     const usage=Number(e.usage)||0,quota=Number(e.quota)||0;
     const persistent=navigator.storage.persisted?await navigator.storage.persisted():false;
-    return 'デッキ '+formatBytes(localBytes)+(quota?' ・ 端末保存 '+formatBytes(usage)+' / '+formatBytes(quota):'')+(persistent?' ・ 保存保護あり':' ・ 通常保存');
-  }catch(e){return 'デッキ '+formatBytes(localBytes);}
+    return '保存済み動画 '+formatBytes(localBytes)+(quota?' ・ 端末保存 +formatBytes(usage)+' / '+formatBytes(quota):'')+(persistent?' ・ 保存保護あり':' ・ 通常保存');
+  }catch(e){return '保存済み動画 '+formatBytes(localBytes);}
 }
 function filteredSortedSources(sources){
   const q=(deckSearch?.value||'').trim().toLowerCase();
@@ -422,14 +426,11 @@ function makeSourceTile(src,{selectable=false,manageable=false}={}){
 
   const info=document.createElement('div');
   info.className='deckVideoInfo';
-  const date=document.createElement('span');
-  date.className='deckVideoDate';
-  date.textContent=sourceDisplayTime(src);
   const name=document.createElement('strong');
   name.textContent=displayName;
   const meta=document.createElement('small');
   meta.textContent=(Number(src.candidateCount)||0)+'個の一瞬 ・ '+formatDuration(src.duration);
-  info.append(date,name,meta);
+  info.append(name,meta);
   choose.append(media,info);
 
   if(selectable){
@@ -565,6 +566,143 @@ async function saveSourceAndFrames(source,frames,replays){
     tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);
   });
 }
+
+function replayTiming(targetTime,duration){
+  const d=Math.max(.05,Number(duration)||0);
+  const target=Math.max(0,Math.min(d-.04,Number(targetTime)||0));
+  const reverse=target<EARLY_REPLAY_SECONDS;
+  const start=reverse?target:Math.max(0,target-REPLAY_SECONDS);
+  const end=reverse?Math.min(d-.04,target+REPLAY_SECONDS):target;
+  return {target,start,end,span:Math.max(.04,end-start),mode:reverse?'reverse':'forward'};
+}
+function waitForMediaEvent(el,name,timeout=10000){
+  if(name==='loadedmetadata'&&el.readyState>=1)return Promise.resolve();
+  return new Promise((resolve,reject)=>{
+    const done=()=>{cleanup();resolve();};
+    const fail=()=>{cleanup();reject(new Error('background video '+name+' failed'));};
+    const timer=setTimeout(()=>{cleanup();reject(new Error('background video '+name+' timeout'));},timeout);
+    const cleanup=()=>{clearTimeout(timer);el.removeEventListener(name,done);el.removeEventListener('error',fail);};
+    el.addEventListener(name,done,{once:true});
+    el.addEventListener('error',fail,{once:true});
+  });
+}
+async function backgroundSeekTo(v,time){
+  const safe=Math.max(0,Math.min((Number(v.duration)||.05)-.04,Number(time)||0));
+  if(Math.abs((Number(v.currentTime)||0)-safe)>.02){
+    v.currentTime=safe;
+    try{await waitForMediaEvent(v,'seeked',6000);}catch(e){}
+  }
+  await new Promise(r=>setTimeout(r,24));
+}
+async function captureReplayBurstBackground(v,canvas,cx,targetTime){
+  const timing=replayTiming(targetTime,v.duration);
+  const vw=Math.max(1,v.videoWidth||1),vh=Math.max(1,v.videoHeight||1);
+  const scale=Math.min(1,REPLAY_EDGE/Math.max(vw,vh));
+  canvas.width=Math.max(2,Math.round(vw*scale));
+  canvas.height=Math.max(2,Math.round(vh*scale));
+  const frames=[];
+  let bytes=0;
+  for(let i=0;i<REPLAY_FRAME_COUNT;i++){
+    await waitUntilVisible();
+    const p=REPLAY_FRAME_COUNT===1?0:i/(REPLAY_FRAME_COUNT-1);
+    await backgroundSeekTo(v,timing.start+timing.span*p);
+    cx.drawImage(v,0,0,canvas.width,canvas.height);
+    let dataUrl=canvas.toDataURL('image/webp',REPLAY_QUALITY);
+    if(!dataUrl.startsWith('data:image/webp'))dataUrl=canvas.toDataURL('image/jpeg',REPLAY_QUALITY);
+    frames.push(dataUrl);
+    bytes+=approxDataUrlBytes(dataUrl);
+  }
+  if(timing.mode==='reverse')frames.reverse();
+  return {frames,mode:timing.mode,span:timing.span,bytes,width:canvas.width,height:canvas.height,count:frames.length};
+}
+async function storeBackgroundReplay(sourceId,frameId,replay){
+  const db=await openDB();
+  let frameFound=false;
+  await new Promise((res,rej)=>{
+    const tx=db.transaction([FRAME_STORE,REPLAY_STORE],'readwrite');
+    const fs=tx.objectStore(FRAME_STORE),rs=tx.objectStore(REPLAY_STORE);
+    const req=fs.get(frameId);
+    req.onsuccess=()=>{
+      const fr=req.result;
+      if(!fr)return;
+      frameFound=true;
+      fs.put({...fr,
+        replayMode:replay.mode,replaySpan:replay.span,replaySize:replay.bytes,
+        replayWidth:replay.width,replayHeight:replay.height,replayFrameCount:replay.count,
+        replayQuality:REPLAY_QUALITY,replayEdge:REPLAY_EDGE,replayPending:false
+      });
+      rs.put({
+        id:frameId,frames:replay.frames,mode:replay.mode,span:replay.span,
+        width:replay.width,height:replay.height,frameCount:replay.count,
+        quality:REPLAY_QUALITY,edge:REPLAY_EDGE,size:replay.bytes,createdAt:Date.now()
+      });
+    };
+    tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);
+  });
+  if(!frameFound)return false;
+  const ids=activeCreation?.deckCandidateIds||[];
+  for(let i=0;i<ids.length;i++){
+    if(ids[i]!==frameId)continue;
+    if(activeCreation.deckReplayModes)activeCreation.deckReplayModes[i]=replay.mode;
+    if(activeCreation.deckReplaySpans)activeCreation.deckReplaySpans[i]=replay.span;
+  }
+  return true;
+}
+async function refreshSourceStorage(sourceId){
+  const [frames,sources]=await Promise.all([framesForSource(sourceId),getAll(SOURCE_STORE)]);
+  const src=sources.find(x=>x.id===sourceId);
+  if(!src)return;
+  src.storageBytes=frames.reduce((n,x)=>n+(Number(x.imageSize)||0)+(Number(x.replaySize)||0),0)+(Number(src.thumbnailSize)||0);
+  src.replayReadyCount=frames.filter(x=>Number(x.replayFrameCount)>=2&&Number(x.replaySize)>0).length;
+  src.replayPending=Math.max(0,frames.length-src.replayReadyCount);
+  const db=await openDB();
+  await new Promise((res,rej)=>{
+    const tx=db.transaction(SOURCE_STORE,'readwrite');
+    tx.objectStore(SOURCE_STORE).put(src);
+    tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);
+  });
+}
+async function runReplayJob(job){
+  if(!job?.file||!job.targets?.length)return;
+  const v=document.createElement('video');
+  v.muted=true;v.playsInline=true;v.preload='metadata';
+  const canvas=document.createElement('canvas');
+  const cx=canvas.getContext('2d');
+  const url=URL.createObjectURL(job.file);
+  try{
+    v.src=url;v.load();
+    await waitForMediaEvent(v,'loadedmetadata',10000);
+    let currentBytes=(await stats()).bytes;
+    const byteLimit=await effectiveByteLimit(currentBytes);
+    for(const target of job.targets){
+      await waitUntilVisible();
+      if(typeof requestIdleCallback==='function'){
+        await new Promise(r=>requestIdleCallback(()=>r(),{timeout:450}));
+      }else{
+        await new Promise(r=>setTimeout(r,80));
+      }
+      const replay=await captureReplayBurstBackground(v,canvas,cx,target.time);
+      if(currentBytes+replay.bytes>byteLimit)break;
+      const saved=await storeBackgroundReplay(job.sourceId,target.id,replay);
+      if(saved)currentBytes+=replay.bytes;
+    }
+    await refreshSourceStorage(job.sourceId);
+  }catch(err){
+    console.warn('background miracle replay failed',err);
+  }finally{
+    try{v.pause();v.removeAttribute('src');v.load();}catch(e){}
+    URL.revokeObjectURL(url);
+  }
+}
+function enqueueReplayJobs(jobs){
+  const pending=(jobs||[]).filter(x=>x?.targets?.length);
+  if(!pending.length)return;
+  replayQueue=replayQueue.then(async()=>{
+    for(const job of pending)await runReplayJob(job);
+    await renderDeck().catch(()=>{});
+  }).catch(err=>console.warn('background replay queue failed',err));
+}
+
 window.__memoryDeckLoadReplay=async candidateId=>{
   if(!candidateId)return null;
   const db=await openDB();
@@ -583,8 +721,12 @@ async function extractOne(file,overallIndex,total){
   const fingerprint=hashString([file.name,file.size,file.lastModified,Math.round(duration*1000)].join('|'));
   const existing=await existingSource(fingerprint);
   if(existing){
-    if(await sourceHasReplay(existing.id))return {duplicate:true,name:file.name,count:0,sourceId:existing.id};
-    await deleteSource(existing.id);
+    const own=await framesForSource(existing.id);
+    const missing=own.filter(x=>!(Number(x.replayFrameCount)>=2&&Number(x.replaySize)>0));
+    return {
+      duplicate:true,name:file.name,count:0,sourceId:existing.id,
+      replayJob:missing.length?{file,sourceId:existing.id,targets:missing.map(x=>({id:x.id,time:x.timestamp}))}:null
+    };
   }
   const before=await stats();
   const room=Math.max(0,MAX_FRAMES-before.count);
@@ -616,34 +758,26 @@ async function extractOne(file,overallIndex,total){
     duration,addedAt:Date.now(),candidateCount:0
   };
   const frames=[];
-  const replays=[];
   let bytes=before.bytes;
   const byteLimit=await effectiveByteLimit(before.bytes);
   for(let i=0;i<picked.length;i++){
     const p=picked[i];
-    progressText.textContent='動画 '+overallIndex+' / '+total+' ・ 通常画像を保存しています '+(i+1)+' / '+picked.length;
+    progressText.textContent='動画 '+overallIndex+' / '+total+' ・ ルーレット画像を保存しています '+(i+1)+' / '+picked.length;
     const stored=await captureDeckImage(p.time);
     const imageSize=approxDataUrlBytes(stored.dataUrl);
-    progressText.textContent='動画 '+overallIndex+' / '+total+' ・ 奇跡リプレイを保存しています '+(i+1)+' / '+picked.length+'（420px・12コマ）';
-    const replay=await captureReplayBurst(p.time);
-    const candidateBytes=imageSize+replay.bytes;
-    if(bytes+candidateBytes>byteLimit)break;
+    if(bytes+imageSize>byteLimit)break;
     const d=details[i]||{};
     const candidateId=sourceId+'-'+String(i).padStart(3,'0');
+    const timing=replayTiming(p.time,duration);
     frames.push({
       id:candidateId,sourceVideoId:sourceId,timestamp:p.time,
       imageData:stored.dataUrl,width:stored.width,height:stored.height,imageSize,createdAt:Date.now(),
-      replayMode:replay.mode,replaySpan:replay.span,replaySize:replay.bytes,
-      replayWidth:replay.width,replayHeight:replay.height,replayFrameCount:replay.count,
-      replayQuality:REPLAY_QUALITY,replayEdge:REPLAY_EDGE,
+      replayMode:timing.mode,replaySpan:0,replaySize:0,
+      replayWidth:0,replayHeight:0,replayFrameCount:0,
+      replayQuality:REPLAY_QUALITY,replayEdge:REPLAY_EDGE,replayPending:true,
       clarity:d.clarityScore??null,rarity:d.rarityScore??null,change:d.changeScore??null,featureScore:d.score??null
     });
-    replays.push({
-      id:candidateId,frames:replay.frames,mode:replay.mode,span:replay.span,
-      width:replay.width,height:replay.height,frameCount:replay.count,
-      quality:REPLAY_QUALITY,edge:REPLAY_EDGE,size:replay.bytes,createdAt:Date.now()
-    });
-    bytes+=candidateBytes;
+    bytes+=imageSize;
   }
   if(!frames.length)throw new Error('デッキの保存容量が上限に達しています');
   source.candidateCount=frames.length;
@@ -654,10 +788,15 @@ async function extractOne(file,overallIndex,total){
     source.thumbnailWidth=thumb.width;
     source.thumbnailHeight=thumb.height;
   }
-  source.storageBytes=frames.reduce((n,x)=>n+(Number(x.imageSize)||0)+(Number(x.replaySize)||0),0)+(Number(source.thumbnailSize)||0);
+  source.storageBytes=frames.reduce((n,x)=>n+(Number(x.imageSize)||0),0)+(Number(source.thumbnailSize)||0);
+  source.replayPending=frames.length;
+  source.replayReadyCount=0;
   source.replaySpec={edge:REPLAY_EDGE,frames:REPLAY_FRAME_COUNT,quality:REPLAY_QUALITY,seconds:REPLAY_SECONDS};
-  await saveSourceAndFrames(source,frames,replays);
-  return {duplicate:false,name:file.name,count:frames.length,sourceId};
+  await saveSourceAndFrames(source,frames,[]);
+  return {
+    duplicate:false,name:file.name,count:frames.length,sourceId,
+    replayJob:{file,sourceId,targets:frames.map(x=>({id:x.id,time:x.timestamp}))}
+  };
 }
 async function requestPersistence(){
   if(!navigator.storage?.persist)return false;
@@ -674,11 +813,13 @@ window.__memoryDeckHandleFiles=async files=>{
   let added=0,duplicates=0,failed=0;
   const errors=[];
   const batchSourceIds=[];
+  const replayJobs=[];
   try{
     for(let i=0;i<files.length;i++){
       try{
         const r=await extractOne(files[i],i+1,files.length);
         if(r.sourceId)batchSourceIds.push(r.sourceId);
+        if(r.replayJob)replayJobs.push(r.replayJob);
         if(r.duplicate)duplicates++;else added+=r.count;
       }catch(e){
         failed++;
@@ -693,10 +834,10 @@ window.__memoryDeckHandleFiles=async files=>{
       await saveSelectedSources();
     }
     progressBar.style.width='100%';
-    let msg=added+'個の一瞬を思い出デッキに追加しました。';
+    let msg=added+'個の一瞬を準備しました。ルーレットはすぐに始められます。';
     if(duplicates)msg+=' '+duplicates+'本は追加済みのためスキップしました。';
     if(failed)msg+=' '+failed+'本は処理できませんでした。';
-    if(batchSourceIds.length)msg+=' 今回選んだ動画だけをルーレット候補にしています。';
+    if(batchSourceIds.length)msg+=' 奇跡リプレイはバックグラウンドで保存します。';
     progressText.textContent=msg;
     const standalone=window.matchMedia?.('(display-mode: standalone)')?.matches||navigator.standalone===true;
     let notice=errors.length?errors.join(' / '):msg;
@@ -717,7 +858,10 @@ window.__memoryDeckHandleFiles=async files=>{
         window.__memoryNavigate?.('play');
         currentCreation=null;
         preparePlay(creation);
+        enqueueReplayJobs(replayJobs);
       }
+    }else{
+      enqueueReplayJobs(replayJobs);
     }
   }finally{
     processing=false;
@@ -917,6 +1061,8 @@ deckRestoreInput?.addEventListener('change',async()=>{
   deckRestoreInput.value='';
 });
 deckSearch?.addEventListener('input',()=>renderSourceLibraries());
+deckSearch?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();renderSourceLibraries();}});
+deckSearchBtn?.addEventListener('click',()=>{renderSourceLibraries();deckSearch?.focus();});
 deckSort?.addEventListener('change',()=>renderSourceLibraries());
 deckSelectAllBtn?.addEventListener('click',async()=>{
   selectedSourceIds.clear();

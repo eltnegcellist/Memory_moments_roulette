@@ -767,9 +767,23 @@ button.howtoBanner.is-active-view{display:flex!important}
 .settingsCard .deckManage{display:grid!important;margin-top:14px}.settingsSubhead{margin:16px 0 8px;font-size:15px}.settingsCard .deckPhotoLibrary{max-height:min(52vh,520px)}
 @media (max-width:520px){.homeChoice{padding:15px 13px}.homeShortcuts small{display:none}.homeShortcuts button{min-height:62px}.deckCard[data-app-view="library"]{padding-left:12px;padding-right:12px}}
 
-/* v1.1 nav2: robust mobile view switching */
+/* v1.1 library2: robust mobile view switching */
 body[data-app-view] .appView,
 body[data-app-view] #homeActions,
 body[data-app-view] .conceptCard,
 body[data-app-view] .hero,
 body[data-app-view] .howtoBanner{will-change:auto}
+
+
+/* v1.1 library2: date-first video identity and separated management */
+.deckLibraryManageBar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:7px 0 9px;padding:9px 10px;border-radius:14px;background:#f8f3ef}
+.deckLibraryManageBar span{font-size:10px;line-height:1.45;color:#7d695f}
+.deckLibraryManageBar .secondary{flex:0 0 auto;padding:8px 11px;font-size:10px}
+.deckVideoInfo strong{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
+.deckCard.manage-mode .deckSelectionBar,.deckCard.manage-mode .deckActionsSticky{display:none!important}
+.deckCard.manage-mode .deckVideoCheck{display:none}
+.deckCard.manage-mode .deckVideoPick{border-color:transparent!important;box-shadow:0 3px 10px rgba(67,42,31,.07)!important}
+.settingsDataSummary{margin:10px 0 4px;padding:11px 12px;border-radius:14px;background:#faf6f3;color:#7d695f;font-size:11px;line-height:1.5}
+.settingsCard .deckManage{display:grid!important;margin-top:14px}
+.settingsCard .deckPhotoLibrary{display:none!important}
+@media(max-width:420px){.deckLibraryManageBar{align-items:flex-start}.deckLibraryManageBar span{font-size:9.5px}}

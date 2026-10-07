@@ -52,6 +52,9 @@ const thumbnailObserver=typeof IntersectionObserver!=='undefined'
 let selectionLoaded=false;
 let lastDeckSources=[];
 let backgroundQueue=Promise.resolve();
+const queuedSourceIds=new Set();
+const opfsWriteJobs=new Map();
+const OPFS_PREFIX='memory-moments-source-';
 
 async function getAll(store){
   const db=await openDB();
@@ -294,7 +297,6 @@ async function captureReplayBurst(targetTime){
   const frames=[];
   let totalBytes=0;
   for(let i=0;i<REPLAY_FRAME_COUNT;i++){
-    await waitUntilVisible();
     const p=REPLAY_FRAME_COUNT===1?0:i/(REPLAY_FRAME_COUNT-1);
     const t=start+span*p;
     await seekTo(t);
@@ -428,7 +430,11 @@ function makeSourceTile(src,{selectable=false,manageable=false}={}){
   const name=document.createElement('strong');
   name.textContent=displayName;
   const meta=document.createElement('small');
-  meta.textContent=(Number(src.candidateCount)||0)+'個の一瞬 ・ '+formatDuration(src.duration);
+  const pendingCount=Math.max(Number(src.imagePending)||0,Number(src.replayPending)||0);
+  const finishState=pendingCount
+    ? (src.resumeNeedsFile?' ・ 仕上げ未完了（同じ動画を選ぶと再開）':' ・ 仕上げ中')
+    : '';
+  meta.textContent=(Number(src.candidateCount)||0)+'個の一瞬 ・ '+formatDuration(src.duration)+finishState;
   info.append(name,meta);
   choose.append(media,info);
 
@@ -519,6 +525,8 @@ async function renderDeck(){
 }
 async function deleteSource(sourceId){
   selectedSourceIds.delete(sourceId);
+  queuedSourceIds.delete(sourceId);
+  await removeOpfsForSource(sourceId);
   await saveSelectedSources();
   const db=await openDB();
   await new Promise((res,rej)=>{
@@ -566,6 +574,132 @@ async function saveSourceAndFrames(source,frames,replays){
   });
 }
 
+
+async function updateSourceRecord(sourceId,patch){
+  const db=await openDB();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(SOURCE_STORE,'readwrite');
+    const store=tx.objectStore(SOURCE_STORE);
+    const req=store.get(sourceId);
+    req.onsuccess=()=>{
+      const src=req.result;
+      if(src)store.put({...src,...patch});
+    };
+    tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);
+  });
+}
+function opfsFileName(sourceId){
+  return OPFS_PREFIX+sourceId+'.video';
+}
+async function opfsRoot(){
+  if(!navigator.storage?.getDirectory)return null;
+  try{return await navigator.storage.getDirectory();}catch(e){return null;}
+}
+async function removeOpfsFileByName(name){
+  if(!name)return;
+  const root=await opfsRoot();
+  if(!root)return;
+  try{await root.removeEntry(name);}catch(e){}
+}
+async function removeOpfsForSource(sourceId){
+  await removeOpfsFileByName(opfsFileName(sourceId));
+}
+async function getOpfsResumeFile(src){
+  const root=await opfsRoot();
+  if(!root||!src?.id)return null;
+  const name=src.opfsName||opfsFileName(src.id);
+  try{
+    const handle=await root.getFileHandle(name);
+    const file=await handle.getFile();
+    if(Number(src.fileSize)>0&&file.size!==Number(src.fileSize)){
+      await removeOpfsFileByName(name);
+      return null;
+    }
+    if(!file.size)return null;
+    return file;
+  }catch(e){return null;}
+}
+async function cleanupSourceOpfsIfComplete(sourceId){
+  const frames=await framesForSource(sourceId);
+  if(!frames.length)return;
+  const pending=frames.some(x=>x.imagePending||!(Number(x.replayFrameCount)>=2&&Number(x.replaySize)>0));
+  if(pending)return;
+  await removeOpfsForSource(sourceId);
+  await updateSourceRecord(sourceId,{opfsReady:false,opfsComplete:true,resumeNeedsFile:false,backgroundCompletedAt:Date.now()});
+}
+function persistSourceFileForResume(file,sourceId){
+  if(!file||!sourceId)return Promise.resolve(false);
+  if(opfsWriteJobs.has(sourceId))return opfsWriteJobs.get(sourceId);
+  const job=(async()=>{
+    const root=await opfsRoot();
+    if(!root){
+      await updateSourceRecord(sourceId,{opfsReady:false,resumeNeedsFile:true});
+      return false;
+    }
+    const name=opfsFileName(sourceId);
+    try{
+      await updateSourceRecord(sourceId,{opfsName:name,opfsReady:false,resumeNeedsFile:false,opfsWriting:true});
+      const handle=await root.getFileHandle(name,{create:true});
+      const writable=await handle.createWritable();
+      await writable.write(file);
+      await writable.close();
+      const saved=await handle.getFile();
+      if(Number(file.size)>0&&saved.size!==Number(file.size))throw new Error('temporary video size mismatch');
+      await updateSourceRecord(sourceId,{
+        opfsName:name,opfsReady:true,opfsWriting:false,resumeNeedsFile:false,
+        opfsSize:saved.size,opfsSavedAt:Date.now()
+      });
+      await cleanupSourceOpfsIfComplete(sourceId);
+      return true;
+    }catch(err){
+      console.warn('temporary source save failed',err);
+      await updateSourceRecord(sourceId,{opfsReady:false,opfsWriting:false,resumeNeedsFile:true});
+      return false;
+    }
+  })().finally(()=>opfsWriteJobs.delete(sourceId));
+  opfsWriteJobs.set(sourceId,job);
+  return job;
+}
+async function clearOpfsSourceFiles(){
+  const root=await opfsRoot();
+  if(!root)return;
+  try{
+    for await(const [name] of root.entries()){
+      if(name.startsWith(OPFS_PREFIX)){
+        try{await root.removeEntry(name);}catch(e){}
+      }
+    }
+  }catch(e){}
+}
+function pendingTargetsFromFrames(frames){
+  return (frames||[]).map(x=>({
+    id:x.id,time:x.timestamp,imageSize:Number(x.imageSize)||0,
+    needImage:!!x.imagePending,
+    needReplay:!(Number(x.replayFrameCount)>=2&&Number(x.replaySize)>0)
+  })).filter(x=>x.needImage||x.needReplay);
+}
+async function resumePendingBackgroundWork(){
+  const sources=await getAll(SOURCE_STORE);
+  const jobs=[];
+  for(const src of sources){
+    const frames=await framesForSource(src.id);
+    const targets=pendingTargetsFromFrames(frames);
+    if(!targets.length){
+      await cleanupSourceOpfsIfComplete(src.id);
+      continue;
+    }
+    const file=await getOpfsResumeFile(src);
+    if(file){
+      await updateSourceRecord(src.id,{opfsReady:true,resumeNeedsFile:false,opfsWriting:false});
+      jobs.push({file,sourceId:src.id,targets,resumed:true});
+    }else{
+      await updateSourceRecord(src.id,{opfsReady:false,opfsWriting:false,resumeNeedsFile:true});
+    }
+  }
+  enqueueBackgroundJobs(jobs);
+  renderDeck().catch(()=>{});
+}
+
 function replayTiming(targetTime,duration){
   const d=Math.max(.05,Number(duration)||0);
   const target=Math.max(0,Math.min(d-.04,Number(targetTime)||0));
@@ -594,7 +728,6 @@ async function backgroundSeekTo(v,time){
   await new Promise(r=>setTimeout(r,24));
 }
 async function captureDeckImageBackground(v,canvas,cx,time){
-  await waitUntilVisible();
   await backgroundSeekTo(v,time);
   const maxEdge=1280;
   const vw=Math.max(1,v.videoWidth||1),vh=Math.max(1,v.videoHeight||1);
@@ -693,16 +826,12 @@ async function refreshSourceStorage(sourceId){
   const [frames,sources]=await Promise.all([framesForSource(sourceId),getAll(SOURCE_STORE)]);
   const src=sources.find(x=>x.id===sourceId);
   if(!src)return;
-  src.storageBytes=frames.reduce((n,x)=>n+(Number(x.imageSize)||0)+(Number(x.replaySize)||0),0)+(Number(src.thumbnailSize)||0);
-  src.imageReadyCount=frames.filter(x=>!x.imagePending).length;
-  src.imagePending=Math.max(0,frames.length-src.imageReadyCount);
-  src.replayReadyCount=frames.filter(x=>Number(x.replayFrameCount)>=2&&Number(x.replaySize)>0).length;
-  src.replayPending=Math.max(0,frames.length-src.replayReadyCount);
-  const db=await openDB();
-  await new Promise((res,rej)=>{
-    const tx=db.transaction(SOURCE_STORE,'readwrite');
-    tx.objectStore(SOURCE_STORE).put(src);
-    tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);
+  const imageReadyCount=frames.filter(x=>!x.imagePending).length;
+  const replayReadyCount=frames.filter(x=>Number(x.replayFrameCount)>=2&&Number(x.replaySize)>0).length;
+  await updateSourceRecord(sourceId,{
+    storageBytes:frames.reduce((n,x)=>n+(Number(x.imageSize)||0)+(Number(x.replaySize)||0),0)+(Number(src.thumbnailSize)||0),
+    imageReadyCount,imagePending:Math.max(0,frames.length-imageReadyCount),
+    replayReadyCount,replayPending:Math.max(0,frames.length-replayReadyCount)
   });
 }
 async function runBackgroundMediaJob(job){
@@ -718,11 +847,8 @@ async function runBackgroundMediaJob(job){
     let currentBytes=(await stats()).bytes;
     const byteLimit=await effectiveByteLimit(currentBytes);
     for(const target of job.targets){
-      await waitUntilVisible();
-      if(typeof requestIdleCallback==='function'){
-        await new Promise(r=>requestIdleCallback(()=>r(),{timeout:450}));
-      }else{
-        await new Promise(r=>setTimeout(r,60));
+      if(!document.hidden&&typeof requestIdleCallback==='function'){
+        await new Promise(r=>requestIdleCallback(()=>r(),{timeout:180}));
       }
       if(target.needImage){
         const stored=await captureDeckImageBackground(v,canvas,cx,target.time);
@@ -742,6 +868,7 @@ async function runBackgroundMediaJob(job){
       }
     }
     await refreshSourceStorage(job.sourceId);
+    await cleanupSourceOpfsIfComplete(job.sourceId);
     const activeIds=new Set(activeCreation?.deckCandidateIds||[]);
     if(activeCreation?.id&&job.targets.some(x=>activeIds.has(x.id))){
       try{
@@ -752,17 +879,26 @@ async function runBackgroundMediaJob(job){
   }catch(err){
     console.warn('background media save failed',err);
   }finally{
+    await refreshSourceStorage(job.sourceId).catch(()=>{});
+    await cleanupSourceOpfsIfComplete(job.sourceId).catch(()=>{});
     try{v.pause();v.removeAttribute('src');v.load();}catch(e){}
     URL.revokeObjectURL(url);
   }
 }
 function enqueueBackgroundJobs(jobs){
-  const pending=(jobs||[]).filter(x=>x?.targets?.some(t=>t.needImage||t.needReplay));
+  const pending=(jobs||[]).filter(x=>x?.sourceId&&x?.targets?.some(t=>t.needImage||t.needReplay)&&!queuedSourceIds.has(x.sourceId));
   if(!pending.length)return;
+  pending.forEach(x=>queuedSourceIds.add(x.sourceId));
   backgroundQueue=backgroundQueue.then(async()=>{
-    for(const job of pending)await runBackgroundMediaJob(job);
+    for(const job of pending){
+      try{await runBackgroundMediaJob(job);}
+      finally{queuedSourceIds.delete(job.sourceId);}
+    }
     await renderDeck().catch(()=>{});
-  }).catch(err=>console.warn('background media queue failed',err));
+  }).catch(err=>{
+    pending.forEach(x=>queuedSourceIds.delete(x.sourceId));
+    console.warn('background media queue failed',err);
+  });
 }
 
 window.__memoryDeckLoadReplay=async candidateId=>{
@@ -784,13 +920,8 @@ async function extractOne(file,overallIndex,total){
   const existing=await existingSource(fingerprint);
   if(existing){
     const own=await framesForSource(existing.id);
-    const pending=own
-      .map(x=>({
-        id:x.id,time:x.timestamp,imageSize:Number(x.imageSize)||0,
-        needImage:!!x.imagePending,
-        needReplay:!(Number(x.replayFrameCount)>=2&&Number(x.replaySize)>0)
-      }))
-      .filter(x=>x.needImage||x.needReplay);
+    const pending=pendingTargetsFromFrames(own);
+    if(pending.length)persistSourceFileForResume(file,existing.id).catch(()=>{});
     return {
       duplicate:true,name:file.name,count:0,sourceId:existing.id,
       backgroundJob:pending.length?{file,sourceId:existing.id,targets:pending}:null
@@ -823,7 +954,8 @@ async function extractOne(file,overallIndex,total){
   const sourceId='s'+Date.now().toString(36)+hashString(fingerprint+Math.random());
   const source={
     id:sourceId,fingerprint,fileName:file.name,fileSize:file.size,lastModified:file.lastModified,
-    duration,addedAt:Date.now(),candidateCount:0
+    duration,addedAt:Date.now(),candidateCount:0,
+    opfsName:opfsFileName(sourceId),opfsReady:false,opfsWriting:false,resumeNeedsFile:false
   };
   const frames=[];
   let bytes=before.bytes;
@@ -865,6 +997,7 @@ async function extractOne(file,overallIndex,total){
   source.replayReadyCount=0;
   source.replaySpec={edge:REPLAY_EDGE,frames:REPLAY_FRAME_COUNT,quality:REPLAY_QUALITY,seconds:REPLAY_SECONDS};
   await saveSourceAndFrames(source,frames,[]);
+  persistSourceFileForResume(file,sourceId).catch(()=>{});
   return {
     duplicate:false,name:file.name,count:frames.length,sourceId,
     backgroundJob:{
@@ -1125,6 +1258,7 @@ deckClearBtn?.addEventListener('click',async()=>{
   selectedSourceIds.clear();
   selectionLoaded=true;
   await saveSelectedSources();
+  await clearOpfsSourceFiles();
   deckNotice.textContent='思い出デッキを削除しました。';
   deckNotice.className='note deckNotice';
   await renderDeck();
@@ -1155,7 +1289,7 @@ deckClearSelectionBtn?.addEventListener('click',async()=>{
 });
 document.addEventListener('visibilitychange',()=>{
   if(processing&&document.hidden){
-    deckNotice.textContent='処理を一時停止します。画面に戻ると続きから再開します。完了済みの動画は保存されています。';
+    deckNotice.textContent='シーン分析中です。OSに停止されない限り処理を続け、停止された場合も完了済みデータは残ります。';
     deckNotice.className='note deckNotice';
   }
 });
@@ -1173,4 +1307,5 @@ window.__memoryDeckStartSelection=async()=>{
   updateSelectionStatus(lastDeckSources);
 };
 renderDeck().catch(err=>{console.error(err);deckStatus.textContent='デッキ情報を読み込めませんでした。';});
+resumePendingBackgroundWork().catch(err=>console.warn('background resume failed',err));
 })();

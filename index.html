@@ -21,9 +21,9 @@
 <link rel="apple-touch-icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2">
 <link rel="icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2" type="image/png">
 <title>思い出ルーレットおみくじ</title>
-<link rel="stylesheet" href="./style.css?v=1.1.0-library2">
-<link rel="stylesheet" href="./deluxe.css?v=1.1.0-library2">
-<link rel="stylesheet" href="./features.css?v=1.1.0-library2">
+<link rel="stylesheet" href="./style.css?v=1.1.0-fast1">
+<link rel="stylesheet" href="./deluxe.css?v=1.1.0-fast1">
+<link rel="stylesheet" href="./features.css?v=1.1.0-fast1">
 <style>
 body:not(.show-score-details) .scoreChip,
 body:not(.show-score-details) .scoreDetails,
@@ -116,7 +116,8 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <div class="deckLibraryToolbar">
     <div class="deckLibrarySearch">
       <span aria-hidden="true">⌕</span>
-      <input id="deckSearch" type="search" placeholder="追加日で検索（例 10/7）" autocomplete="off">
+      <input id="deckSearch" type="search" placeholder="日付・時刻で検索（例 10/7）" autocomplete="off">
+      <button id="deckSearchBtn" type="button">検索</button>
     </div>
     <select id="deckSort" aria-label="動画の並び順">
       <option value="newest" selected>新しい順</option>
@@ -343,12 +344,12 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <video id="video" playsinline muted preload="metadata" style="display:none"></video><canvas id="captureCanvas" style="display:none"></canvas><canvas id="smallCanvas" width="28" height="28" style="display:none"></canvas>
 </div>
 <div id="bigOverlay"><div id="bigText">大吉！</div></div>
-<script src="./navigation.js?v=1.1.0-library2" defer></script>
-<script src="./app.js?v=1.1.0-library2" defer></script>
-<script src="./deck.js?v=1.1.0-library2" defer></script>
-<script src="./deluxe.js?v=1.1.0-library2" defer></script>
-<script src="./features.js?v=1.1.0-library2" defer></script>
-<script src="./hidden-settings.js?v=1.1.0-library2" defer></script>
+<script src="./navigation.js?v=1.1.0-fast1" defer></script>
+<script src="./app.js?v=1.1.0-fast1" defer></script>
+<script src="./deck.js?v=1.1.0-fast1" defer></script>
+<script src="./deluxe.js?v=1.1.0-fast1" defer></script>
+<script src="./features.js?v=1.1.0-fast1" defer></script>
+<script src="./hidden-settings.js?v=1.1.0-fast1" defer></script>
 <script>
 (()=>{
   const scoreBox=document.getElementById('showScores');

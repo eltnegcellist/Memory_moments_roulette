@@ -21,9 +21,9 @@
 <link rel="apple-touch-icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2">
 <link rel="icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2" type="image/png">
 <title>思い出ルーレットおみくじ</title>
-<link rel="stylesheet" href="./style.css?v=1.1.0-history1">
-<link rel="stylesheet" href="./deluxe.css?v=1.1.0-history1">
-<link rel="stylesheet" href="./features.css?v=1.1.0-history1">
+<link rel="stylesheet" href="./style.css?v=1.1.0-settings1">
+<link rel="stylesheet" href="./deluxe.css?v=1.1.0-settings1">
+<link rel="stylesheet" href="./features.css?v=1.1.0-settings1">
 <style>
 body:not(.show-score-details) .scoreChip,
 body:not(.show-score-details) .scoreDetails,
@@ -61,7 +61,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <nav class="homeShortcuts" aria-label="保存した内容">
     <button type="button" data-route="favorites"><span aria-hidden="true">♡</span><strong>お気に入り</strong><small id="homeFavoriteCount">保存した写真</small></button>
     <button type="button" data-route="history"><span aria-hidden="true">↺</span><strong>履歴</strong><small id="homeHistoryCount">今回の結果</small></button>
-    <button type="button" data-route="settings"><span aria-hidden="true">⚙</span><strong>設定</strong><small>保存データの管理</small></button>
+    <button type="button" data-route="settings"><span aria-hidden="true">⚙</span><strong>設定</strong><small>ルーレット・データ</small></button>
   </nav>
 </section>
 <section class="conceptCard" data-app-view="home" aria-label="このアプリが目指すこと">
@@ -86,22 +86,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
     <div class="note">1本でも複数本でも選べます。処理はブラウザ内だけで行い、元動画は外部へ送信しません。</div>
   </div>
   <div id="progressWrap"><div class="progress"><div id="progressBar"></div></div><div id="progressText">準備中...</div></div>
-  <details class="opt" id="detailOptions">
-    <summary>詳細オプション</summary>
-    <div class="row" style="margin-bottom:10px">
-      <label for="frameCount">抽出枚数</label>
-      <select id="frameCount">
-        <option value="auto" selected>おまかせ（動画の長さに応じて8〜15枚）</option>
-        <option value="8">8枚</option><option value="12">12枚</option><option value="15">15枚</option>
-      </select>
-    </div>
-    <label class="toggle"><span><b style="display:block;margin-bottom:3px">通常ルーレットにする</b><span class="note">ONにすると、運勢なしの思い出ルーレットとして作ります。豪華演出も自動でOFFになります。</span></span><input id="plainMode" type="checkbox"></label>
-    <label class="toggle" style="margin-top:10px"><span><b style="display:block;margin-bottom:3px">運勢サンプルを表示する</b><span class="note">候補確認用のサンプルです。実際の運勢は、ルーレットを止めたときに写真とは独立して抽選します。</span></span><input id="showFortunes" type="checkbox"></label>
-
-    
-
-    <div id="labSettingsHint" class="labSettingsHint">LAB設定：画面右上のバージョン表示を5回タップで表示・非表示</div>
-  </details>
+  <p class="note createSettingsNote">抽出枚数や通常ルーレットなどの設定は、ホームの「設定」からまとめて変更できます。</p>
 </section>
 <section id="deckCard" class="card deckCard appView" data-app-view="library">
   <div class="viewTopbar"><button class="viewBack" type="button" data-nav-back>‹ ホーム</button><span>過去の動画</span></div>
@@ -149,11 +134,11 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 </section>
 <section id="legacyLibrarySection" class="card appView" data-app-view="history">
   <div class="viewTopbar"><button class="viewBack" type="button" data-nav-back>‹ ホーム</button><span>履歴</span></div>
-  <div class="historyLegacy">
-    <h2>作ったルーレット</h2>
-    <p class="note">新しい形式も含め、作ったルーレットをこの端末に保存します。「遊ぶ」を押すと、そのルーレットをすぐにもう一度回せます。</p>
-    <div id="library"><div class="note">まだ作ったルーレットはありません。</div></div>
-  </div>
+  <details class="historyLegacy">
+    <summary>以前保存したルーレット</summary>
+    <p class="note">旧形式で保存したルーレットです。普段は「過去の動画から作る」を使うのがおすすめです。</p>
+    <div id="library"><div class="note">まだ保存されていません。</div></div>
+  </details>
 </section>
 <section id="playSection" class="card appView" data-app-view="play">
   <div class="step">PLAY</div>
@@ -193,7 +178,36 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <div class="viewTopbar"><button class="viewBack" type="button" data-nav-back>‹ ホーム</button><span>設定</span></div>
   <div class="step">SETTINGS</div>
   <h2>設定・データ管理</h2>
-  <p class="note viewIntro">保存容量、バックアップ、復元などのデータ管理をまとめています。個別の動画削除は「過去の動画」画面の「動画を管理」から行えます。</p>
+  <p class="note viewIntro">ルーレットの作り方と、保存データの管理をここにまとめています。設定は次に作るルーレットにも引き継がれます。</p>
+
+  <section class="settingsGroup" aria-labelledby="rouletteSettingsTitle">
+    <div class="settingsGroupHead">
+      <div>
+        <span class="settingsGroupEyebrow">ROULETTE</span>
+        <h3 id="rouletteSettingsTitle">ルーレット設定</h3>
+      </div>
+    </div>
+    <label class="settingsItem settingsSelectItem">
+      <span><b>抽出枚数</b><span class="note">動画1本から保存する一瞬の数です。通常は「おまかせ」がおすすめです。</span></span>
+      <select id="frameCount">
+        <option value="auto" selected>おまかせ（8〜15枚）</option>
+        <option value="8">8枚</option>
+        <option value="12">12枚</option>
+        <option value="15">15枚</option>
+      </select>
+    </label>
+    <label class="settingsItem">
+      <span><b>通常ルーレットにする</b><span class="note">ONにすると運勢を付けず、「どの一瞬で止まるか」だけを楽しみます。豪華演出も自動でOFFになります。</span></span>
+      <input id="plainMode" type="checkbox">
+    </label>
+    <label class="settingsItem">
+      <span><b>運勢サンプルを表示する</b><span class="note">候補確認画面に運勢のサンプルを表示します。実際の運勢はSTOPしたときに写真とは独立して抽選します。</span></span>
+      <input id="showFortunes" type="checkbox">
+    </label>
+  </section>
+
+  <div id="labSettingsHint" class="labSettingsHint settingsLabHint">LAB設定：画面右上のバージョン表示を5回タップで表示</div>
+
   <section id="labSettingsInline" class="labSettingsInline" hidden>
         <div class="labSettingsInlineHead">
           <span class="labSettingsInlineBadge">LAB</span>
@@ -224,6 +238,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
           <button id="labResetAppData" type="button">完全初期化</button>
         </div>
       </section>
+  <h3 class="settingsSubhead">データ管理</h3>
   <div id="deckManage" class="deckManage">
     <div id="deckStorage" class="deckStorage">保存容量を確認しています…</div>
     <div class="settingsDataSummary">保存済み動画の容量とバックアップを管理します。</div>
@@ -344,12 +359,12 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <video id="video" playsinline muted preload="metadata" style="display:none"></video><canvas id="captureCanvas" style="display:none"></canvas><canvas id="smallCanvas" width="28" height="28" style="display:none"></canvas>
 </div>
 <div id="bigOverlay"><div id="bigText">大吉！</div></div>
-<script src="./navigation.js?v=1.1.0-history1" defer></script>
-<script src="./app.js?v=1.1.0-history1" defer></script>
-<script src="./deck.js?v=1.1.0-history1" defer></script>
-<script src="./deluxe.js?v=1.1.0-history1" defer></script>
-<script src="./features.js?v=1.1.0-history1" defer></script>
-<script src="./hidden-settings.js?v=1.1.0-history1" defer></script>
+<script src="./navigation.js?v=1.1.0-settings1" defer></script>
+<script src="./app.js?v=1.1.0-settings1" defer></script>
+<script src="./deck.js?v=1.1.0-settings1" defer></script>
+<script src="./deluxe.js?v=1.1.0-settings1" defer></script>
+<script src="./features.js?v=1.1.0-settings1" defer></script>
+<script src="./hidden-settings.js?v=1.1.0-settings1" defer></script>
 <script>
 (()=>{
   const scoreBox=document.getElementById('showScores');

@@ -696,6 +696,7 @@ async function resumePendingBackgroundWork(){
   }
   const jobs=[];
   for(const src of sources){
+    if(opfsWriteJobs.has(src.id))continue;
     const frames=await framesForSource(src.id);
     const targets=pendingTargetsFromFrames(frames);
     if(!targets.length){

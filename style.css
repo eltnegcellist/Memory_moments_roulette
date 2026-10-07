@@ -796,3 +796,82 @@ body[data-app-view] .howtoBanner{will-change:auto}
 .deckVideoInfo{grid-template-columns:1fr;gap:2px}
 .deckVideoInfo strong{font-size:10px;white-space:nowrap;display:block;-webkit-line-clamp:unset;line-clamp:unset}
 .deckVideoInfo small{font-size:8px}
+
+
+/* v1.1 unified settings */
+.createSettingsNote{
+  margin:12px 2px 0;
+  padding:10px 11px;
+  border-radius:12px;
+  background:#faf5f1;
+  color:#806b60;
+}
+.settingsGroup{
+  margin:12px 0 4px;
+  padding:13px;
+  border:1px solid #eaded7;
+  border-radius:18px;
+  background:#fff;
+}
+.settingsGroupHead{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:9px;
+}
+.settingsGroupEyebrow{
+  display:block;
+  margin-bottom:2px;
+  color:#b6536c;
+  font-size:9px;
+  font-weight:1000;
+  letter-spacing:.12em;
+}
+.settingsGroupHead h3{
+  margin:0;
+  font-size:16px;
+}
+.settingsItem{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:12px 2px;
+  border-top:1px solid #f0e7e2;
+}
+.settingsItem:first-of-type{border-top:0}
+.settingsItem>span{
+  display:grid;
+  gap:3px;
+  min-width:0;
+  flex:1;
+}
+.settingsItem b{font-size:12px}
+.settingsItem .note{font-size:10px;line-height:1.5}
+.settingsItem input[type="checkbox"]{
+  width:20px;
+  height:20px;
+  flex:0 0 auto;
+  accent-color:#d95f80;
+}
+.settingsSelectItem{align-items:flex-start}
+.settingsSelectItem select{
+  max-width:180px;
+  flex:0 0 auto;
+  font-size:11px;
+  padding:9px 10px;
+}
+.settingsLabHint{
+  margin:11px 0 4px;
+}
+.settingsSubhead{
+  margin:18px 0 8px;
+  padding-top:3px;
+  font-size:15px;
+}
+@media(max-width:520px){
+  .settingsItem{align-items:flex-start}
+  .settingsSelectItem{display:grid;gap:8px}
+  .settingsSelectItem select{max-width:none;width:100%}
+}

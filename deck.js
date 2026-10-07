@@ -382,7 +382,7 @@ async function storageText(localBytes){
     const e=await navigator.storage.estimate();
     const usage=Number(e.usage)||0,quota=Number(e.quota)||0;
     const persistent=navigator.storage.persisted?await navigator.storage.persisted():false;
-    return '保存済み動画 '+formatBytes(localBytes)+(quota?' ・ 端末保存 +formatBytes(usage)+' / '+formatBytes(quota):'')+(persistent?' ・ 保存保護あり':' ・ 通常保存');
+    return '保存済み動画 '+formatBytes(localBytes)+(quota?' ・ 端末保存 '+formatBytes(usage)+' / '+formatBytes(quota):'')+(persistent?' ・ 保存保護あり':' ・ 通常保存');
   }catch(e){return '保存済み動画 '+formatBytes(localBytes);}
 }
 function filteredSortedSources(sources){
@@ -858,11 +858,9 @@ window.__memoryDeckHandleFiles=async files=>{
         window.__memoryNavigate?.('play');
         currentCreation=null;
         preparePlay(creation);
-        enqueueReplayJobs(replayJobs);
       }
-    }else{
-      enqueueReplayJobs(replayJobs);
     }
+    enqueueReplayJobs(replayJobs);
   }finally{
     processing=false;
     fileInput.disabled=false;

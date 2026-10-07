@@ -620,6 +620,7 @@ async function getOpfsResumeFile(src){
   }catch(e){return null;}
 }
 async function cleanupSourceOpfsIfComplete(sourceId){
+  if(opfsWriteJobs.has(sourceId))return;
   const frames=await framesForSource(sourceId);
   if(!frames.length)return;
   const pending=frames.some(x=>x.imagePending||!(Number(x.replayFrameCount)>=2&&Number(x.replaySize)>0));
@@ -680,6 +681,19 @@ function pendingTargetsFromFrames(frames){
 }
 async function resumePendingBackgroundWork(){
   const sources=await getAll(SOURCE_STORE);
+  const knownIds=new Set(sources.map(x=>x.id));
+  const root=await opfsRoot();
+  if(root){
+    try{
+      for await(const [name] of root.entries()){
+        if(!name.startsWith(OPFS_PREFIX))continue;
+        const sourceId=name.slice(OPFS_PREFIX.length,-'.video'.length);
+        if(!knownIds.has(sourceId)){
+          try{await root.removeEntry(name);}catch(e){}
+        }
+      }
+    }catch(e){}
+  }
   const jobs=[];
   for(const src of sources){
     const frames=await framesForSource(src.id);
@@ -688,12 +702,22 @@ async function resumePendingBackgroundWork(){
       await cleanupSourceOpfsIfComplete(src.id);
       continue;
     }
+    const imageReadyCount=frames.filter(x=>!x.imagePending).length;
+    const replayReadyCount=frames.filter(x=>Number(x.replayFrameCount)>=2&&Number(x.replaySize)>0).length;
     const file=await getOpfsResumeFile(src);
     if(file){
-      await updateSourceRecord(src.id,{opfsReady:true,resumeNeedsFile:false,opfsWriting:false});
+      await updateSourceRecord(src.id,{
+        opfsReady:true,resumeNeedsFile:false,opfsWriting:false,
+        imageReadyCount,imagePending:Math.max(0,frames.length-imageReadyCount),
+        replayReadyCount,replayPending:Math.max(0,frames.length-replayReadyCount)
+      });
       jobs.push({file,sourceId:src.id,targets,resumed:true});
     }else{
-      await updateSourceRecord(src.id,{opfsReady:false,opfsWriting:false,resumeNeedsFile:true});
+      await updateSourceRecord(src.id,{
+        opfsReady:false,opfsWriting:false,resumeNeedsFile:true,
+        imageReadyCount,imagePending:Math.max(0,frames.length-imageReadyCount),
+        replayReadyCount,replayPending:Math.max(0,frames.length-replayReadyCount)
+      });
     }
   }
   enqueueBackgroundJobs(jobs);
@@ -1215,7 +1239,8 @@ async function restoreDeck(file){
       }
       if(accepted.length){
         const storageBytes=accepted.reduce((n,x)=>n+(Number(x.frame.imageSize)||0)+(Number(x.frame.replaySize)||0),0)+(Number(src.thumbnailSize)||0);
-        ss.put({...src,candidateCount:accepted.length,storageBytes});
+        const hasPending=accepted.some(x=>x.frame.imagePending||!(Number(x.frame.replayFrameCount)>=2&&Number(x.frame.replaySize)>0));
+        ss.put({...src,candidateCount:accepted.length,storageBytes,opfsName:null,opfsReady:false,opfsWriting:false,resumeNeedsFile:hasPending});
         accepted.forEach(x=>{fs.put(x.frame);if(x.replay)rs.put(x.replay);});
       }
     }
@@ -1292,6 +1317,12 @@ document.addEventListener('visibilitychange',()=>{
     deckNotice.textContent='シーン分析中です。OSに停止されない限り処理を続け、停止された場合も完了済みデータは残ります。';
     deckNotice.className='note deckNotice';
   }
+  if(!document.hidden){
+    resumePendingBackgroundWork().catch(err=>console.warn('background resume failed',err));
+  }
+});
+window.addEventListener('pageshow',()=>{
+  resumePendingBackgroundWork().catch(err=>console.warn('background resume failed',err));
 });
 requestPersistence().catch(()=>{});
 window.__memoryDeckRender=()=>renderDeck();

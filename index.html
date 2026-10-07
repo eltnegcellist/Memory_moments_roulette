@@ -21,9 +21,9 @@
 <link rel="apple-touch-icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2">
 <link rel="icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2" type="image/png">
 <title>思い出ルーレットおみくじ</title>
-<link rel="stylesheet" href="./style.css?v=1.1.0-nav2">
-<link rel="stylesheet" href="./deluxe.css?v=1.1.0-nav2">
-<link rel="stylesheet" href="./features.css?v=1.1.0-nav2">
+<link rel="stylesheet" href="./style.css?v=1.1.0-library2">
+<link rel="stylesheet" href="./deluxe.css?v=1.1.0-library2">
+<link rel="stylesheet" href="./features.css?v=1.1.0-library2">
 <style>
 body:not(.show-score-details) .scoreChip,
 body:not(.show-score-details) .scoreDetails,
@@ -109,10 +109,14 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <h2>過去の動画からルーレットを作る</h2>
   <p class="note viewIntro">今回使いたい動画だけを選んでください。1本でも複数本でも選べます。</p>
   <p id="deckStatus" class="deckStatus">保存した動画を読み込んでいます…</p>
+  <div class="deckLibraryManageBar">
+    <span id="deckLibraryManageNote">タップして今回使う動画を選びます。</span>
+    <button id="deckLibraryManageBtn" class="secondary" type="button">動画を管理</button>
+  </div>
   <div class="deckLibraryToolbar">
     <div class="deckLibrarySearch">
       <span aria-hidden="true">⌕</span>
-      <input id="deckSearch" type="search" placeholder="過去の動画を検索" autocomplete="off">
+      <input id="deckSearch" type="search" placeholder="追加日で検索（例 10/7）" autocomplete="off">
     </div>
     <select id="deckSort" aria-label="動画の並び順">
       <option value="newest" selected>新しい順</option>
@@ -188,7 +192,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <div class="viewTopbar"><button class="viewBack" type="button" data-nav-back>‹ ホーム</button><span>設定</span></div>
   <div class="step">SETTINGS</div>
   <h2>設定・データ管理</h2>
-  <p class="note viewIntro">動画の削除やバックアップなど、普段は使わない管理機能をまとめています。</p>
+  <p class="note viewIntro">保存容量、バックアップ、復元などのデータ管理をまとめています。個別の動画削除は「過去の動画」画面の「動画を管理」から行えます。</p>
   <section id="labSettingsInline" class="labSettingsInline" hidden>
         <div class="labSettingsInlineHead">
           <span class="labSettingsInlineBadge">LAB</span>
@@ -221,11 +225,10 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
       </section>
   <div id="deckManage" class="deckManage">
     <div id="deckStorage" class="deckStorage">保存容量を確認しています…</div>
-    <h3 class="settingsSubhead">保存済み動画</h3>
-    <div id="deckSources" class="deckSources deckPhotoLibrary"><div class="note">追加した動画はここに表示されます。</div></div>
+    <div class="settingsDataSummary">保存済み動画の容量とバックアップを管理します。</div>
     <div class="deckBackupActions">
-      <button id="deckBackupBtn" class="secondary" type="button">デッキを書き出す</button>
-      <button id="deckRestoreBtn" class="secondary" type="button">デッキを復元する</button>
+      <button id="deckBackupBtn" class="secondary" type="button">バックアップを書き出す</button>
+      <button id="deckRestoreBtn" class="secondary" type="button">バックアップから復元</button>
       <button id="deckClearBtn" class="danger" type="button">保存済み動画をすべて削除</button>
       <input id="deckRestoreInput" type="file" accept="application/json,.json" hidden>
     </div>
@@ -340,12 +343,12 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <video id="video" playsinline muted preload="metadata" style="display:none"></video><canvas id="captureCanvas" style="display:none"></canvas><canvas id="smallCanvas" width="28" height="28" style="display:none"></canvas>
 </div>
 <div id="bigOverlay"><div id="bigText">大吉！</div></div>
-<script src="./navigation.js?v=1.1.0-nav2" defer></script>
-<script src="./app.js?v=1.1.0-nav2" defer></script>
-<script src="./deck.js?v=1.1.0-nav2" defer></script>
-<script src="./deluxe.js?v=1.1.0-nav2" defer></script>
-<script src="./features.js?v=1.1.0-nav2" defer></script>
-<script src="./hidden-settings.js?v=1.1.0-nav2" defer></script>
+<script src="./navigation.js?v=1.1.0-library2" defer></script>
+<script src="./app.js?v=1.1.0-library2" defer></script>
+<script src="./deck.js?v=1.1.0-library2" defer></script>
+<script src="./deluxe.js?v=1.1.0-library2" defer></script>
+<script src="./features.js?v=1.1.0-library2" defer></script>
+<script src="./hidden-settings.js?v=1.1.0-library2" defer></script>
 <script>
 (()=>{
   const scoreBox=document.getElementById('showScores');

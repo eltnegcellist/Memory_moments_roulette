@@ -29,10 +29,13 @@ const deckSort=document.getElementById('deckSort');
 const deckSelectionStatus=document.getElementById('deckSelectionStatus');
 const deckSelectAllBtn=document.getElementById('deckSelectAllBtn');
 const deckClearSelectionBtn=document.getElementById('deckClearSelectionBtn');
+const deckLibraryManageBtn=document.getElementById('deckLibraryManageBtn');
+const deckLibraryManageNote=document.getElementById('deckLibraryManageNote');
 const homeSavedVideoCount=document.getElementById('homeSavedVideoCount');
-if(!deckCard||!deckDrawBtn||!deckManage||!deckSources||!deckPicker)return;
+if(!deckCard||!deckDrawBtn||!deckPicker)return;
 
 let processing=false;
+let libraryManageMode=false;
 const selectedSourceIds=new Set();
 const thumbnailJobs=new Map();
 const thumbnailTargets=new WeakMap();
@@ -86,8 +89,25 @@ function approxDataUrlBytes(s){
   return Math.ceil((s.length-(comma>=0?comma+1:0))*0.75);
 }
 function sourceMomentDate(src){
-  const t=Number(src?.lastModified)||Number(src?.addedAt)||Date.now();
+  const t=Number(src?.addedAt)||Number(src?.lastModified)||Date.now();
   return new Date(t);
+}
+function sourceDisplayName(src){
+  const d=sourceMomentDate(src);
+  return (d.getMonth()+1)+'月'+d.getDate()+'日に追加した動画';
+}
+function sourceDisplayTime(src){
+  const d=sourceMomentDate(src);
+  return d.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+}
+function sourceSearchText(src){
+  const d=sourceMomentDate(src);
+  return [
+    src?.fileName||'',
+    sourceDisplayName(src),
+    (d.getMonth()+1)+'/'+d.getDate(),
+    d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate()
+  ].join(' ').toLowerCase();
 }
 function sourceMonthKey(src){
   const d=sourceMomentDate(src);
@@ -365,7 +385,7 @@ function filteredSortedSources(sources){
   const q=(deckSearch?.value||'').trim().toLowerCase();
   const newest=(deckSort?.value||'newest')!=='oldest';
   return sources
-    .filter(src=>!q||(src.fileName||'').toLowerCase().includes(q))
+    .filter(src=>!q||sourceSearchText(src).includes(q))
     .sort((a,b)=>{
       const d=sourceMomentDate(a)-sourceMomentDate(b);
       return newest?-d:d;
@@ -380,7 +400,8 @@ function makeSourceTile(src,{selectable=false,manageable=false}={}){
   choose.type='button';
   choose.className='deckVideoPick';
   choose.setAttribute('aria-pressed',selectedSourceIds.has(src.id)?'true':'false');
-  choose.setAttribute('aria-label',(src.fileName||'動画')+(selectedSourceIds.has(src.id)?' 選択済み':' 選択する'));
+  const displayName=sourceDisplayName(src);
+  choose.setAttribute('aria-label',displayName+(selectedSourceIds.has(src.id)?' 選択済み':' 選択する'));
 
   const media=document.createElement('div');
   media.className='deckVideoThumb';
@@ -403,11 +424,11 @@ function makeSourceTile(src,{selectable=false,manageable=false}={}){
   info.className='deckVideoInfo';
   const date=document.createElement('span');
   date.className='deckVideoDate';
-  date.textContent=sourceMomentDate(src).toLocaleDateString('ja-JP',{month:'numeric',day:'numeric'});
+  date.textContent=sourceDisplayTime(src);
   const name=document.createElement('strong');
-  name.textContent=src.fileName||'動画';
+  name.textContent=displayName;
   const meta=document.createElement('small');
-  meta.textContent=(Number(src.candidateCount)||0)+'個の一瞬';
+  meta.textContent=(Number(src.candidateCount)||0)+'個の一瞬 ・ '+formatDuration(src.duration);
   info.append(date,name,meta);
   choose.append(media,info);
 
@@ -429,11 +450,11 @@ function makeSourceTile(src,{selectable=false,manageable=false}={}){
     const del=document.createElement('button');
     del.type='button';
     del.className='deckVideoDelete';
-    del.setAttribute('aria-label',(src.fileName||'動画')+'をデッキから削除');
+    del.setAttribute('aria-label',displayName+'を保存済み動画から削除');
     del.textContent='×';
     del.onclick=async e=>{
       e.preventDefault();e.stopPropagation();
-      if(!confirm('「'+(src.fileName||'この動画')+'」から作った一瞬をデッキから削除しますか？'))return;
+      if(!confirm('「'+displayName+'」を保存済み動画から削除しますか？'))return;
       await deleteSource(src.id);
       await renderDeck();
     };
@@ -471,8 +492,16 @@ function renderGroupedLibrary(container,sources,options){
   }
 }
 function renderSourceLibraries(){
-  renderGroupedLibrary(deckPicker,lastDeckSources,{selectable:true,manageable:false});
-  renderGroupedLibrary(deckSources,lastDeckSources,{selectable:false,manageable:true});
+  renderGroupedLibrary(deckPicker,lastDeckSources,{selectable:!libraryManageMode,manageable:libraryManageMode});
+  if(deckSources)renderGroupedLibrary(deckSources,lastDeckSources,{selectable:false,manageable:true});
+}
+function syncLibraryManageMode(){
+  deckCard.classList.toggle('manage-mode',libraryManageMode);
+  if(deckLibraryManageBtn)deckLibraryManageBtn.textContent=libraryManageMode?'管理を終了':'動画を管理';
+  if(deckLibraryManageNote)deckLibraryManageNote.textContent=libraryManageMode
+    ? '削除したい動画の × を押してください。ルーレット用の選択は一時停止しています。'
+    : 'タップして今回使う動画を選びます。';
+  renderSourceLibraries();
 }
 async function renderDeck(){
   const s=await stats();
@@ -485,7 +514,7 @@ async function renderDeck(){
     ? s.sources.length+'本の動画から '+s.count+'個の一瞬を保存しています。'+(selected.length?' 現在 '+selected.length+'本を選択中です。':' ルーレットに使う動画を選んでください。')
     : 'まだ保存した動画はありません。上の「新しい動画からルーレットを作る」から追加してください。';
   updateSelectionStatus(s.sources);
-  deckStorage.textContent=await storageText(s.bytes);
+  if(deckStorage)deckStorage.textContent=await storageText(s.bytes);
   renderSourceLibraries();
 }
 async function deleteSource(sourceId){
@@ -740,7 +769,7 @@ async function buildDeckCreation(sourceIds){
   ]);
   const frames=frameGroups.flat();
   if(!frames.length)return null;
-  const sourceNames=new Map(sources.map(x=>[x.id,x.fileName||'動画']));
+  const sourceNames=new Map(sources.map(x=>[x.id,sourceDisplayName(x)]));
   const ids=frames.map(x=>x.id);
   const drawState=await preparedDrawState(ids);
   const mode=modeName();
@@ -775,8 +804,13 @@ deckDrawBtn.addEventListener('click',async()=>{
 });
 deckAddBtn?.addEventListener('click',()=>fileInput.click());
 deckManageBtn?.addEventListener('click',()=>{
+  if(!deckManage)return;
   deckManage.hidden=!deckManage.hidden;
   deckManageBtn.textContent=deckManage.hidden?'保存データを管理':'管理を閉じる';
+});
+deckLibraryManageBtn?.addEventListener('click',()=>{
+  libraryManageMode=!libraryManageMode;
+  syncLibraryManageMode();
 });
 async function backupDeck(){
   const [sources,frames,replays,drawState]=await Promise.all([getAll(SOURCE_STORE),getAll(FRAME_STORE),getAll(REPLAY_STORE),metaGet('drawState')]);
@@ -906,6 +940,10 @@ document.addEventListener('visibilitychange',()=>{
 requestPersistence().catch(()=>{});
 window.__memoryDeckRender=()=>renderDeck();
 window.__memoryDeckStartSelection=async()=>{
+  libraryManageMode=false;
+  deckCard.classList.remove('manage-mode');
+  if(deckLibraryManageBtn)deckLibraryManageBtn.textContent='動画を管理';
+  if(deckLibraryManageNote)deckLibraryManageNote.textContent='タップして今回使う動画を選びます。';
   selectedSourceIds.clear();
   selectionLoaded=true;
   await saveSelectedSources();

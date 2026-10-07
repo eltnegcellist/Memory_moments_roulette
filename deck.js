@@ -51,7 +51,7 @@ const thumbnailObserver=typeof IntersectionObserver!=='undefined'
   : null;
 let selectionLoaded=false;
 let lastDeckSources=[];
-let replayQueue=Promise.resolve();
+let backgroundQueue=Promise.resolve();
 
 async function getAll(store){
   const db=await openDB();
@@ -593,6 +593,19 @@ async function backgroundSeekTo(v,time){
   }
   await new Promise(r=>setTimeout(r,24));
 }
+async function captureDeckImageBackground(v,canvas,cx,time){
+  await waitUntilVisible();
+  await backgroundSeekTo(v,time);
+  const maxEdge=1280;
+  const vw=Math.max(1,v.videoWidth||1),vh=Math.max(1,v.videoHeight||1);
+  const scale=Math.min(1,maxEdge/Math.max(vw,vh));
+  canvas.width=Math.max(2,Math.round(vw*scale));
+  canvas.height=Math.max(2,Math.round(vh*scale));
+  cx.drawImage(v,0,0,canvas.width,canvas.height);
+  let dataUrl=canvas.toDataURL('image/webp',.82);
+  if(!dataUrl.startsWith('data:image/webp'))dataUrl=canvas.toDataURL('image/jpeg',.82);
+  return {dataUrl,width:canvas.width,height:canvas.height,size:approxDataUrlBytes(dataUrl)};
+}
 async function captureReplayBurstBackground(v,canvas,cx,targetTime){
   const timing=replayTiming(targetTime,v.duration);
   const vw=Math.max(1,v.videoWidth||1),vh=Math.max(1,v.videoHeight||1);
@@ -613,6 +626,31 @@ async function captureReplayBurstBackground(v,canvas,cx,targetTime){
   }
   if(timing.mode==='reverse')frames.reverse();
   return {frames,mode:timing.mode,span:timing.span,bytes,width:canvas.width,height:canvas.height,count:frames.length};
+}
+async function storeBackgroundImage(frameId,stored){
+  const db=await openDB();
+  let frameFound=false;
+  await new Promise((res,rej)=>{
+    const tx=db.transaction(FRAME_STORE,'readwrite');
+    const fs=tx.objectStore(FRAME_STORE);
+    const req=fs.get(frameId);
+    req.onsuccess=()=>{
+      const fr=req.result;
+      if(!fr)return;
+      frameFound=true;
+      fs.put({...fr,
+        imageData:stored.dataUrl,width:stored.width,height:stored.height,
+        imageSize:stored.size,imagePending:false
+      });
+    };
+    tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);
+  });
+  if(!frameFound)return false;
+  const ids=activeCreation?.deckCandidateIds||[];
+  for(let i=0;i<ids.length;i++){
+    if(ids[i]===frameId&&activeCreation?.frames)activeCreation.frames[i]=stored.dataUrl;
+  }
+  return true;
 }
 async function storeBackgroundReplay(sourceId,frameId,replay){
   const db=await openDB();
@@ -652,6 +690,8 @@ async function refreshSourceStorage(sourceId){
   const src=sources.find(x=>x.id===sourceId);
   if(!src)return;
   src.storageBytes=frames.reduce((n,x)=>n+(Number(x.imageSize)||0)+(Number(x.replaySize)||0),0)+(Number(src.thumbnailSize)||0);
+  src.imageReadyCount=frames.filter(x=>!x.imagePending).length;
+  src.imagePending=Math.max(0,frames.length-src.imageReadyCount);
   src.replayReadyCount=frames.filter(x=>Number(x.replayFrameCount)>=2&&Number(x.replaySize)>0).length;
   src.replayPending=Math.max(0,frames.length-src.replayReadyCount);
   const db=await openDB();
@@ -661,7 +701,7 @@ async function refreshSourceStorage(sourceId){
     tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);
   });
 }
-async function runReplayJob(job){
+async function runBackgroundMediaJob(job){
   if(!job?.file||!job.targets?.length)return;
   const v=document.createElement('video');
   v.muted=true;v.playsInline=true;v.preload='metadata';
@@ -678,28 +718,53 @@ async function runReplayJob(job){
       if(typeof requestIdleCallback==='function'){
         await new Promise(r=>requestIdleCallback(()=>r(),{timeout:450}));
       }else{
-        await new Promise(r=>setTimeout(r,80));
+        await new Promise(r=>setTimeout(r,60));
       }
-      const replay=await captureReplayBurstBackground(v,canvas,cx,target.time);
-      if(currentBytes+replay.bytes>byteLimit)break;
-      const saved=await storeBackgroundReplay(job.sourceId,target.id,replay);
-      if(saved)currentBytes+=replay.bytes;
+
+      if(target.needImage){
+        const stored=await captureDeckImageBackground(v,canvas,cx,target.time);
+        const oldSize=Number(target.imageSize)||0;
+        const delta=Math.max(0,stored.size-oldSize);
+        if(currentBytes+delta<=byteLimit){
+          const saved=await storeBackgroundImage(target.id,stored);
+          if(saved){
+            currentBytes+=delta;
+            target.imageSize=stored.size;
+            target.needImage=false;
+          }
+        }
+      }
+
+      if(target.needReplay){
+        const replay=await captureReplayBurstBackground(v,canvas,cx,target.time);
+        if(currentBytes+replay.bytes<=byteLimit){
+          const saved=await storeBackgroundReplay(job.sourceId,target.id,replay);
+          if(saved){
+            currentBytes+=replay.bytes;
+            target.needReplay=false;
+          }
+        }
+      }
     }
     await refreshSourceStorage(job.sourceId);
+    const activeIds=new Set(activeCreation?.deckCandidateIds||[]);
+    if(job.targets.some(x=>activeIds.has(x.id))){
+      try{await persistCreation(activeCreation);}catch(e){console.warn('background roulette history refresh failed',e);}
+    }
   }catch(err){
-    console.warn('background miracle replay failed',err);
+    console.warn('background media save failed',err);
   }finally{
     try{v.pause();v.removeAttribute('src');v.load();}catch(e){}
     URL.revokeObjectURL(url);
   }
 }
-function enqueueReplayJobs(jobs){
-  const pending=(jobs||[]).filter(x=>x?.targets?.length);
+function enqueueBackgroundJobs(jobs){
+  const pending=(jobs||[]).filter(x=>x?.targets?.some(t=>t.needImage||t.needReplay));
   if(!pending.length)return;
-  replayQueue=replayQueue.then(async()=>{
-    for(const job of pending)await runReplayJob(job);
+  backgroundQueue=backgroundQueue.then(async()=>{
+    for(const job of pending)await runBackgroundMediaJob(job);
     await renderDeck().catch(()=>{});
-  }).catch(err=>console.warn('background replay queue failed',err));
+  }).catch(err=>console.warn('background media queue failed',err));
 }
 
 window.__memoryDeckLoadReplay=async candidateId=>{
@@ -721,10 +786,16 @@ async function extractOne(file,overallIndex,total){
   const existing=await existingSource(fingerprint);
   if(existing){
     const own=await framesForSource(existing.id);
-    const missing=own.filter(x=>!(Number(x.replayFrameCount)>=2&&Number(x.replaySize)>0));
+    const pending=own
+      .map(x=>({
+        id:x.id,time:x.timestamp,imageSize:Number(x.imageSize)||0,
+        needImage:!!x.imagePending,
+        needReplay:!(Number(x.replayFrameCount)>=2&&Number(x.replaySize)>0)
+      }))
+      .filter(x=>x.needImage||x.needReplay);
     return {
       duplicate:true,name:file.name,count:0,sourceId:existing.id,
-      replayJob:missing.length?{file,sourceId:existing.id,targets:missing.map(x=>({id:x.id,time:x.timestamp}))}:null
+      backgroundJob:pending.length?{file,sourceId:existing.id,targets:pending}:null
     };
   }
   const before=await stats();
@@ -759,18 +830,20 @@ async function extractOne(file,overallIndex,total){
   const frames=[];
   let bytes=before.bytes;
   const byteLimit=await effectiveByteLimit(before.bytes);
+  const analysisWidth=Math.max(2,Number(captureCanvas.width)||2);
+  const analysisHeight=Math.max(2,Number(captureCanvas.height)||2);
   for(let i=0;i<picked.length;i++){
     const p=picked[i];
-    progressText.textContent='動画 '+overallIndex+' / '+total+' ・ ルーレット画像を保存しています '+(i+1)+' / '+picked.length;
-    const stored=await captureDeckImage(p.time);
-    const imageSize=approxDataUrlBytes(stored.dataUrl);
+    progressText.textContent='動画 '+overallIndex+' / '+total+' ・ ルーレットを準備しています '+(i+1)+' / '+picked.length;
+    const imageData=p.dataUrl;
+    const imageSize=approxDataUrlBytes(imageData);
     if(bytes+imageSize>byteLimit)break;
     const d=details[i]||{};
     const candidateId=sourceId+'-'+String(i).padStart(3,'0');
     const timing=replayTiming(p.time,duration);
     frames.push({
       id:candidateId,sourceVideoId:sourceId,timestamp:p.time,
-      imageData:stored.dataUrl,width:stored.width,height:stored.height,imageSize,createdAt:Date.now(),
+      imageData,width:analysisWidth,height:analysisHeight,imageSize,createdAt:Date.now(),imagePending:true,
       replayMode:timing.mode,replaySpan:0,replaySize:0,
       replayWidth:0,replayHeight:0,replayFrameCount:0,
       replayQuality:REPLAY_QUALITY,replayEdge:REPLAY_EDGE,replayPending:true,
@@ -788,13 +861,18 @@ async function extractOne(file,overallIndex,total){
     source.thumbnailHeight=thumb.height;
   }
   source.storageBytes=frames.reduce((n,x)=>n+(Number(x.imageSize)||0),0)+(Number(source.thumbnailSize)||0);
+  source.imagePending=frames.length;
+  source.imageReadyCount=0;
   source.replayPending=frames.length;
   source.replayReadyCount=0;
   source.replaySpec={edge:REPLAY_EDGE,frames:REPLAY_FRAME_COUNT,quality:REPLAY_QUALITY,seconds:REPLAY_SECONDS};
   await saveSourceAndFrames(source,frames,[]);
   return {
     duplicate:false,name:file.name,count:frames.length,sourceId,
-    replayJob:{file,sourceId,targets:frames.map(x=>({id:x.id,time:x.timestamp}))}
+    backgroundJob:{
+      file,sourceId,
+      targets:frames.map(x=>({id:x.id,time:x.timestamp,imageSize:x.imageSize,needImage:true,needReplay:true}))
+    }
   };
 }
 async function requestPersistence(){
@@ -812,13 +890,13 @@ window.__memoryDeckHandleFiles=async files=>{
   let added=0,duplicates=0,failed=0;
   const errors=[];
   const batchSourceIds=[];
-  const replayJobs=[];
+  const backgroundJobs=[];
   try{
     for(let i=0;i<files.length;i++){
       try{
         const r=await extractOne(files[i],i+1,files.length);
         if(r.sourceId)batchSourceIds.push(r.sourceId);
-        if(r.replayJob)replayJobs.push(r.replayJob);
+        if(r.backgroundJob)backgroundJobs.push(r.backgroundJob);
         if(r.duplicate)duplicates++;else added+=r.count;
       }catch(e){
         failed++;
@@ -836,7 +914,7 @@ window.__memoryDeckHandleFiles=async files=>{
     let msg=added+'個の一瞬を準備しました。ルーレットはすぐに始められます。';
     if(duplicates)msg+=' '+duplicates+'本は追加済みのためスキップしました。';
     if(failed)msg+=' '+failed+'本は処理できませんでした。';
-    if(batchSourceIds.length)msg+=' 奇跡リプレイはバックグラウンドで保存します。';
+    if(batchSourceIds.length)msg+=' 高解像度画像と奇跡リプレイはバックグラウンドで保存します。';
     progressText.textContent=msg;
     const standalone=window.matchMedia?.('(display-mode: standalone)')?.matches||navigator.standalone===true;
     let notice=errors.length?errors.join(' / '):msg;
@@ -860,7 +938,7 @@ window.__memoryDeckHandleFiles=async files=>{
         preparePlay(creation);
       }
     }
-    enqueueReplayJobs(replayJobs);
+    enqueueBackgroundJobs(backgroundJobs);
   }finally{
     processing=false;
     fileInput.disabled=false;

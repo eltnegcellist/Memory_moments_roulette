@@ -9,11 +9,31 @@ function drawFortune(){
   return "吉";
 }
 const $=id=>document.getElementById(id);
-const fileInput=$("fileInput"), frameCountEl=$("frameCount"), plainModeEl=$("plainMode"), previewSection=$("previewSection"), progressWrap=$("progressWrap"), progressBar=$("progressBar"), progressText=$("progressText"), grid=$("grid"), previewTitle=$("previewTitle"), previewNote=$("previewNote"), analysisStatus=$("analysisStatus"), playBtn=$("playBtn"), reextractBtn=$("reextractBtn"), library=$("library");
+const fileInput=$("fileInput"), frameCountEl=$("frameCount"), plainModeEl=$("plainMode"), showFortunesEl=$("showFortunes"), previewSection=$("previewSection"), progressWrap=$("progressWrap"), progressBar=$("progressBar"), progressText=$("progressText"), grid=$("grid"), previewTitle=$("previewTitle"), previewNote=$("previewNote"), analysisStatus=$("analysisStatus"), playBtn=$("playBtn"), reextractBtn=$("reextractBtn"), library=$("library");
 const video=$("video"), captureCanvas=$("captureCanvas"), smallCanvas=$("smallCanvas"), ctx=captureCanvas.getContext("2d",{willReadFrequently:true}), sctx=smallCanvas.getContext("2d",{willReadFrequently:true});
 const playSection=$("playSection"), stage=$("stage"), playImage=$("playImage"), fortuneBadge=$("fortuneBadge"), resultCard=$("resultCard"), resultText=$("resultText"), message=$("message"), rouletteBadge=$("rouletteBadge"), tapHint=$("tapHint");
 const bigOverlay=$("bigOverlay");
 let objectUrl=null, lastFile=null, currentSourceKey=null, selectedFrames=[], selectedFortunes=[], selectedAppealDetails=[], currentCreation=null, activeCreation=null, running=false, timer=null, currentIndex=0, primed=false;
+const PUBLIC_SETTINGS_KEY='memory-roulette-settings-v1';
+function loadPublicSettings(){
+  let data={};
+  try{data=JSON.parse(localStorage.getItem(PUBLIC_SETTINGS_KEY)||'{}')||{};}catch(e){}
+  const frame=String(data.frameCount||'auto');
+  if([...frameCountEl.options].some(x=>x.value===frame))frameCountEl.value=frame;
+  plainModeEl.checked=!!data.plainMode;
+  if(showFortunesEl)showFortunesEl.checked=!!data.showFortunes;
+}
+function savePublicSettings(){
+  try{
+    localStorage.setItem(PUBLIC_SETTINGS_KEY,JSON.stringify({
+      frameCount:frameCountEl.value||'auto',
+      plainMode:!!plainModeEl.checked,
+      showFortunes:!!showFortunesEl?.checked
+    }));
+  }catch(e){}
+}
+loadPublicSettings();
+if(showFortunesEl)showFortunesEl.dispatchEvent(new Event('change',{bubbles:true}));
 function sourceKeyFor(file){return file?`${file.name}|${file.size}|${file.lastModified}`:null;}
 function modeName(){return plainModeEl.checked?"roulette":"omikuji";}
 function autoTitle(mode){const d=new Date(); const pad=n=>String(n).padStart(2,'0'); return mode==='omikuji' ? `思い出おみくじ ${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}` : `思い出ルーレット ${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;}
@@ -21,7 +41,9 @@ function shuffle(arr){const a=arr.slice(); for(let i=a.length-1;i>0;i--){const j
 function manualTargetCount(){const v=frameCountEl.value; return v==='auto'?null:Number(v);}
 function autoTargetCount(duration,distinctCount,totalCount){ const choices=[12,14,16,18,20,24,28]; let desired=18; if(duration<4) desired=12; else if(duration<7) desired=14; else if(duration<12) desired=16; else if(duration<20) desired=18; else if(duration<35) desired=20; else if(duration<60) desired=24; else desired=28; const diversity=totalCount>0?distinctCount/totalCount:0.5; if(diversity<0.22) desired-=4; else if(diversity<0.35) desired-=2; else if(diversity>0.68) desired+=2; desired=Math.max(12,Math.min(28,desired)); return choices.reduce((best,x)=>Math.abs(x-desired)<Math.abs(best-desired)?x:best,choices[0]); }
 function updatePreviewMeta(){ const mode=modeName(); previewTitle.textContent=mode==='omikuji' ? '自動で作成したおみくじ' : '自動で作成した思い出ルーレット'; previewNote.textContent=mode==='omikuji' ? '保存名は自動で付けます。必要なら保存後に変更できます。特徴度は写真の良し悪しを決める点数ではなく、候補どうしの違いを見るための補助値です。' : '保存名は自動で付けます。必要なら保存後に変更できます。'; }
-plainModeEl.addEventListener('change',async()=>{ if(selectedFrames.length){ if(modeName()==='omikuji'){ selectedFortunes=await assignFortunes(selectedFrames); } renderGrid(); } updatePreviewMeta(); });
+plainModeEl.addEventListener('change',async()=>{ savePublicSettings(); if(selectedFrames.length){ if(modeName()==='omikuji'){ selectedFortunes=await assignFortunes(selectedFrames); } renderGrid(); } updatePreviewMeta(); });
+frameCountEl.addEventListener('change',savePublicSettings);
+showFortunesEl?.addEventListener('change',savePublicSettings);
 function once(target,event,timeout=6000){return new Promise((resolve,reject)=>{let done=false; const fn=()=>{if(done)return; done=true; clearTimeout(to); target.removeEventListener(event,fn); resolve();}; const to=setTimeout(()=>{if(done)return; done=true; target.removeEventListener(event,fn); reject(new Error(event+' timeout'));},timeout); target.addEventListener(event,fn,{once:true});})}
 async function loadVideo(file){ if(objectUrl) URL.revokeObjectURL(objectUrl); currentSourceKey=sourceKeyFor(file); objectUrl=URL.createObjectURL(file); video.src=objectUrl; video.load(); if(video.readyState<1) await once(video,'loadedmetadata',10000); if(!isFinite(video.duration)||video.duration<=0) throw new Error('動画の長さを取得できません'); }
 async function seekTo(t){ const safe=Math.max(0,Math.min(video.duration-.04,t)); if(Math.abs(video.currentTime-safe)>.02){ video.currentTime=safe; try{await once(video,'seeked',6000)}catch(e){} } await new Promise(r=>setTimeout(r,35)); }
@@ -121,7 +143,6 @@ grid.appendChild(d);
 }
 function makeCreation(){ const mode=modeName(); const id=currentCreation?.id || ('r'+Date.now()+Math.random().toString(36).slice(2,8)); return { id, title: currentCreation?.title || autoTitle(mode), createdAt: currentCreation?.createdAt || Date.now(), updatedAt: Date.now(), sourceKey: currentSourceKey, mode, frames: selectedFrames.map(f=>f.dataUrl), fortunes: mode==='omikuji' ? selectedFortunes.slice() : [], times: selectedFrames.map(f=>f.time), appeal: mode==='omikuji' ? selectedAppealDetails.map(x=>({score:x.score,clarityScore:x.clarityScore,rarityScore:x.rarityScore,changeScore:x.changeScore})) : [] }; }
 const DBNAME='babyExpressionRouletteDB', STORE='creations';
-const LAST_ROULETTE_KEY='memory-moments-last-roulette-v1';
 function openDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DBNAME,3);r.onupgradeneeded=()=>{
   const db=r.result;
   if(!db.objectStoreNames.contains(STORE))db.createObjectStore(STORE,{keyPath:'id'});
@@ -137,21 +158,10 @@ function openDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open(D
   if(!db.objectStoreNames.contains('deckReplays'))db.createObjectStore('deckReplays',{keyPath:'id'});
 };r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
 async function dbPut(x){const db=await openDB();return new Promise((res,rej)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).put(x);tx.oncomplete=res;tx.onerror=()=>rej(tx.error)})}
-async function dbGet(id){if(!id)return null;const db=await openDB();return new Promise((res,rej)=>{const r=db.transaction(STORE).objectStore(STORE).get(id);r.onsuccess=()=>res(r.result||null);r.onerror=()=>rej(r.error)})}
 async function dbAll(){const db=await openDB();return new Promise((res,rej)=>{const r=db.transaction(STORE).objectStore(STORE).getAll();r.onsuccess=()=>res(r.result.sort((a,b)=>(b.updatedAt||b.createdAt)-(a.updatedAt||a.createdAt)));r.onerror=()=>rej(r.error)})}
-function rememberLastRoulette(x){
-  if(!x?.id)return;
-  try{localStorage.setItem(LAST_ROULETTE_KEY,x.id);}catch(e){}
-}
-async function persistCreation(x){
-  if(!x?.id||!Array.isArray(x.frames)||!x.frames.length)return;
-  await dbPut(x);
-  rememberLastRoulette(x);
-  refreshLibrary().catch(e=>console.error('roulette history refresh failed',e));
-}
 async function dbDelete(id){const db=await openDB();return new Promise((res,rej)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).delete(id);tx.oncomplete=res;tx.onerror=()=>rej(tx.error)})}
-async function refreshLibrary(){ const all=await dbAll(); library.innerHTML=''; if(!all.length){ library.innerHTML='<div class="note">まだ作ったルーレットはありません。</div>'; return; } all.forEach(x=>{ const el=document.createElement('div'); el.className='saved'; el.innerHTML=`<img src="${x.frames[0]}"><div class="savedMain"><div class="savedTitle"></div><div class="savedMeta">${x.mode==='omikuji'?'おみくじ':'通常ルーレット'} ・ ${new Date(x.updatedAt||x.createdAt).toLocaleString('ja-JP')} ・ ${x.frames.length}枚</div><div class="savedBtns"><button class="primary open">遊ぶ</button><button class="secondary renameToggle">名前変更</button><button class="danger del">削除</button></div><div class="renameRow" style="display:none"><input type="text" value=""><button class="secondary saveName">保存</button></div></div>`; el.querySelector('.savedTitle').textContent=x.title; el.querySelector('.renameRow input').value=x.title; el.querySelector('.open').onclick=()=>{ unlockAudio(); preparePlay(x); }; el.querySelector('.renameToggle').onclick=()=>{ const row=el.querySelector('.renameRow'); row.style.display=row.style.display==='none'?'flex':'none'; }; el.querySelector('.saveName').onclick=async()=>{ const nx=(el.querySelector('.renameRow input').value||'').trim(); if(!nx) return; x.title=nx; x.updatedAt=Date.now(); await dbPut(x); refreshLibrary(); }; el.querySelector('.del').onclick=async()=>{ if(confirm('削除しますか？')){ await dbDelete(x.id); refreshLibrary(); } }; library.appendChild(el); }); }
-async function saveCurrentCreation(){ currentCreation=makeCreation(); await persistCreation(currentCreation); }
+async function refreshLibrary(){ const all=await dbAll(); library.innerHTML=''; if(!all.length){ library.innerHTML='<div class="note">まだ保存されていません。</div>'; return; } all.forEach(x=>{ const el=document.createElement('div'); el.className='saved'; el.innerHTML=`<img src="${x.frames[0]}"><div class="savedMain"><div class="savedTitle"></div><div class="savedMeta">${x.mode==='omikuji'?'おみくじ':'通常ルーレット'} ・ ${new Date(x.updatedAt||x.createdAt).toLocaleString('ja-JP')} ・ ${x.frames.length}枚</div><div class="savedBtns"><button class="primary open">遊ぶ</button><button class="secondary renameToggle">名前変更</button><button class="danger del">削除</button></div><div class="renameRow" style="display:none"><input type="text" value=""><button class="secondary saveName">保存</button></div></div>`; el.querySelector('.savedTitle').textContent=x.title; el.querySelector('.renameRow input').value=x.title; el.querySelector('.open').onclick=()=>{ unlockAudio(); preparePlay(x); }; el.querySelector('.renameToggle').onclick=()=>{ const row=el.querySelector('.renameRow'); row.style.display=row.style.display==='none'?'flex':'none'; }; el.querySelector('.saveName').onclick=async()=>{ const nx=(el.querySelector('.renameRow input').value||'').trim(); if(!nx) return; x.title=nx; x.updatedAt=Date.now(); await dbPut(x); refreshLibrary(); }; el.querySelector('.del').onclick=async()=>{ if(confirm('削除しますか？')){ await dbDelete(x.id); refreshLibrary(); } }; library.appendChild(el); }); }
+async function saveCurrentCreation(){ currentCreation=makeCreation(); await dbPut(currentCreation); await refreshLibrary(); }
 let audioCtx=null;
 function ensureAudio(){
 if(!audioCtx){ const Ctx=window.AudioContext||window.webkitAudioContext; if(Ctx) audioCtx=new Ctx(); }
@@ -174,6 +184,8 @@ seq.forEach(([f,d,w],i)=>tone(f,d,w,name==='大吉'?.12:.08,i%2?'sine':'triangle
 function updatePlayStageAspect(x){
 stage.classList.remove('stageLandscape');
 stage.style.removeProperty('aspect-ratio');
+// A mixed deck must never use a landscape stage when it contains portrait frames.
+// Portrait is intentionally preferred so vertical memories stay large and readable.
 if(x?.deckPreferPortrait)return;
 if(x?.deckMode&&x?.deckAllLandscape===false)return;
 const src=x?.frames?.[0];
@@ -193,7 +205,6 @@ probe.src=src;
 }
 function preparePlay(x){
 window.__memoryNavigate?.('play');
-rememberLastRoulette(x);
 activeCreation=x; running=false; clearInterval(timer); currentIndex=0;
 updatePlayStageAspect(x);
 playSection.style.display='block';
@@ -228,29 +239,8 @@ tapHint.textContent='もう一度タップすると再開します';
 function celebrate(){ bigOverlay.classList.remove('show'); void bigOverlay.offsetWidth; bigOverlay.classList.add('show'); const pal=['#ffd700','#fff0a0','#fff','#ff5a61','#ff9d00']; for(let i=0;i<90;i++){ const e=document.createElement('div'); e.className='confetti'; e.style.left=Math.random()*100+'vw'; e.style.width=7+Math.random()*9+'px'; e.style.height=10+Math.random()*18+'px'; e.style.background=pal[Math.floor(Math.random()*pal.length)]; e.style.animationDuration=1.8+Math.random()*1.6+'s'; e.style.animationDelay=Math.random()*.3+'s'; document.body.appendChild(e); setTimeout(()=>e.remove(),3800); } if(navigator.vibrate) navigator.vibrate([100,60,140,70,260]); playSound('大吉'); setTimeout(()=>bigOverlay.classList.remove('show'),2500); }
 fileInput.addEventListener('change',()=>{ if(fileInput.files?.length){ currentCreation=null; if(typeof window.__memoryDeckHandleFiles==='function'){ window.__memoryDeckHandleFiles(Array.from(fileInput.files)); return; } extractFromCurrentFile(); } });
 reextractBtn.addEventListener('click',()=>{ if(lastFile){ currentCreation=null; extractFromCurrentFile(); } });
-playBtn.addEventListener('click',async()=>{ if(!selectedFrames.length) return; unlockAudio(); currentCreation=makeCreation(); try{await persistCreation(currentCreation);}catch(e){console.error('roulette history save failed',e);} preparePlay(currentCreation); });
+playBtn.addEventListener('click',()=>{ if(!selectedFrames.length) return; unlockAudio(); currentCreation=makeCreation(); preparePlay(currentCreation); dbPut(currentCreation).then(refreshLibrary).catch(()=>{}); });
 stage.addEventListener('pointerdown',e=>{ e.preventDefault(); if(!primed) unlockAudio(); if(running) stopRun(); else startRun(); },{passive:false});
 $('backBtn').addEventListener('click',()=>{ clearInterval(timer); running=false; playSection.style.display='none'; if(window.__memoryBackFromPlay)window.__memoryBackFromPlay();else window.__memoryNavigate?.('home'); });
-async function restoreLastRouletteAfterReload(){
-  if(location.hash!=='#play'||activeCreation?.frames?.length)return;
-  try{
-    let saved=null;
-    let lastId=null;
-    try{lastId=localStorage.getItem(LAST_ROULETTE_KEY);}catch(e){}
-    if(lastId)saved=await dbGet(lastId);
-    if(!saved){
-      const all=await dbAll();
-      saved=all[0]||null;
-    }
-    if(saved?.frames?.length){
-      preparePlay(saved);
-      return;
-    }
-  }catch(e){
-    console.error('last roulette restore failed',e);
-  }
-  window.__memoryNavigate?.('home',{replace:true});
-}
 updatePreviewMeta(); refreshLibrary();
-window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>restoreLastRouletteAfterReload(),0));
 if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});

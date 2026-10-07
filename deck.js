@@ -855,6 +855,7 @@ window.__memoryDeckHandleFiles=async files=>{
     if(batchSourceIds.length){
       const creation=await buildDeckCreation(batchSourceIds);
       if(creation){
+        try{await persistCreation(creation);}catch(e){console.error('roulette history save failed',e);}
         window.__memoryNavigate?.('play');
         currentCreation=null;
         preparePlay(creation);
@@ -941,6 +942,7 @@ deckDrawBtn.addEventListener('click',async()=>{
   const creation=await buildDeckCreation([...selectedSourceIds]);
   if(!creation)return;
   unlockAudio();
+  try{await persistCreation(creation);}catch(e){console.error('roulette history save failed',e);}
   currentCreation=null;
   preparePlay(creation);
 });

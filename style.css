@@ -787,3 +787,12 @@ body[data-app-view] .howtoBanner{will-change:auto}
 .settingsCard .deckManage{display:grid!important;margin-top:14px}
 .settingsCard .deckPhotoLibrary{display:none!important}
 @media(max-width:420px){.deckLibraryManageBar{align-items:flex-start}.deckLibraryManageBar span{font-size:9.5px}}
+
+
+/* v1.1 fast1: explicit search action and compact datetime titles */
+.deckLibrarySearch{padding-right:5px}
+.deckLibrarySearch input{min-width:0}
+.deckLibrarySearch button{flex:0 0 auto;padding:7px 10px;border-radius:9px;background:#6f5549;color:#fff;font-size:10px;font-weight:900}
+.deckVideoInfo{grid-template-columns:1fr;gap:2px}
+.deckVideoInfo strong{font-size:10px;white-space:nowrap;display:block;-webkit-line-clamp:unset;line-clamp:unset}
+.deckVideoInfo small{font-size:8px}

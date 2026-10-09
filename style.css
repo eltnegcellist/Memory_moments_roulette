@@ -903,3 +903,21 @@ body[data-app-view] .howtoBanner{will-change:auto}
   white-space:pre-line;
   line-height:1.65;
 }
+
+
+/* v1.1 test1: background processing visibility */
+.deckProcessingSummary{
+  margin:8px 0 10px;
+  padding:9px 11px;
+  border-radius:12px;
+  background:#fff4e8;
+  border:1px solid #efd8c0;
+  color:#6f5549;
+  font-size:10px;
+  line-height:1.5;
+  font-weight:700;
+}
+.deckVideoProgress{display:grid;gap:3px;margin-top:3px}
+.deckVideoProgressText{font-size:7.5px;line-height:1.25;color:#8a6f62;white-space:normal}
+.deckVideoProgressTrack{height:3px;border-radius:999px;overflow:hidden;background:#eaded8}
+.deckVideoProgressFill{height:100%;width:0;border-radius:inherit;background:currentColor;opacity:.65;transition:width .2s ease}

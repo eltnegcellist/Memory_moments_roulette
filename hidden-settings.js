@@ -1,5 +1,5 @@
 (()=>{
-const trigger=document.getElementById('labSettingsTrigger');
+const triggers=[...document.querySelectorAll('[data-lab-trigger]')];
 const inline=document.getElementById('labSettingsInline');
 const hint=document.getElementById('labSettingsHint');
 const scoreBox=document.getElementById('showScores');
@@ -8,7 +8,7 @@ const deluxeItem=document.getElementById('labDeluxeItem');
 const specialMode=document.getElementById('labSpecialMode');
 const plainMode=document.getElementById('plainMode');
 const resetAppDataBtn=document.getElementById('labResetAppData');
-if(!trigger||!inline||!scoreBox||!deluxeMode||!specialMode||!plainMode)return;
+if(!triggers.length||!inline||!scoreBox||!deluxeMode||!specialMode||!plainMode)return;
 
 const KEY='baby-roulette-hidden-settings-v29';
 const LEGACY_KEY='baby-roulette-hidden-settings-v27';
@@ -51,7 +51,7 @@ function syncDeluxeForMode(){
 function renderLabVisibility(){
   inline.hidden=!labVisible;
   if(hint)hint.style.display=labVisible?'none':'block';
-  trigger.title='5回タップでLAB設定を表示・非表示';
+  triggers.forEach(trigger=>trigger.title='5回タップでLAB設定を表示・非表示');
 }
 function toggleLab(){
   labVisible=!labVisible;
@@ -79,7 +79,7 @@ function load(){
   save();
 }
 
-trigger.addEventListener('click',()=>{
+triggers.forEach(trigger=>trigger.addEventListener('click',()=>{
   taps++;
   clearTimeout(tapTimer);
   tapTimer=setTimeout(()=>{taps=0;},1800);
@@ -88,7 +88,7 @@ trigger.addEventListener('click',()=>{
     clearTimeout(tapTimer);
     toggleLab();
   }
-});
+}));
 
 scoreBox.addEventListener('change',save);
 specialMode.addEventListener('change',()=>{window.__babyLabSpecialMode=specialMode.value;window.__babyLabForcedSpecial=null;save();});

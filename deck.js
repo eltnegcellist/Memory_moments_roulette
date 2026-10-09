@@ -1077,7 +1077,7 @@ window.__memoryDeckHandleFiles=async files=>{
     let msg=added+'個の一瞬を準備しました。ルーレットはすぐに始められます。';
     if(duplicates)msg+=' '+duplicates+'本は追加済みのためスキップしました。';
     if(failed)msg+=' '+failed+'本は処理できませんでした。';
-    if(batchSourceIds.length)msg+=' 高解像度画像と奇跡リプレイはバックグラウンドで保存します。';
+    if(batchSourceIds.length)msg+=' 高解像度画像と特別リプレイはバックグラウンドで保存します。';
     progressText.textContent=msg;
     const standalone=window.matchMedia?.('(display-mode: standalone)')?.matches||navigator.standalone===true;
     let notice=errors.length?errors.join(' / '):msg;

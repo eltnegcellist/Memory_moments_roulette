@@ -23,6 +23,9 @@ function forceTop(){
 }
 function applyView(view){
   const target=VALID.has(view)?view:'home';
+  if(currentView==='favorites'&&target!=='favorites'){
+    Promise.resolve(window.__memoryCommitFavoriteDeletes?.()).catch(err=>console.error('favorite delete commit failed',err));
+  }
   document.body.dataset.appView=target;
   document.querySelectorAll('[data-app-view]').forEach(el=>{
     const active=el.dataset.appView===target;

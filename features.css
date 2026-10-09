@@ -38,7 +38,17 @@
 .labPhotoMeta{padding:7px 8px 9px;display:grid;gap:2px}
 .labPhotoMeta strong{font-size:10px;line-height:1.25;color:#49372e}
 .labPhotoMeta span{font-size:9px;color:#8a766b}
-.labDelete{position:absolute;right:5px;top:5px;padding:4px 7px;border-radius:999px;background:#0008;color:#fff;font-size:9px;font-weight:800}
+.labDelete{position:absolute;right:5px;top:5px;padding:4px 7px;border-radius:999px;background:#0008;color:#fff;font-size:9px;font-weight:800;z-index:3}
+.labPhotoCard.is-pending-delete{border-color:#d6b6a8;background:#fbf4f0}
+.labPhotoCard.is-pending-delete img{opacity:.34;filter:grayscale(.22)}
+.labPhotoCard.is-pending-delete .labPhotoMeta{opacity:.34}
+.labPhotoCard.is-pending-delete .labPhotoActions{visibility:hidden}
+.labDeleteState{display:none;position:absolute;left:9px;right:9px;top:50%;transform:translateY(-50%);z-index:2;padding:9px 8px;border-radius:12px;background:rgba(255,252,249,.94);border:1px solid #dec5b9;box-shadow:0 5px 16px #0002;text-align:center;pointer-events:none}
+.labDeleteState strong,.labDeleteState span{display:block}
+.labDeleteState strong{font-size:11px;color:#5c4034}
+.labDeleteState span{margin-top:2px;font-size:8px;line-height:1.35;color:#8a6d60}
+.labPhotoCard.is-pending-delete .labDeleteState{display:block}
+.labPhotoCard.is-pending-delete .labDelete{padding:5px 8px;background:#fff;color:#5b4035;border:1px solid #cfae9f;box-shadow:0 4px 12px #0002;font-weight:950}
 @media(max-width:520px){
   #labCollection{grid-template-columns:repeat(2,1fr)}
   #labRareBadge{top:66px;font-size:12px;max-width:90%;white-space:normal;text-align:center}

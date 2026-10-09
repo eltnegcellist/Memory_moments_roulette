@@ -741,6 +741,9 @@ body.howto-open{overflow:hidden}
 /* v1.1 focused navigation */
 [data-app-view]{display:none!important}
 [data-app-view].is-active-view{display:block!important}
+/* The legacy preview is only usable when the fallback extractor fills its thumbnails.
+   A route change must not force its empty action buttons onto the new-video screen. */
+#previewSection:not(.has-content){display:none!important}
 header.hero.is-active-view{display:flex!important}
 button.howtoBanner.is-active-view{display:flex!important}
 .homeActions{margin:14px 0 16px}

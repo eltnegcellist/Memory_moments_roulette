@@ -9,6 +9,7 @@ const rouletteBadgeEl=document.getElementById('rouletteBadge');
 const tapHintEl=document.getElementById('tapHint');
 const playImageEl=document.getElementById('playImage');
 const collectionEl=document.getElementById('labCollection');
+const pendingFavoriteDeletes=new Set();
 const historyEl=document.getElementById('labHistory');
 const historyEmpty=document.getElementById('labHistoryEmpty');
 const makeGifBtn=document.getElementById('labMakeGif');
@@ -2086,6 +2087,28 @@ async function labDelete(id){
     tx.onerror=()=>reject(tx.error);
   });
 }
+async function commitPendingFavoriteDeletes(){
+  const ids=[...pendingFavoriteDeletes];
+  if(!ids.length)return;
+  pendingFavoriteDeletes.clear();
+  const failed=[];
+  for(const id of ids){
+    try{await labDelete(id);}
+    catch(err){
+      failed.push(id);
+      console.error('favorite delete commit failed',err);
+    }
+  }
+  failed.forEach(id=>pendingFavoriteDeletes.add(id));
+  await renderCollection();
+}
+window.__memoryCommitFavoriteDeletes=commitPendingFavoriteDeletes;
+
+function setFavoriteDeleteState(card,button,pending){
+  card.classList.toggle('is-pending-delete',pending);
+  button.textContent=pending?'元に戻す':'削除';
+  button.setAttribute('aria-label',pending?'お気に入りの削除を取り消す':'お気に入りから削除');
+}
 async function downloadDailyPhoto(item){
   if(!item?.image)return false;
   try{
@@ -2134,7 +2157,7 @@ async function renderCollection(){
     const card=document.createElement('article');
     card.className='labPhotoCard';
     const d=new Date(x.createdAt);
-    card.innerHTML='<img alt="保存した思い出の写真"><div class="labPhotoMeta"><strong></strong><span></span><div class="labPhotoActions"><button type="button" class="labPhotoDownload">画像をダウンロード</button><button type="button" class="labPhotoOpen">開く</button></div></div><button type="button" class="labDelete">削除</button>';
+    card.innerHTML='<img alt="保存した思い出の写真"><div class="labPhotoMeta"><strong></strong><span></span><div class="labPhotoActions"><button type="button" class="labPhotoDownload">画像をダウンロード</button><button type="button" class="labPhotoOpen">開く</button></div></div><div class="labDeleteState" aria-live="polite"><strong>削除しました</strong><span>この画面を離れるまで取り消せます</span></div><button type="button" class="labDelete" aria-label="お気に入りから削除">削除</button>';
     card.querySelector('img').src=x.image;
     const mark=x.special==='reversal'?'🌈 ':x.special==='miracle'?'✨ ':'';
     card.querySelector('strong').textContent=mark+(x.displayFortune||specialFortuneDisplay(x.special,x.fortune).fortune)+' ・ '+(x.luckyColor||'')+' ・ '+(x.luckyPoint||'');
@@ -2156,9 +2179,15 @@ async function renderCollection(){
       e.stopPropagation();
       openDailyPhoto(x);
     });
-    card.querySelector('.labDelete').addEventListener('click',async()=>{
-      await labDelete(x.id);
-      renderCollection();
+    const deleteBtn=card.querySelector('.labDelete');
+    setFavoriteDeleteState(card,deleteBtn,pendingFavoriteDeletes.has(x.id));
+    deleteBtn.addEventListener('click',e=>{
+      e.preventDefault();
+      e.stopPropagation();
+      const undo=pendingFavoriteDeletes.has(x.id);
+      if(undo)pendingFavoriteDeletes.delete(x.id);
+      else pendingFavoriteDeletes.add(x.id);
+      setFavoriteDeleteState(card,deleteBtn,!undo);
     });
     collectionEl.appendChild(card);
   });

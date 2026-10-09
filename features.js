@@ -263,12 +263,14 @@ function specialFor(fortune){
   }
   return Math.random()<MIRACLE_GENERAL_RATE?'miracle':null;
 }
-window.__memoryResolveStoppedFortune=baseFortune=>{
+window.__memoryResolveFortuneResult=baseFortune=>{
   const special=specialFor(baseFortune);
   const displayFortune=special==='miracle'?'大大吉':baseFortune;
+  const message=special==='miracle'?FORTUNE_MESSAGES['大大吉']:null;
   window.__memoryPendingSpecialResult={special,baseFortune,displayFortune};
-  return displayFortune;
+  return {fortune:displayFortune,special,baseFortune,message};
 };
+window.__memoryResolveStoppedFortune=baseFortune=>window.__memoryResolveFortuneResult(baseFortune).fortune;
 function setSpecialResultStyle(special){
   resultCardEl.classList.toggle('labSpecialMiracle',special==='miracle');
   resultCardEl.classList.toggle('labSpecialReversal',special==='reversal');
@@ -1680,7 +1682,7 @@ function showLabResult(){
   window.__memoryPendingSpecialResult=null;
   const fortune=(pending?.baseFortune||resultTextEl.textContent||'吉').trim();
   const lucky=pickLucky();
-  const special=pending?.special??specialFor(fortune);
+  const special=pending ? pending.special : specialFor(fortune);
   const targetTime=Number(activeCreation?.times?.[currentIndex]);
 
   if(resultHeadEl)resultHeadEl.textContent='きょうの運勢';

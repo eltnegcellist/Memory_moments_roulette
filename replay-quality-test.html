@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>奇跡リプレイ 低解像度比較テスト</title>
+<title>特別リプレイ 低解像度比較テスト</title>
 <style>
 :root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#342720;background:#fff8f3}
 *{box-sizing:border-box}body{margin:0}.wrap{max-width:880px;margin:auto;padding:20px 14px 60px}
@@ -25,7 +25,7 @@ button:disabled{opacity:.45}.target{display:grid;grid-template-columns:1fr auto;
 </head>
 <body>
 <div class="wrap">
-<h1>奇跡の一枚：低解像度リプレイ比較</h1>
+<h1>特別リプレイ：低解像度比較</h1>
 <p class="lead">手元の動画だけをブラウザ内で処理して、現行仕様に近い「約3秒前 → 停止位置、0.42倍相当」を小さなWebP連続コマで再現します。動画の冒頭2.5秒未満を選んだ場合だけ、停止位置より後ろを取得して逆再生します。</p>
 
 <section class="card">
@@ -47,7 +47,7 @@ button:disabled{opacity:.45}.target{display:grid;grid-template-columns:1fr auto;
 <section id="summaryCard" class="card hidden">
   <h2 style="margin-top:0">容量の目安</h2>
   <div id="summary" class="summary"></div>
-  <p class="note">100動画の推計は「1動画12候補 × 100本」で、この奇跡リプレイ用データだけを持つ場合です。通常の停止画像の容量は含みません。</p>
+  <p class="note">100動画の推計は「1動画12候補 × 100本」で、この特別リプレイ用データだけを持つ場合です。通常の停止画像の容量は含みません。</p>
 </section>
 
 <section id="results" class="grid"></section>
@@ -146,7 +146,7 @@ async function playSet(set,img,badge){
     await new Promise(r=>setTimeout(r,hold));
   }
   if(token===playToken){
-    badge.textContent='奇跡の一枚';
+    badge.textContent='大大吉';
     stop.disabled=true;
   }
 }

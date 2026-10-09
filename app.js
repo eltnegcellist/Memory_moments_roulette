@@ -112,7 +112,7 @@ return frames.map(()=>drawFortune());
 }
 async function extractFromCurrentFile(){
 const file=fileInput.files?.[0] || lastFile; if(!file) return; lastFile=file;
-progressWrap.style.display='block'; previewSection.style.display='none'; progressBar.style.width='2%'; progressText.textContent='動画を読み込んでいます...';
+progressWrap.style.display='block'; previewSection.classList.remove('has-content'); previewSection.style.display='none'; progressBar.style.width='2%'; progressText.textContent='動画を読み込んでいます...';
 try{
 await loadVideo(file); setupCanvas();
 const manualTarget=manualTargetCount();
@@ -128,7 +128,7 @@ const target=manualTarget||autoTargetCount(video.duration,filtered.length,sorted
 selectedFrames=chooseDiverse(filtered.length>=target?filtered:sorted,target);
 if(modeName()==='omikuji'){ progressText.textContent='候補の特徴を整理し、運勢サンプルを準備しています...'; progressBar.style.width='78%'; selectedFortunes=await assignFortunes(selectedFrames); } else { selectedFortunes=[]; selectedAppealDetails=[]; }
 progressBar.style.width='100%'; progressText.textContent=`${manualTarget?'':'おまかせで'}${selectedFrames.length}枚を選びました`;
-renderGrid(); updatePreviewMeta(); previewSection.style.display='block'; previewSection.scrollIntoView({behavior:'smooth'});
+renderGrid(); updatePreviewMeta(); previewSection.classList.toggle('has-content',selectedFrames.length>0); previewSection.style.display=selectedFrames.length?'block':'none'; if(selectedFrames.length)previewSection.scrollIntoView({behavior:'smooth'});
 }catch(e){ console.error(e); progressText.textContent='動画を処理できませんでした'; alert('動画を処理できませんでした: '+e.message); }
 }
 function renderGrid(){

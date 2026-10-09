@@ -853,7 +853,7 @@ async function resumeInterruptedAnalyses(){
           patchSourceProgressState(src.id,patch);
           deckNotice.textContent='前回中断した動画のシーン分析を自動再開しています…';
           deckNotice.className='note deckNotice';
-          const r=await extractOne(file,1,1,{skipResumeCopy:true});
+          const r=await extractOne(file,1,1,{skipResumeCopy:true,resumeSourceId:src.id});
           if(r?.backgroundJob)enqueueBackgroundJobs([r.backgroundJob]);
           deckNotice.textContent='前回中断した動画の分析を再開しました。仕上げ処理を続けています。';
           deckNotice.className='note deckNotice ok';
@@ -1093,8 +1093,11 @@ async function extractOne(file,overallIndex,total,options={}){
   await loadVideo(file);
   setupCanvas();
   const duration=video.duration;
-  const fingerprint=hashString([file.name,file.size,file.lastModified,Math.round(duration*1000)].join('|'));
-  const existing=await existingSource(fingerprint);
+  const resumeById=options.resumeSourceId
+    ? (await getAll(SOURCE_STORE)).find(x=>x.id===options.resumeSourceId)||null
+    : null;
+  const fingerprint=resumeById?.fingerprint||hashString([file.name,file.size,file.lastModified,Math.round(duration*1000)].join('|'));
+  const existing=resumeById||await existingSource(fingerprint);
   let resumeAnalysisSource=null;
   if(existing){
     const own=await framesForSource(existing.id);
@@ -1113,7 +1116,10 @@ async function extractOne(file,overallIndex,total,options={}){
   const before=await stats();
   const sourceId=resumeAnalysisSource?.id||('s'+Date.now().toString(36)+hashString(fingerprint+Math.random()));
   const provisional={
-    id:sourceId,fingerprint,fileName:file.name,fileSize:file.size,lastModified:file.lastModified,
+    id:sourceId,fingerprint,
+    fileName:resumeAnalysisSource?.fileName||file.name,
+    fileSize:Number(resumeAnalysisSource?.fileSize)||file.size,
+    lastModified:Number(resumeAnalysisSource?.lastModified)||file.lastModified,
     duration,addedAt:Number(resumeAnalysisSource?.addedAt)||Date.now(),candidateCount:0,storageBytes:0,
     analysisPending:true,analysisResuming:!!options.skipResumeCopy,
     opfsName:opfsFileName(sourceId),opfsReady:!!resumeAnalysisSource?.opfsReady,

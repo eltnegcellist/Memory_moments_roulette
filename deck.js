@@ -422,7 +422,7 @@ function sourceProgressState(src){
   const suffix=src.resumeNeedsFile?' ・ 同じ動画を選ぶと再開':' ・ 仕上げ中';
   return {
     pending:true,
-    text:'高画質 '+imageReady+'/'+total+' ・ リプレイ '+replayReady+'/'+total+suffix,
+    text:'リプレイ '+replayReady+'/'+total+suffix,
     percent:Math.round(((imageReady+replayReady)/(total*2))*100),
     imageReady,replayReady,total
   };
@@ -444,7 +444,7 @@ function renderProcessingSummary(sources){
   }
   const parts=[];
   if(analysis)parts.push('分析 '+analysis+'本');
-  if(total)parts.push('高画質 '+imageReady+'/'+total+' ・ リプレイ '+replayReady+'/'+total);
+  if(total)parts.push('リプレイ '+replayReady+'/'+total);
   if(needsFile)parts.push(needsFile+'本は元動画の再選択で再開');
   else parts.push('バックグラウンドで仕上げ中');
   deckProcessingSummary.textContent=parts.join(' ・ ');

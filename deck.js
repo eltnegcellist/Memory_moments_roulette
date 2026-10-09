@@ -58,6 +58,7 @@ const opfsWriteJobs=new Map();
 const OPFS_PREFIX='memory-moments-source-';
 let analysisResumeQueue=Promise.resolve();
 const analysisResumeSourceIds=new Set();
+let analysisResumeScanning=false;
 
 async function getAll(store){
   const db=await openDB();
@@ -819,29 +820,34 @@ async function resumePendingBackgroundWork(){
 
 
 async function resumeInterruptedAnalyses(){
-  if(processing||document.hidden)return;
-  const sources=await getAll(SOURCE_STORE);
-  const pending=sources.filter(src=>src.analysisPending&&!analysisResumeSourceIds.has(src.id));
-  if(!pending.length)return;
-  const jobs=[];
-  for(const src of pending){
-    const file=await getOpfsResumeFile(src);
-    if(file){
-      jobs.push({src,file});
-    }else{
-      const patch={analysisResuming:false,resumeNeedsFile:true,opfsReady:false};
-      await updateSourceRecord(src.id,patch);
-      patchSourceProgressState(src.id,patch);
+  if(processing||document.hidden||analysisResumeScanning)return;
+  analysisResumeScanning=true;
+  try{
+    const sources=await getAll(SOURCE_STORE);
+    const pending=sources.filter(src=>src.analysisPending&&!analysisResumeSourceIds.has(src.id));
+    if(!pending.length)return;
+    const jobs=[];
+    for(const src of pending){
+      const file=await getOpfsResumeFile(src);
+      if(file){
+        jobs.push({src,file});
+      }else{
+        const patch={analysisResuming:false,resumeNeedsFile:true,opfsReady:false};
+        await updateSourceRecord(src.id,patch);
+        patchSourceProgressState(src.id,patch);
+      }
     }
-  }
-  if(!jobs.length){renderDeck().catch(()=>{});return;}
-  jobs.forEach(x=>analysisResumeSourceIds.add(x.src.id));
-  analysisResumeQueue=analysisResumeQueue.then(async()=>{
-    for(const {src,file} of jobs){
-      if(processing)break;
-      processing=true;
-      fileInput.disabled=true;
-      try{
+    if(!jobs.length){renderDeck().catch(()=>{});return;}
+    jobs.forEach(x=>analysisResumeSourceIds.add(x.src.id));
+    analysisResumeQueue=analysisResumeQueue.then(async()=>{
+      for(const {src,file} of jobs){
+        if(processing){
+          analysisResumeSourceIds.delete(src.id);
+          continue;
+        }
+        processing=true;
+        fileInput.disabled=true;
+        try{
         const patch={analysisResuming:true,resumeNeedsFile:false};
         await updateSourceRecord(src.id,patch);
         patchSourceProgressState(src.id,patch);
@@ -855,14 +861,17 @@ async function resumeInterruptedAnalyses(){
         console.warn('analysis resume failed',err);
         const retries=(Number(src.analysisRetryCount)||0)+1;
         await updateSourceRecord(src.id,{analysisResuming:false,analysisRetryCount:retries,analysisLastError:String(err?.message||err)});
-      }finally{
-        processing=false;
-        fileInput.disabled=false;
-        analysisResumeSourceIds.delete(src.id);
-        renderDeck().catch(()=>{});
+        }finally{
+          processing=false;
+          fileInput.disabled=false;
+          analysisResumeSourceIds.delete(src.id);
+          renderDeck().catch(()=>{});
+        }
       }
-    }
-  }).catch(err=>console.warn('analysis resume queue failed',err));
+    }).catch(err=>console.warn('analysis resume queue failed',err));
+  }finally{
+    analysisResumeScanning=false;
+  }
 }
 
 function replayTiming(targetTime,duration){

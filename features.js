@@ -263,6 +263,12 @@ function specialFor(fortune){
   }
   return Math.random()<MIRACLE_GENERAL_RATE?'miracle':null;
 }
+window.__memoryResolveStoppedFortune=baseFortune=>{
+  const special=specialFor(baseFortune);
+  const displayFortune=special==='miracle'?'大大吉':baseFortune;
+  window.__memoryPendingSpecialResult={special,baseFortune,displayFortune};
+  return displayFortune;
+};
 function setSpecialResultStyle(special){
   resultCardEl.classList.toggle('labSpecialMiracle',special==='miracle');
   resultCardEl.classList.toggle('labSpecialReversal',special==='reversal');
@@ -1670,9 +1676,11 @@ function showLabResult(){
     }
     return;
   }
-  const fortune=(resultTextEl.textContent||'吉').trim();
+  const pending=window.__memoryPendingSpecialResult||null;
+  window.__memoryPendingSpecialResult=null;
+  const fortune=(pending?.baseFortune||resultTextEl.textContent||'吉').trim();
   const lucky=pickLucky();
-  const special=specialFor(fortune);
+  const special=pending?.special??specialFor(fortune);
   const targetTime=Number(activeCreation?.times?.[currentIndex]);
 
   if(resultHeadEl)resultHeadEl.textContent='きょうの運勢';
@@ -1756,11 +1764,13 @@ window.__memoryOnRouletteStopped=()=>{
   },40);
 };
 window.__memoryOnRouletteStarted=()=>{
+  window.__memoryPendingSpecialResult=null;
   clearTimeout(rouletteStoppedTimer);rouletteStoppedTimer=null;
   clearLab();
   if(resultHeadEl)resultHeadEl.textContent='きょうの運勢';
 };
 window.__memoryOnRoulettePrepared=x=>{
+  window.__memoryPendingSpecialResult=null;
   clearTimeout(rouletteStoppedTimer);rouletteStoppedTimer=null;
   clearLab();
   restoreDrawHistory(x);
@@ -1768,6 +1778,7 @@ window.__memoryOnRoulettePrepared=x=>{
   primeMiracleReplaySource(x);
 };
 window.__memoryOnRouletteExit=()=>{
+  window.__memoryPendingSpecialResult=null;
   clearTimeout(rouletteStoppedTimer);rouletteStoppedTimer=null;
   clearTimeout(dockTimer);dockTimer=null;
   clearTimeout(rareTimer);rareTimer=null;

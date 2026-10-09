@@ -1747,18 +1747,28 @@ window.addEventListener('pointercancel',e=>{
   if(stageGesture&&e.pointerId===stageGesture.id)stageGesture=null;
 },true);
 
-window.__memoryOnRouletteStopped=()=>setTimeout(showLabResult,40);
+let rouletteStoppedTimer=null;
+window.__memoryOnRouletteStopped=()=>{
+  clearTimeout(rouletteStoppedTimer);
+  rouletteStoppedTimer=setTimeout(()=>{
+    rouletteStoppedTimer=null;
+    if(document.body.dataset.appView==='play'&&!running)showLabResult();
+  },40);
+};
 window.__memoryOnRouletteStarted=()=>{
+  clearTimeout(rouletteStoppedTimer);rouletteStoppedTimer=null;
   clearLab();
   if(resultHeadEl)resultHeadEl.textContent='きょうの運勢';
 };
 window.__memoryOnRoulettePrepared=x=>{
+  clearTimeout(rouletteStoppedTimer);rouletteStoppedTimer=null;
   clearLab();
   restoreDrawHistory(x);
   clearGifResult();
   primeMiracleReplaySource(x);
 };
 window.__memoryOnRouletteExit=()=>{
+  clearTimeout(rouletteStoppedTimer);rouletteStoppedTimer=null;
   clearTimeout(dockTimer);dockTimer=null;
   clearTimeout(rareTimer);rareTimer=null;
   clearSpecial();

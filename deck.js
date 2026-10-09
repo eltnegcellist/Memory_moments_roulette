@@ -1213,6 +1213,7 @@ window.__memoryDeckHandleFiles=async files=>{
   fileInput.disabled=true;
   deckDrawBtn.disabled=true;
   progressWrap.style.display='block';
+  previewSection.classList.remove('has-content');
   previewSection.style.display='none';
   progressBar.style.width='3%';
   let added=0,duplicates=0,failed=0;

@@ -296,6 +296,12 @@ function applySpecialFortuneDisplay(special,baseFortune){
   if(d.message&&messageEl)messageEl.textContent=d.message;
   return d;
 }
+function resolvedDisplayFortune(item){
+  if(!item)return '吉';
+  if(item.plain)return 'この瞬間！';
+  if(item.special)return specialFortuneDisplay(item.special,item.fortune||'吉').fortune;
+  return item.displayFortune||item.fortune||'吉';
+}
 function playSpecialSound(kind){
   try{
     if(!primed||!ensureAudio())return;
@@ -1516,7 +1522,7 @@ function renderHistory(){
     const card=document.createElement('button');
     card.type='button';
     card.className='labHistoryItem';
-    const historyLabel=x.plain?'この瞬間！':(x.displayFortune||specialFortuneDisplay(x.special,x.fortune).fortune);
+    const historyLabel=resolvedDisplayFortune(x);
     card.setAttribute('aria-label',(i+1)+'回目 '+historyLabel+' の結果を見る');
     card.innerHTML='<img alt=""><div><strong></strong><span></span><em>結果を見る</em></div>';
     card.querySelector('img').src=x.image;
@@ -1551,7 +1557,7 @@ function addHistory(item){
     targetTime:Number.isFinite(time)?time:currentIndex,
     index:currentIndex,
     fortune:item.fortune||null,
-    displayFortune:item.plain?'この瞬間！':(item.displayFortune||specialFortuneDisplay(item.special,item.fortune).fortune),
+    displayFortune:resolvedDisplayFortune(item),
     lucky:item.lucky||null,
     special:item.special||null,
     plain:!!item.plain,
@@ -1611,7 +1617,7 @@ function showHistoryEntry(x){
         ? '大凶から一転。今日は大逆転大吉！'
         : (x.message||'このときの結果です。');
 
-    currentLab={fortune:x.fortune,displayFortune:x.displayFortune||specialFortuneDisplay(x.special,x.fortune).fortune,lucky:x.lucky||pickLucky(),special:x.special,fromHistory:true};
+    currentLab={fortune:x.fortune,displayFortune:resolvedDisplayFortune(x),lucky:x.lucky||pickLucky(),special:x.special,fromHistory:true};
     renderLucky(currentLab.lucky);
 
     if(x.special){
@@ -1773,7 +1779,7 @@ saveBtn.addEventListener('pointerdown',async e=>{
       createdAt:Date.now(),
       image:playImageEl.currentSrc||playImageEl.src,
       fortune:currentLab.fortune,
-      displayFortune:currentLab.displayFortune||specialFortuneDisplay(currentLab.special,currentLab.fortune).fortune,
+      displayFortune:resolvedDisplayFortune(currentLab),
       luckyColor:currentLab.lucky.color.name,
       luckyColorHex:currentLab.lucky.color.hex,
       luckyPoint:currentLab.lucky.point,
@@ -2168,7 +2174,7 @@ async function renderCollection(){
     card.innerHTML='<img alt="保存した思い出の写真"><div class="labPhotoMeta"><strong></strong><span></span><div class="labPhotoActions"><button type="button" class="labPhotoDownload">画像をダウンロード</button><button type="button" class="labPhotoOpen">開く</button></div></div><div class="labDeleteState" aria-live="polite"><strong>削除しました</strong><span>この画面を離れるまで取り消せます</span></div><button type="button" class="labDelete" aria-label="お気に入りから削除">削除</button>';
     card.querySelector('img').src=x.image;
     const mark=x.special==='reversal'?'🌈 ':x.special==='miracle'?'✨ ':'';
-    card.querySelector('strong').textContent=mark+(x.displayFortune||specialFortuneDisplay(x.special,x.fortune).fortune)+' ・ '+(x.luckyColor||'')+' ・ '+(x.luckyPoint||'');
+    card.querySelector('strong').textContent=mark+resolvedDisplayFortune(x)+' ・ '+(x.luckyColor||'')+' ・ '+(x.luckyPoint||'');
     card.querySelector('span').textContent=d.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
     card.querySelector('.labPhotoDownload').addEventListener('click',async e=>{
       e.preventDefault();

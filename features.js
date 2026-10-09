@@ -126,9 +126,9 @@ const LUCKY_POINTS=[
   'にぎった手','ちいさな指','ふわふわの髪','眠そうな目'
 ];
 const MIRACLE_MESSAGES=[
-  '運勢とは別に、この一枚が今日のごほうび。',
-  'この瞬間に出会えたのも、今日だけの偶然。奇跡の一枚です。',
-  '思いがけない一瞬が、今日の宝物になりました。'
+  '大大吉の特別リプレイです。',
+  'この一瞬をスローでもう一度。',
+  '思いがけない一瞬まで、今日のおみくじの結果です。'
 ];
 const REVERSAL_MESSAGES=[
   '大凶……と思いきや、この一枚で全部ひっくり返りました。',
@@ -194,7 +194,7 @@ miracleOverlay.innerHTML=
   '<div class="labMiracleReplayWrap">'+
     '<div id="labMiracleReplayLabel">0.5× SLOW REPLAY</div>'+
     '<video id="labMiracleVideo" playsinline muted preload="metadata"></video>'+
-    '<img id="labMiracleStill" alt="奇跡の一枚">'+
+    '<img id="labMiracleStill" alt="特別な一瞬">'+
   '</div>'+
   '<div class="labMiracleCenter">'+
     '<div class="labMiracleKicker"></div>'+
@@ -231,7 +231,7 @@ extra.innerHTML=
   '<div id="labSpecialEmblem"></div>'+
   '<div id="labLucky"></div>'+
   '<div id="labSpecialLine"></div>'+
-  '<button id="labReplaySpecial" type="button">✨ 奇跡のリプレイ</button>'+
+  '<button id="labReplaySpecial" type="button">✨ 特別リプレイ</button>'+
   '<button id="labSaveSpecialMovieResult" type="button">🎬 この演出をムービー保存</button>'+
   '<div id="labMovieResultStatus" aria-live="polite"></div>'+
   '<button id="labSavePhoto" type="button">♡ お気に入りに保存</button>';
@@ -269,7 +269,7 @@ function setSpecialResultStyle(special){
   if(specialEmblem){
     specialEmblem.style.display=special?'block':'none';
     specialEmblem.textContent=special==='miracle'
-      ? '✦ MIRACLE MOMENT ✦'
+      ? '✦ SPECIAL FORTUNE ✦'
       : special==='reversal'
         ? '🌈 REVERSAL FORTUNE 🌈'
         : '';
@@ -277,11 +277,11 @@ function setSpecialResultStyle(special){
 
 }
 function revealSpecialImmediately(special){
-  return false;
+  return special==='miracle';
 }
 function specialFortuneDisplay(special,baseFortune){
-  if(special==='miracle')return {head:'きょうの運勢',fortune:baseFortune,badge:(FORTUNE_ICONS[baseFortune]||'🎴')+' '+baseFortune};
-  if(special==='reversal')return {head:'大凶かと思ったら…',fortune:'大逆転大吉',badge:'🌈 大逆転大吉'};
+  if(special==='miracle')return {head:'きょうの運勢',fortune:'大大吉',badge:(FORTUNE_ICONS['大大吉']||'🎊')+' 大大吉',message:FORTUNE_MESSAGES['大大吉']};
+  if(special==='reversal')return {head:'大凶かと思ったら…',fortune:'大逆転大吉',badge:'🌈 大逆転大吉',message:'大凶から一転。今日は大逆転大吉！'};
   return {head:'きょうの運勢',fortune:baseFortune,badge:(FORTUNE_ICONS[baseFortune]||'🎴')+' '+baseFortune};
 }
 function applySpecialFortuneDisplay(special,baseFortune){
@@ -289,9 +289,11 @@ function applySpecialFortuneDisplay(special,baseFortune){
   setSpecialResultStyle(special);
   if(resultHeadEl)resultHeadEl.textContent=d.head;
   resultTextEl.textContent=d.fortune;
-  resultTextEl.style.color=FORTUNE_COLORS[baseFortune==='大凶'?'大吉':baseFortune]||'#700';
+  const colorKey=d.fortune==='大逆転大吉'?'大吉':d.fortune;
+  resultTextEl.style.color=FORTUNE_COLORS[colorKey]||'#700';
   fortuneBadgeEl.textContent=d.badge;
-  fortuneBadgeEl.style.color=FORTUNE_COLORS[baseFortune==='大凶'?'大吉':baseFortune]||'#700';
+  fortuneBadgeEl.style.color=FORTUNE_COLORS[colorKey]||'#700';
+  if(d.message&&messageEl)messageEl.textContent=d.message;
   return d;
 }
 function playSpecialSound(kind){
@@ -353,11 +355,13 @@ function specialSequenceSpec(kind,replay=null){
     introDuration:t.intro,
     intro:kind==='reversal'
       ? {kicker:'大凶……',title:'……あれ？',sub:'まだ終わっていません'}
-      : {kicker:'その一瞬を、もう一度',title:'奇跡の瞬間',sub:'まもなくスローリプレイ'},
-    replay:{kicker:'奇跡の瞬間へ',title:'',sub:'0.42× SLOW REPLAY'},
+      : {kicker:'特別な一瞬を、もう一度',title:'大大吉',sub:'スローリプレイで振り返ります'},
+    replay:kind==='reversal'
+      ? {kicker:'大逆転の一瞬へ',title:'',sub:'0.42× SLOW REPLAY'}
+      : {kicker:'大大吉の一瞬へ',title:'',sub:'0.42× SLOW REPLAY'},
     final:kind==='reversal'
-      ? {duration:t.final,kicker:'大凶かと思ったら…',title:'大逆転大吉！',sub:'🌈 奇跡の一枚 🌈'}
-      : {duration:t.final,kicker:'運勢とは別の、特別な一瞬',title:'奇跡の一枚！',sub:'✨ SPECIAL MOMENT ✨'}
+      ? {duration:t.final,kicker:'大凶かと思ったら…',title:'大逆転大吉！',sub:'🌈 SPECIAL FORTUNE 🌈'}
+      : {duration:t.final,kicker:'特別な一瞬を引きました',title:'大大吉！',sub:'✨ SPECIAL FORTUNE ✨'}
   };
 }
 function specialMovieMimeType(){
@@ -378,7 +382,7 @@ function specialMovieExportKey(replay){
   return replay?[(replay.kind||''),Number(replay.targetTime||0).toFixed(3),replay.index??'',replay.replayCandidateId||''].join('|'):'';
 }
 function specialMovieFilename(kind){
-  const label=kind==='reversal'?'daigyakuten-daikichi':'kiseki-no-ichimai';
+  const label=kind==='reversal'?'daigyakuten-daikichi':'dai-daikichi';
   return 'memory-'+label+'-'+new Date().toISOString().replace(/[:.]/g,'-')+'.webm';
 }
 function setSpecialMovieStatus(text,state=''){
@@ -637,7 +641,7 @@ async function prepareSpecialMovieVideo(replay,slowDuration){
 }
 async function renderSpecialMovie(kind,replay,onProgress){
   if(!specialMovieSupported())throw new Error('このブラウザはムービー保存に対応していません');
-  if(!replay?.frameSrc)throw new Error('奇跡の写真がありません');
+  if(!replay?.frameSrc)throw new Error('リプレイする写真がありません');
 
   const timeline=specialMovieTimeline(kind,replay);
   const still=await loadImage(replay.frameSrc);
@@ -1090,7 +1094,7 @@ async function replayReverseTowardTarget(src,targetTime,token){
   miracleVideo.style.display='none';
   miracleStill.style.display='block';
   miracleReplayLabel.textContent='↶ REVERSE SLOW REPLAY';
-  miracleKicker.textContent='奇跡の瞬間へ';
+  miracleKicker.textContent='特別な一瞬へ';
   miracleSub.textContent='逆再生で近づいています';
 
   const reversed=frames.slice().reverse();
@@ -1154,7 +1158,7 @@ async function replayStoredDeckFrames(token){
   miracleVideo.style.display='none';
   miracleStill.style.display='block';
   miracleReplayLabel.textContent=mode==='reverse'?'↶ REVERSE 0.42× REPLAY':'0.42× SLOW REPLAY';
-  miracleKicker.textContent='奇跡の瞬間へ';
+  miracleKicker.textContent='特別な一瞬へ';
   miracleSub.textContent=mode==='reverse'?'逆再生で近づいています':'保存した連続コマをスロー再生中';
   const totalMs=(span/Math.max(.1,MIRACLE_REPLAY_RATE))*1000;
   const hold=Math.max(120,Math.min(850,totalMs/seq.length));
@@ -1194,7 +1198,7 @@ async function replayReverseFramesFallback(targetTime,token){
   miracleVideo.style.display='none';
   miracleStill.style.display='block';
   miracleReplayLabel.textContent='↶ REVERSE REPLAY';
-  miracleKicker.textContent='奇跡の瞬間へ';
+  miracleKicker.textContent='特別な一瞬へ';
   miracleSub.textContent='逆向きフレームリプレイ';
 
   const hold=Math.max(500,Math.min(800,3000/seq.length));
@@ -1293,16 +1297,16 @@ function showFinalMiraclePhoto(kind,frameSrc){
     applySpecialFortuneDisplay('reversal','大凶');
     miracleKicker.textContent='大凶かと思ったら…';
     miracleTitle.textContent='大逆転大吉！';
-    miracleSub.textContent='🌈 奇跡の一枚 🌈';
+    miracleSub.textContent='🌈 SPECIAL FORTUNE 🌈';
     playSpecialSound('reversal');
     if(navigator.vibrate)navigator.vibrate([120,40,120,40,220,60,320]);
   }else{
     const baseFortune=currentMiracleReplay?.fortune||currentLab?.fortune||'吉';
-    // Miracle is a separate "photo win"; keep the original fortune unchanged.
+    // The special moment is itself the rare fortune: 大大吉.
     applySpecialFortuneDisplay('miracle',baseFortune);
-    miracleKicker.textContent='運勢とは別の、特別な一瞬';
-    miracleTitle.textContent='奇跡の一枚！';
-    miracleSub.textContent='✨ SPECIAL MOMENT ✨';
+    miracleKicker.textContent='特別な一瞬を引きました';
+    miracleTitle.textContent='大大吉！';
+    miracleSub.textContent='✨ SPECIAL FORTUNE ✨';
     playSpecialSound('miracle');
     if(navigator.vibrate)navigator.vibrate([90,45,120,55,180,60,260]);
   }
@@ -1334,7 +1338,7 @@ async function playMiracleSequence(kind,replayAgain=false){
 
   miracleOverlay.className='show '+(kind==='reversal'?'reversal-wait-mode':'miracle-intro-mode');
   miracleKicker.textContent=replayAgain?'もう一度、その瞬間へ':spec.intro.kicker;
-  miracleTitle.textContent=replayAgain?(kind==='reversal'?'大逆転の瞬間':'奇跡の瞬間'):spec.intro.title;
+  miracleTitle.textContent=replayAgain?(kind==='reversal'?'大逆転の瞬間':'大大吉の一瞬'):spec.intro.title;
   miracleSub.textContent=replayAgain?'まもなくスローリプレイ':spec.intro.sub;
   if(kind==='reversal'&&!replayAgain&&navigator.vibrate)navigator.vibrate([70,80,70]);
   await sleep(replayAgain?280:Math.round(spec.introDuration*1000));
@@ -1601,7 +1605,11 @@ function showHistoryEntry(x){
       resultTextEl.textContent=x.fortune;
       resultTextEl.style.color=FORTUNE_COLORS[x.fortune]||'#700';
     }
-    messageEl.textContent=x.message||'このときの結果です。';
+    messageEl.textContent=x.special==='miracle'
+      ? FORTUNE_MESSAGES['大大吉']
+      : x.special==='reversal'
+        ? '大凶から一転。今日は大逆転大吉！'
+        : (x.message||'このときの結果です。');
 
     currentLab={fortune:x.fortune,displayFortune:x.displayFortune||specialFortuneDisplay(x.special,x.fortune).fortune,lucky:x.lucky||pickLucky(),special:x.special,fromHistory:true};
     renderLucky(currentLab.lucky);
@@ -1613,7 +1621,7 @@ function showHistoryEntry(x){
       };
       replaySpecialBtn.style.display='block';
       movieResultBtn.style.display='block';
-      specialLine.textContent=x.special==='reversal'?'🌈 大逆転！奇跡の一枚':'✨ 奇跡の一枚';
+      specialLine.textContent=x.special==='reversal'?'🌈 大逆転大吉・特別リプレイ':'✨ 大大吉・特別リプレイ';
       specialLine.className=x.special==='reversal'?'reversal':'miracle';
       specialLine.style.display='block';
     }

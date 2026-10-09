@@ -237,13 +237,13 @@ if(activeCreation?.deckMode&&typeof window.__memoryDeckResolveStop==='function')
 }
 if(activeCreation.mode==='omikuji'){
   const baseFortune=window.__babyLabForcedSpecial==='reversal'?'大凶':drawFortune();
-  const resolved=typeof window.__memoryResolveFortuneResult==='function'
-    ? window.__memoryResolveFortuneResult(baseFortune)
-    : null;
-  const f=resolved?.fortune||baseFortune;
+  const resolved=typeof window.__memoryResolveStoppedFortune==='function'
+    ? window.__memoryResolveStoppedFortune(baseFortune)
+    : baseFortune;
+  const f=resolved||baseFortune;
   if(Array.isArray(activeCreation.fortunes))activeCreation.fortunes[currentIndex]=f;
   fortuneBadge.style.display='block'; fortuneBadge.textContent=(FORTUNE_ICONS[f]||'🎴')+' '+f; fortuneBadge.style.color=FORTUNE_COLORS[f]||'#700';
-  resultCard.style.display='block'; resultText.textContent=f; resultText.style.color=FORTUNE_COLORS[f]||'#700'; message.textContent=resolved?.message||FORTUNE_MESSAGES[f]||'';
+  resultCard.style.display='block'; resultText.textContent=f; resultText.style.color=FORTUNE_COLORS[f]||'#700'; message.textContent=FORTUNE_MESSAGES[f]||'';
   rouletteBadge.style.display='none'; if(f==='大吉') celebrate(); else playSound(f);
 }else{
   rouletteBadge.style.display='block'; rouletteBadge.textContent='この瞬間！'; playSound('吉');

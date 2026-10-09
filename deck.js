@@ -385,13 +385,18 @@ function formatBytes(n){
   return (n/1024/1024).toFixed(1)+'MB';
 }
 async function storageText(localBytes){
-  if(!navigator.storage?.estimate)return '保存済み動画 '+formatBytes(localBytes);
+  const appLine='保存済み動画データ：'+formatBytes(localBytes);
+  if(!navigator.storage?.estimate)return appLine;
   try{
     const e=await navigator.storage.estimate();
     const usage=Number(e.usage)||0,quota=Number(e.quota)||0;
     const persistent=navigator.storage.persisted?await navigator.storage.persisted():false;
-    return '保存済み動画 '+formatBytes(localBytes)+(quota?' ・ 端末保存 '+formatBytes(usage)+' / '+formatBytes(quota):'')+(persistent?' ・ 保存保護あり':' ・ 通常保存');
-  }catch(e){return '保存済み動画 '+formatBytes(localBytes);}
+    const browserLine=quota
+      ? 'ブラウザ保存領域（参考）：'+formatBytes(usage)+' 使用 / 上限 約'+formatBytes(quota)
+      : '';
+    const protectionLine='保存保護：'+(persistent?'有効':'通常');
+    return [appLine,browserLine,protectionLine].filter(Boolean).join('\n');
+  }catch(e){return appLine;}
 }
 function filteredSortedSources(sources){
   const q=(deckSearch?.value||'').trim().toLowerCase();

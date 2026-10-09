@@ -4,6 +4,7 @@ if(!box)return;
 let deluxe=false;
 let photoFocusTimer=null;
 let drumRollTimer=null;
+let drumStartTimer=null;
 let drumStep=0;
 const originals={preparePlay,startRun,stopRun,unlockAudio,celebrate};
 const clsMap={'大吉':'fortune-daikichi','吉':'fortune-kichi','中吉':'fortune-chukichi','小吉':'fortune-shokichi','末吉':'fortune-suekichi','凶':'fortune-kyo','大凶':'fortune-daikyo'};
@@ -37,6 +38,7 @@ function startDrumRoll(){
   drumRollTimer=setInterval(hit,92);
 }
 function clearFx(){
+clearTimeout(drumStartTimer);drumStartTimer=null;
 stopDrumRoll();
 clearTimeout(photoFocusTimer);photoFocusTimer=null;
 Object.values(clsMap).forEach(c=>stage.classList.remove(c));
@@ -45,7 +47,11 @@ document.querySelectorAll('.fxParticle').forEach(e=>e.remove());
 document.querySelectorAll('.confetti').forEach(e=>e.remove());
 bigOverlay.classList.remove('show','deluxe');
 }
-window.__memoryStopRouletteEffects=()=>clearFx();
+window.__memoryStopRouletteEffects=()=>{
+  clearFx();
+  closePhotoViewer();
+  photoAction.style.display='none';
+};
 function focusPhoto(){
 stage.classList.remove('result-reveal');
 stage.classList.add('photo-focus');
@@ -74,7 +80,10 @@ startRun=function(withSound=true){
   originals.startRun(false);
   if(deluxe){
     if(withSound)deluxeStart();
-    setTimeout(()=>{if(running&&deluxe)startDrumRoll();},withSound?360:120);
+    drumStartTimer=setTimeout(()=>{
+      drumStartTimer=null;
+      if(running&&deluxe&&document.body.dataset.appView==='play')startDrumRoll();
+    },withSound?360:120);
   }else if(withSound){
     playSound('start');
   }

@@ -167,6 +167,7 @@ async function dbDelete(id){const db=await openDB();return new Promise((res,rej)
 async function refreshLibrary(){ const all=await dbAll(); const homeHistoryCount=$("homeHistoryCount"); if(homeHistoryCount)homeHistoryCount.textContent=all.length?all.length+'件のルーレット':'まだありません'; library.innerHTML=''; if(!all.length){ library.innerHTML='<div class="note">まだ作ったルーレットはありません。</div>'; return; } all.forEach(x=>{ const el=document.createElement('div'); el.className='saved'; el.innerHTML=`<img src="${x.frames[0]}"><div class="savedMain"><div class="savedTitle"></div><div class="savedMeta">${x.mode==='omikuji'?'おみくじ':'通常ルーレット'} ・ ${new Date(x.updatedAt||x.createdAt).toLocaleString('ja-JP')} ・ ${x.frames.length}枚</div><div class="savedBtns"><button class="primary open">遊ぶ</button><button class="secondary renameToggle">名前変更</button><button class="danger del">削除</button></div><div class="renameRow" style="display:none"><input type="text" value=""><button class="secondary saveName">保存</button></div></div>`; el.querySelector('.savedTitle').textContent=x.title; el.querySelector('.renameRow input').value=x.title; el.querySelector('.open').onclick=()=>{ unlockAudio(); preparePlay(x); }; el.querySelector('.renameToggle').onclick=()=>{ const row=el.querySelector('.renameRow'); row.style.display=row.style.display==='none'?'flex':'none'; }; el.querySelector('.saveName').onclick=async()=>{ const nx=(el.querySelector('.renameRow input').value||'').trim(); if(!nx) return; x.title=nx; x.updatedAt=Date.now(); await dbPut(x); refreshLibrary(); }; el.querySelector('.del').onclick=async()=>{ if(confirm('削除しますか？')){ await dbDelete(x.id); refreshLibrary(); } }; library.appendChild(el); }); }
 async function saveCurrentCreation(){ currentCreation=makeCreation(); await persistCreation(currentCreation); }
 let audioCtx=null;
+const activeTones=new Set();
 function ensureAudio(){
 if(!audioCtx){ const Ctx=window.AudioContext||window.webkitAudioContext; if(Ctx) audioCtx=new Ctx(); }
 if(audioCtx&&audioCtx.state==='suspended') audioCtx.resume();
@@ -177,7 +178,10 @@ if(!audioCtx||audioCtx.state!=='running') return;
 const now=audioCtx.currentTime+when, osc=audioCtx.createOscillator(), gain=audioCtx.createGain();
 osc.type=type; osc.frequency.setValueAtTime(freq,now);
 gain.gain.setValueAtTime(.0001,now); gain.gain.exponentialRampToValueAtTime(vol,now+.015); gain.gain.exponentialRampToValueAtTime(.0001,now+dur);
-osc.connect(gain).connect(audioCtx.destination); osc.start(now); osc.stop(now+dur+.03);
+osc.connect(gain).connect(audioCtx.destination);
+activeTones.add(osc);
+osc.addEventListener('ended',()=>{activeTones.delete(osc);osc.disconnect();gain.disconnect();},{once:true});
+osc.start(now); osc.stop(now+dur+.03);
 }
 function unlockAudio(){ primed=true; ensureAudio(); playSound('start'); }
 function playSound(name){
@@ -248,15 +252,31 @@ fileInput.addEventListener('change',()=>{ if(fileInput.files?.length){ currentCr
 reextractBtn.addEventListener('click',()=>{ if(lastFile){ currentCreation=null; extractFromCurrentFile(); } });
 playBtn.addEventListener('click',()=>{ if(!selectedFrames.length) return; unlockAudio(); currentCreation=makeCreation(); persistCreation(currentCreation).catch(e=>console.error('roulette history save failed',e)); preparePlay(currentCreation); });
 stage.addEventListener('pointerdown',e=>{ e.preventDefault(); if(!primed) unlockAudio(); if(running) stopRun(); else startRun(); },{passive:false});
-$('backBtn').addEventListener('click',()=>{
-  clearInterval(timer); timer=null; running=false; stage.classList.remove('pulse');
+// Abandoning a spin does not count as stopping/drawing a result.
+function exitRoulette(){
+  const interrupted=running;
+  running=false;
+  clearInterval(timer);timer=null;
+  stage.classList.remove('pulse');
   window.__memoryStopRouletteEffects?.();
   window.__memoryOnRouletteExit?.();
   document.querySelectorAll('.confetti').forEach(e=>e.remove());
-  bigOverlay.classList.remove('show');
-  try{if(audioCtx&&audioCtx.state==='running')audioCtx.suspend();}catch(e){}
-  playSection.style.display='none';
-  if(window.__memoryBackFromPlay)window.__memoryBackFromPlay();else window.__memoryNavigate?.('home');
+  bigOverlay.classList.remove('show','deluxe');
+  if(interrupted){
+    rouletteBadge.style.display='block';
+    rouletteBadge.textContent='タップで再開';
+    tapHint.textContent='画像をタップすると再開します';
+  }
+  // Also stop oscillators already queued on the Web Audio timeline.
+  for(const osc of activeTones){try{osc.stop();}catch(e){}}
+  activeTones.clear();
+  try{navigator.vibrate?.(0);}catch(e){}
+  try{audioCtx?.suspend().catch(()=>{});}catch(e){}
+}
+window.__memoryExitRoulette=exitRoulette;
+$('backBtn').addEventListener('click',()=>{
+  if(window.__memoryBackFromPlay)window.__memoryBackFromPlay();
+  else{exitRoulette();window.__memoryNavigate?.('home');}
 });
 async function restoreLastRouletteAfterReload(){
   if(location.hash!=='#play'||activeCreation?.frames?.length)return;

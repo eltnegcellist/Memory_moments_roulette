@@ -23,6 +23,10 @@ function forceTop(){
 }
 function applyView(view){
   const target=VALID.has(view)?view:'home';
+  // Android's edge-swipe Back changes history without clicking #backBtn.
+  if(currentView==='play'&&target!=='play'){
+    try{window.__memoryExitRoulette?.();}catch(err){console.error('roulette exit failed',err);}
+  }
   if(currentView==='favorites'&&target!=='favorites'){
     Promise.resolve(window.__memoryCommitFavoriteDeletes?.()).catch(err=>console.error('favorite delete commit failed',err));
   }
@@ -87,6 +91,12 @@ document.getElementById('fileInput')?.addEventListener('change',e=>{
   if(e.currentTarget.files?.length)navigate('create');
 });
 
+// Leaving the PWA/document may trigger pagehide instead of popstate.
+window.addEventListener('pagehide',()=>{
+  if(currentView==='play'){
+    try{window.__memoryExitRoulette?.();}catch(err){console.error('roulette pagehide cleanup failed',err);}
+  }
+});
 window.addEventListener('popstate',()=>applyView(routeFromHash()));
 window.addEventListener('hashchange',()=>applyView(routeFromHash()));
 applyView(routeFromHash());

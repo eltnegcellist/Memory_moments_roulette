@@ -21,9 +21,9 @@
 <link rel="apple-touch-icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2">
 <link rel="icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2" type="image/png">
 <title>思い出ルーレットおみくじ</title>
-<link rel="stylesheet" href="./style.css?v=1.1.0-h7">
-<link rel="stylesheet" href="./deluxe.css?v=1.1.0-h7">
-<link rel="stylesheet" href="./features.css?v=1.1.0-h7">
+<link rel="stylesheet" href="./style.css?v=1.1.0-h8">
+<link rel="stylesheet" href="./deluxe.css?v=1.1.0-h8">
+<link rel="stylesheet" href="./features.css?v=1.1.0-h8">
 <style>
 body:not(.show-score-details) .scoreChip,
 body:not(.show-score-details) .scoreDetails,
@@ -39,7 +39,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <header class="hero" data-app-view="home">
   <div class="heroMark" aria-hidden="true"><img src="./icons/memory-roulette-omikuji.png?v=memorybrand2" alt=""></div>
   <div class="heroText">
-    <div class="heroTopline"><span class="eyebrow">MEMORY MOMENTS</span><span class="versionBadge" id="labSettingsTrigger" data-lab-trigger title="5回タップでラボ設定">v1.1.0-h7</span></div>
+    <div class="heroTopline"><span class="eyebrow">MEMORY MOMENTS</span><span class="versionBadge" id="labSettingsTrigger" data-lab-trigger title="5回タップでラボ設定">v1.1.0-h8</span></div>
     <h1><span class="titlePart">思い出ルーレット</span><span class="titlePart">おみくじ</span></h1>
     <p class="heroCatch">動画に隠れた、いろいろな一瞬を。</p>
     <p class="lead">写真には残さなかった一瞬まで、動画には残っています。自分では選ばなかった一枚に偶然出会い、おみくじと一緒に楽しむアプリです。</p>
@@ -208,7 +208,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 
   <button id="settingsVersionTrigger" class="settingsVersionTrigger" data-lab-trigger type="button" title="5回タップでLAB設定を表示">
     <span>アプリバージョン</span>
-    <strong>v1.1.0-h7</strong>
+    <strong>v1.1.0-h8</strong>
   </button>
   <div id="labSettingsHint" class="labSettingsHint settingsLabHint">LAB設定：上のバージョン表示を5回タップで表示</div>
 
@@ -233,7 +233,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
           <select id="labSpecialMode">
             <option value="normal" selected>通常（確率どおり）</option>
             <option value="slow">毎回スローモーション</option>
-            <option value="miracle">奇跡の一枚を毎回表示</option>
+            <option value="miracle">大大吉を毎回表示</option>
             <option value="reversal">大逆転大吉を毎回表示</option>
           </select>
         </label>
@@ -245,14 +245,14 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <h3 class="settingsSubhead">データ管理</h3>
   <div id="deckManage" class="deckManage">
     <div id="deckStorage" class="deckStorage">保存容量を確認しています…</div>
-    <div class="settingsDataSummary">「保存済み動画データ」は、このアプリがデッキ用に保存している候補画像・奇跡リプレイ・サムネイルの容量です。「ブラウザ保存領域」は参考値で、このアプリ専用ではなく、同じサイト由来の別データを含む場合があります。端末全体の使用量ではありません。</div>
+    <div class="settingsDataSummary">「保存済み動画データ」は、このアプリがデッキ用に保存している候補画像・特別リプレイ・サムネイルの容量です。「ブラウザ保存領域」は参考値で、このアプリ専用ではなく、同じサイト由来の別データを含む場合があります。端末全体の使用量ではありません。</div>
     <div class="deckBackupActions">
       <button id="deckBackupBtn" class="secondary" type="button">バックアップを書き出す</button>
       <button id="deckRestoreBtn" class="secondary" type="button">バックアップから復元</button>
       <button id="deckClearBtn" class="danger" type="button">保存済み動画をすべて削除</button>
       <input id="deckRestoreInput" type="file" accept="application/json,.json" hidden>
     </div>
-    <p class="note">元動画そのものは保存しません。候補画像と「奇跡の一枚」用の短い連続コマを端末内へ保存します。継続利用する場合は定期的なデッキの書き出しがおすすめです。</p>
+    <p class="note">元動画そのものは保存しません。候補画像と特別リプレイ用の短い連続コマを端末内へ保存します。継続利用する場合は定期的なデッキの書き出しがおすすめです。</p>
   </div>
 </section>
 
@@ -330,17 +330,17 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
     </div>
 
     <section class="howtoSecret">
-      <div class="secretBadge">✨ 特別な奇跡のリプレイ</div>
-      <h3>ときどき、止まった一瞬が特別な演出に</h3>
+      <div class="secretBadge">✨ 特別運勢「大大吉」</div>
+      <h3>ときどき、特別な運勢とリプレイが登場</h3>
       <div class="secretVisual" aria-hidden="true">
-        <div class="secretFortune">大吉</div>
+        <div class="secretFortune">おみくじ</div>
         <div class="secretArrow">→</div>
         <div class="secretReplay"><span>▶</span><b>SLOW REPLAY</b></div>
         <div class="secretArrow">→</div>
-        <div class="secretFortune special">特別</div>
+        <div class="secretFortune special">大大吉</div>
       </div>
-      <p>おみくじでは、<b>大凶以外の結果で低い確率で「奇跡のリプレイ」</b>が始まることがあります。ここでいう「奇跡」は完璧なベストショットとは限りません。変顔でも妙なポーズでも、その場でしか引けなかった一瞬を特別演出で楽しみます。</p>
-      <p><b>大凶では、一定確率で「大逆転」リプレイ</b>が発生します。どちらの演出も、出会えたらその一瞬ごと楽しんでください。</p>
+      <p>おみくじでは、<b>大凶以外で低い確率で「大大吉」</b>が出て、特別リプレイが始まることがあります。大大吉は写真の良し悪しを評価するものではなく、その場でしか引けなかった一瞬との出会いそのものを特別な運勢として扱います。</p>
+      <p><b>大凶では、一定確率で「大逆転大吉」</b>が発生します。どちらも写真とは別の賞ではなく、その回のおみくじ結果です。</p>
     </section>
 
     <section class="howtoTips">
@@ -363,12 +363,12 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <video id="video" playsinline muted preload="metadata" style="display:none"></video><canvas id="captureCanvas" style="display:none"></canvas><canvas id="smallCanvas" width="28" height="28" style="display:none"></canvas>
 </div>
 <div id="bigOverlay"><div id="bigText">大吉！</div></div>
-<script src="./navigation.js?v=1.1.0-h7" defer></script>
-<script src="./app.js?v=1.1.0-h7" defer></script>
-<script src="./deck.js?v=1.1.0-h7" defer></script>
-<script src="./deluxe.js?v=1.1.0-h7" defer></script>
-<script src="./features.js?v=1.1.0-h7" defer></script>
-<script src="./hidden-settings.js?v=1.1.0-h7" defer></script>
+<script src="./navigation.js?v=1.1.0-h8" defer></script>
+<script src="./app.js?v=1.1.0-h8" defer></script>
+<script src="./deck.js?v=1.1.0-h8" defer></script>
+<script src="./deluxe.js?v=1.1.0-h8" defer></script>
+<script src="./features.js?v=1.1.0-h8" defer></script>
+<script src="./hidden-settings.js?v=1.1.0-h8" defer></script>
 <script>
 (()=>{
   const scoreBox=document.getElementById('showScores');

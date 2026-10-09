@@ -12,6 +12,7 @@ const REPLAY_SECONDS=3.0;
 const EARLY_REPLAY_SECONDS=2.5;
 const deckCard=document.getElementById('deckCard');
 const deckStatus=document.getElementById('deckStatus');
+const deckProcessingSummary=document.getElementById('deckProcessingSummary');
 const deckPicker=document.getElementById('deckPicker');
 const deckNotice=document.getElementById('deckNotice');
 const deckDrawBtn=document.getElementById('deckDrawBtn');
@@ -55,6 +56,9 @@ let backgroundQueue=Promise.resolve();
 const queuedSourceIds=new Set();
 const opfsWriteJobs=new Map();
 const OPFS_PREFIX='memory-moments-source-';
+let analysisResumeQueue=Promise.resolve();
+const analysisResumeSourceIds=new Set();
+let analysisResumeScanning=false;
 
 async function getAll(store){
   const db=await openDB();
@@ -398,6 +402,67 @@ async function storageText(localBytes){
     return [appLine,browserLine,protectionLine].filter(Boolean).join('\n');
   }catch(e){return appLine;}
 }
+
+function sourceProgressState(src){
+  const total=Math.max(0,Number(src?.candidateCount)||0);
+  if(src?.analysisPending){
+    return {
+      pending:true,
+      text:src.resumeNeedsFile
+        ? 'シーン分析未完了 ・ 同じ動画を選ぶと再開'
+        : (analysisResumeSourceIds.has(src.id)||src.analysisResuming?'シーン分析を自動再開中':'シーン分析の再開待ち'),
+      percent:0
+    };
+  }
+  if(!total)return {pending:false,text:'',percent:100};
+  const imageReady=Math.max(0,Math.min(total,Number(src.imageReadyCount)||Math.max(0,total-(Number(src.imagePending)||0))));
+  const replayReady=Math.max(0,Math.min(total,Number(src.replayReadyCount)||Math.max(0,total-(Number(src.replayPending)||0))));
+  const pending=imageReady<total||replayReady<total;
+  if(!pending)return {pending:false,text:'',percent:100,imageReady,replayReady,total};
+  const suffix=src.resumeNeedsFile?' ・ 同じ動画を選ぶと再開':' ・ 仕上げ中';
+  return {
+    pending:true,
+    text:'高画質 '+imageReady+'/'+total+' ・ リプレイ '+replayReady+'/'+total+suffix,
+    percent:Math.round(((imageReady+replayReady)/(total*2))*100),
+    imageReady,replayReady,total
+  };
+}
+function renderProcessingSummary(sources){
+  if(!deckProcessingSummary)return;
+  const list=(sources||[]).filter(src=>sourceProgressState(src).pending);
+  if(!list.length){
+    deckProcessingSummary.hidden=true;
+    deckProcessingSummary.textContent='';
+    return;
+  }
+  let total=0,imageReady=0,replayReady=0,analysis=0,needsFile=0;
+  for(const src of list){
+    const p=sourceProgressState(src);
+    if(src.analysisPending){analysis++;if(src.resumeNeedsFile)needsFile++;continue;}
+    total+=p.total||0;imageReady+=p.imageReady||0;replayReady+=p.replayReady||0;
+    if(src.resumeNeedsFile)needsFile++;
+  }
+  const parts=[];
+  if(analysis)parts.push('分析 '+analysis+'本');
+  if(total)parts.push('高画質 '+imageReady+'/'+total+' ・ リプレイ '+replayReady+'/'+total);
+  if(needsFile)parts.push(needsFile+'本は元動画の再選択で再開');
+  else parts.push('バックグラウンドで仕上げ中');
+  deckProcessingSummary.textContent=parts.join(' ・ ');
+  deckProcessingSummary.hidden=false;
+}
+function patchSourceProgressState(sourceId,patch){
+  const src=lastDeckSources.find(x=>x.id===sourceId);
+  if(src)Object.assign(src,patch);
+  const state=sourceProgressState(src||patch);
+  document.querySelectorAll('[data-source-id="'+sourceId+'"]').forEach(card=>{
+    const text=card.querySelector('.deckVideoProgressText');
+    const fill=card.querySelector('.deckVideoProgressFill');
+    if(text)text.textContent=state.text;
+    if(fill)fill.style.width=(state.percent||0)+'%';
+  });
+  renderProcessingSummary(lastDeckSources);
+}
+
 function filteredSortedSources(sources){
   const q=(deckSearch?.value||'').trim().toLowerCase();
   const newest=(deckSort?.value||'newest')!=='oldest';
@@ -442,12 +507,24 @@ function makeSourceTile(src,{selectable=false,manageable=false}={}){
   const name=document.createElement('strong');
   name.textContent=displayName;
   const meta=document.createElement('small');
-  const pendingCount=Math.max(Number(src.imagePending)||0,Number(src.replayPending)||0);
-  const finishState=pendingCount
-    ? (src.resumeNeedsFile?' ・ 仕上げ未完了（同じ動画を選ぶと再開）':' ・ 仕上げ中')
-    : '';
-  meta.textContent=(Number(src.candidateCount)||0)+'個の一瞬 ・ '+formatDuration(src.duration)+finishState;
+  meta.textContent=(Number(src.candidateCount)||0)+'個の一瞬 ・ '+formatDuration(src.duration);
   info.append(name,meta);
+  const progressState=sourceProgressState(src);
+  if(progressState.pending){
+    const progress=document.createElement('div');
+    progress.className='deckVideoProgress';
+    const progressText=document.createElement('span');
+    progressText.className='deckVideoProgressText';
+    progressText.textContent=progressState.text;
+    const track=document.createElement('span');
+    track.className='deckVideoProgressTrack';
+    const fill=document.createElement('span');
+    fill.className='deckVideoProgressFill';
+    fill.style.width=(progressState.percent||0)+'%';
+    track.appendChild(fill);
+    progress.append(progressText,track);
+    info.appendChild(progress);
+  }
   choose.append(media,info);
 
   if(selectable){
@@ -528,6 +605,7 @@ async function renderDeck(){
   const validIds=new Set(s.sources.map(x=>x.id));
   for(const id of [...selectedSourceIds])if(!validIds.has(id))selectedSourceIds.delete(id);
   updateSelectionStatus(s.sources);
+  renderProcessingSummary(s.sources);
   if(deckStorage)deckStorage.textContent=await storageText(s.bytes);
   renderSourceLibraries();
 }
@@ -639,35 +717,42 @@ async function cleanupSourceOpfsIfComplete(sourceId){
 function persistSourceFileForResume(file,sourceId){
   if(!file||!sourceId)return Promise.resolve(false);
   if(opfsWriteJobs.has(sourceId))return opfsWriteJobs.get(sourceId);
-  const job=(async()=>{
+  const raw=(async()=>{
     const root=await opfsRoot();
     if(!root){
-      await updateSourceRecord(sourceId,{opfsReady:false,resumeNeedsFile:true});
+      await updateSourceRecord(sourceId,{opfsReady:false,resumeNeedsFile:true,opfsWriting:false});
+      patchSourceProgressState(sourceId,{opfsReady:false,resumeNeedsFile:true,opfsWriting:false});
       return false;
     }
     const name=opfsFileName(sourceId);
     try{
       await updateSourceRecord(sourceId,{opfsName:name,opfsReady:false,resumeNeedsFile:false,opfsWriting:true});
+      patchSourceProgressState(sourceId,{opfsName:name,opfsReady:false,resumeNeedsFile:false,opfsWriting:true});
       const handle=await root.getFileHandle(name,{create:true});
       const writable=await handle.createWritable();
       await writable.write(file);
       await writable.close();
       const saved=await handle.getFile();
       if(Number(file.size)>0&&saved.size!==Number(file.size))throw new Error('temporary video size mismatch');
-      await updateSourceRecord(sourceId,{
-        opfsName:name,opfsReady:true,opfsWriting:false,resumeNeedsFile:false,
-        opfsSize:saved.size,opfsSavedAt:Date.now()
-      });
-      await cleanupSourceOpfsIfComplete(sourceId);
+      const patch={opfsName:name,opfsReady:true,opfsWriting:false,resumeNeedsFile:false,opfsSize:saved.size,opfsSavedAt:Date.now()};
+      await updateSourceRecord(sourceId,patch);
+      patchSourceProgressState(sourceId,patch);
       return true;
     }catch(err){
       console.warn('temporary source save failed',err);
-      await updateSourceRecord(sourceId,{opfsReady:false,opfsWriting:false,resumeNeedsFile:true});
+      const patch={opfsReady:false,opfsWriting:false,resumeNeedsFile:true};
+      await updateSourceRecord(sourceId,patch);
+      patchSourceProgressState(sourceId,patch);
       return false;
     }
-  })().finally(()=>opfsWriteJobs.delete(sourceId));
-  opfsWriteJobs.set(sourceId,job);
-  return job;
+  })();
+  const tracked=raw.finally(async()=>{
+    opfsWriteJobs.delete(sourceId);
+    await cleanupSourceOpfsIfComplete(sourceId).catch(()=>{});
+    renderDeck().catch(()=>{});
+  });
+  opfsWriteJobs.set(sourceId,tracked);
+  return tracked;
 }
 async function clearOpfsSourceFiles(){
   const root=await opfsRoot();
@@ -704,7 +789,7 @@ async function resumePendingBackgroundWork(){
   }
   const jobs=[];
   for(const src of sources){
-    if(opfsWriteJobs.has(src.id))continue;
+    if(opfsWriteJobs.has(src.id)||src.analysisPending)continue;
     const frames=await framesForSource(src.id);
     const targets=pendingTargetsFromFrames(frames);
     if(!targets.length){
@@ -731,6 +816,62 @@ async function resumePendingBackgroundWork(){
   }
   enqueueBackgroundJobs(jobs);
   renderDeck().catch(()=>{});
+}
+
+
+async function resumeInterruptedAnalyses(){
+  if(processing||document.hidden||analysisResumeScanning)return;
+  analysisResumeScanning=true;
+  try{
+    const sources=await getAll(SOURCE_STORE);
+    const pending=sources.filter(src=>src.analysisPending&&!analysisResumeSourceIds.has(src.id));
+    if(!pending.length)return;
+    const jobs=[];
+    for(const src of pending){
+      const file=await getOpfsResumeFile(src);
+      if(file){
+        jobs.push({src,file});
+      }else{
+        const patch={analysisResuming:false,resumeNeedsFile:true,opfsReady:false};
+        await updateSourceRecord(src.id,patch);
+        patchSourceProgressState(src.id,patch);
+      }
+    }
+    if(!jobs.length){renderDeck().catch(()=>{});return;}
+    jobs.forEach(x=>analysisResumeSourceIds.add(x.src.id));
+    analysisResumeQueue=analysisResumeQueue.then(async()=>{
+      for(const {src,file} of jobs){
+        if(processing){
+          analysisResumeSourceIds.delete(src.id);
+          continue;
+        }
+        processing=true;
+        fileInput.disabled=true;
+        try{
+          const patch={analysisResuming:true,resumeNeedsFile:false};
+          await updateSourceRecord(src.id,patch);
+          patchSourceProgressState(src.id,patch);
+          deckNotice.textContent='前回中断した動画のシーン分析を自動再開しています…';
+          deckNotice.className='note deckNotice';
+          const r=await extractOne(file,1,1,{skipResumeCopy:true,resumeSourceId:src.id});
+          if(r?.backgroundJob)enqueueBackgroundJobs([r.backgroundJob]);
+          deckNotice.textContent='前回中断した動画の分析を再開しました。仕上げ処理を続けています。';
+          deckNotice.className='note deckNotice ok';
+        }catch(err){
+          console.warn('analysis resume failed',err);
+          const retries=(Number(src.analysisRetryCount)||0)+1;
+          await updateSourceRecord(src.id,{analysisResuming:false,analysisRetryCount:retries,analysisLastError:String(err?.message||err)});
+        }finally{
+          processing=false;
+          fileInput.disabled=false;
+          analysisResumeSourceIds.delete(src.id);
+          renderDeck().catch(()=>{});
+        }
+      }
+    }).catch(err=>console.warn('analysis resume queue failed',err));
+  }finally{
+    analysisResumeScanning=false;
+  }
 }
 
 function replayTiming(targetTime,duration){
@@ -857,14 +998,17 @@ async function storeBackgroundReplay(sourceId,frameId,replay){
 async function refreshSourceStorage(sourceId){
   const [frames,sources]=await Promise.all([framesForSource(sourceId),getAll(SOURCE_STORE)]);
   const src=sources.find(x=>x.id===sourceId);
-  if(!src)return;
+  if(!src)return null;
   const imageReadyCount=frames.filter(x=>!x.imagePending).length;
   const replayReadyCount=frames.filter(x=>Number(x.replayFrameCount)>=2&&Number(x.replaySize)>0).length;
-  await updateSourceRecord(sourceId,{
+  const patch={
     storageBytes:frames.reduce((n,x)=>n+(Number(x.imageSize)||0)+(Number(x.replaySize)||0),0)+(Number(src.thumbnailSize)||0),
     imageReadyCount,imagePending:Math.max(0,frames.length-imageReadyCount),
     replayReadyCount,replayPending:Math.max(0,frames.length-replayReadyCount)
-  });
+  };
+  await updateSourceRecord(sourceId,patch);
+  patchSourceProgressState(sourceId,patch);
+  return patch;
 }
 async function runBackgroundMediaJob(job){
   if(!job?.file||!job.targets?.length)return;
@@ -898,6 +1042,7 @@ async function runBackgroundMediaJob(job){
           if(saved){currentBytes+=replay.bytes;target.needReplay=false;}
         }
       }
+      await refreshSourceStorage(job.sourceId).catch(()=>{});
     }
     await refreshSourceStorage(job.sourceId);
     await cleanupSourceOpfsIfComplete(job.sourceId);
@@ -942,24 +1087,46 @@ window.__memoryDeckLoadReplay=async candidateId=>{
     r.onerror=()=>rej(r.error);
   });
 };
-async function extractOne(file,overallIndex,total){
+async function extractOne(file,overallIndex,total,options={}){
   await waitUntilVisible();
   progressText.textContent='動画 '+overallIndex+' / '+total+' を読み込んでいます…';
   await loadVideo(file);
   setupCanvas();
   const duration=video.duration;
-  const fingerprint=hashString([file.name,file.size,file.lastModified,Math.round(duration*1000)].join('|'));
-  const existing=await existingSource(fingerprint);
+  const resumeById=options.resumeSourceId
+    ? (await getAll(SOURCE_STORE)).find(x=>x.id===options.resumeSourceId)||null
+    : null;
+  const fingerprint=resumeById?.fingerprint||hashString([file.name,file.size,file.lastModified,Math.round(duration*1000)].join('|'));
+  const existing=resumeById||await existingSource(fingerprint);
+  let resumeAnalysisSource=null;
   if(existing){
     const own=await framesForSource(existing.id);
-    const pending=pendingTargetsFromFrames(own);
-    if(pending.length)persistSourceFileForResume(file,existing.id).catch(()=>{});
-    return {
-      duplicate:true,name:file.name,count:0,sourceId:existing.id,
-      backgroundJob:pending.length?{file,sourceId:existing.id,targets:pending}:null
-    };
+    if(!own.length&&existing.analysisPending){
+      resumeAnalysisSource=existing;
+      if(!options.skipResumeCopy)persistSourceFileForResume(file,existing.id).catch(()=>{});
+    }else{
+      const pending=pendingTargetsFromFrames(own);
+      if(pending.length&&!options.skipResumeCopy)persistSourceFileForResume(file,existing.id).catch(()=>{});
+      return {
+        duplicate:true,name:file.name,count:0,sourceId:existing.id,
+        backgroundJob:pending.length?{file,sourceId:existing.id,targets:pending}:null
+      };
+    }
   }
   const before=await stats();
+  const sourceId=resumeAnalysisSource?.id||('s'+Date.now().toString(36)+hashString(fingerprint+Math.random()));
+  const provisional={
+    id:sourceId,fingerprint,
+    fileName:resumeAnalysisSource?.fileName||file.name,
+    fileSize:Number(resumeAnalysisSource?.fileSize)||file.size,
+    lastModified:Number(resumeAnalysisSource?.lastModified)||file.lastModified,
+    duration,addedAt:Number(resumeAnalysisSource?.addedAt)||Date.now(),candidateCount:0,storageBytes:0,
+    analysisPending:true,analysisResuming:!!options.skipResumeCopy,
+    opfsName:opfsFileName(sourceId),opfsReady:!!resumeAnalysisSource?.opfsReady,
+    opfsWriting:!!resumeAnalysisSource?.opfsWriting,resumeNeedsFile:false
+  };
+  await saveSourceAndFrames({...resumeAnalysisSource,...provisional},[],[]);
+  if(!options.skipResumeCopy)persistSourceFileForResume(file,sourceId).catch(()=>{});
   const room=Math.max(0,MAX_FRAMES-before.count);
   if(!room)throw new Error('思い出デッキは最大'+MAX_FRAMES+'個です');
   const target=Math.min(deckTargetCount(duration),room);
@@ -983,11 +1150,9 @@ async function extractOne(file,overallIndex,total){
   const picked=selectDiverseMoments(deduped.length?deduped:candidates,target);
   if(!picked.length)throw new Error('保存できる一瞬を見つけられませんでした');
   const details=computeAppealDetails(picked);
-  const sourceId='s'+Date.now().toString(36)+hashString(fingerprint+Math.random());
   const source={
-    id:sourceId,fingerprint,fileName:file.name,fileSize:file.size,lastModified:file.lastModified,
-    duration,addedAt:Date.now(),candidateCount:0,
-    opfsName:opfsFileName(sourceId),opfsReady:false,opfsWriting:false,resumeNeedsFile:false
+    ...provisional,
+    analysisPending:false,analysisResuming:false,analysisCompletedAt:Date.now()
   };
   const frames=[];
   let bytes=before.bytes;
@@ -1029,7 +1194,7 @@ async function extractOne(file,overallIndex,total){
   source.replayReadyCount=0;
   source.replaySpec={edge:REPLAY_EDGE,frames:REPLAY_FRAME_COUNT,quality:REPLAY_QUALITY,seconds:REPLAY_SECONDS};
   await saveSourceAndFrames(source,frames,[]);
-  persistSourceFileForResume(file,sourceId).catch(()=>{});
+  patchSourceProgressState(sourceId,source);
   return {
     duplicate:false,name:file.name,count:frames.length,sourceId,
     backgroundJob:{
@@ -1043,7 +1208,7 @@ async function requestPersistence(){
   try{return await navigator.storage.persist();}catch(e){return false;}
 }
 window.__memoryDeckHandleFiles=async files=>{
-  if(processing||!files?.length)return;
+  if(processing||analysisResumeSourceIds.size||!files?.length)return;
   processing=true;
   fileInput.disabled=true;
   deckDrawBtn.disabled=true;
@@ -1326,10 +1491,12 @@ document.addEventListener('visibilitychange',()=>{
     deckNotice.className='note deckNotice';
   }
   if(!document.hidden){
+    resumeInterruptedAnalyses().catch(err=>console.warn('analysis resume failed',err));
     resumePendingBackgroundWork().catch(err=>console.warn('background resume failed',err));
   }
 });
 window.addEventListener('pageshow',()=>{
+  resumeInterruptedAnalyses().catch(err=>console.warn('analysis resume failed',err));
   resumePendingBackgroundWork().catch(err=>console.warn('background resume failed',err));
 });
 requestPersistence().catch(()=>{});
@@ -1346,5 +1513,6 @@ window.__memoryDeckStartSelection=async()=>{
   updateSelectionStatus(lastDeckSources);
 };
 renderDeck().catch(err=>{console.error(err);deckStatus.textContent='デッキ情報を読み込めませんでした。';});
+resumeInterruptedAnalyses().catch(err=>console.warn('analysis resume failed',err));
 resumePendingBackgroundWork().catch(err=>console.warn('background resume failed',err));
 })();

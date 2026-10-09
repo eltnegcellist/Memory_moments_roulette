@@ -21,9 +21,9 @@
 <link rel="apple-touch-icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2">
 <link rel="icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2" type="image/png">
 <title>思い出ルーレットおみくじ</title>
-<link rel="stylesheet" href="./style.css?v=1.1.0-h9">
-<link rel="stylesheet" href="./deluxe.css?v=1.1.0-h9">
-<link rel="stylesheet" href="./features.css?v=1.1.0-h9">
+<link rel="stylesheet" href="./style.css?v=1.1.0-test2">
+<link rel="stylesheet" href="./deluxe.css?v=1.1.0-test2">
+<link rel="stylesheet" href="./features.css?v=1.1.0-test2">
 <style>
 body:not(.show-score-details) .scoreChip,
 body:not(.show-score-details) .scoreDetails,
@@ -94,6 +94,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <h2>過去の動画からルーレットを作る</h2>
   <p class="note viewIntro">今回使いたい動画だけを選んでください。1本でも複数本でも選べます。</p>
   <p id="deckStatus" class="deckStatus">保存した動画を読み込んでいます…</p>
+  <div id="deckProcessingSummary" class="deckProcessingSummary" hidden></div>
   <div class="deckLibraryManageBar">
     <span id="deckLibraryManageNote">タップして今回使う動画を選びます。</span>
     <button id="deckLibraryManageBtn" class="secondary" type="button">動画を管理</button>
@@ -363,12 +364,12 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <video id="video" playsinline muted preload="metadata" style="display:none"></video><canvas id="captureCanvas" style="display:none"></canvas><canvas id="smallCanvas" width="28" height="28" style="display:none"></canvas>
 </div>
 <div id="bigOverlay"><div id="bigText">大吉！</div></div>
-<script src="./navigation.js?v=1.1.0-h9" defer></script>
-<script src="./app.js?v=1.1.0-h9" defer></script>
-<script src="./deck.js?v=1.1.0-h9" defer></script>
-<script src="./deluxe.js?v=1.1.0-h9" defer></script>
-<script src="./features.js?v=1.1.0-h9" defer></script>
-<script src="./hidden-settings.js?v=1.1.0-h9" defer></script>
+<script src="./navigation.js?v=1.1.0-test2" defer></script>
+<script src="./app.js?v=1.1.0-test2" defer></script>
+<script src="./deck.js?v=1.1.0-test2" defer></script>
+<script src="./deluxe.js?v=1.1.0-test2" defer></script>
+<script src="./features.js?v=1.1.0-test2" defer></script>
+<script src="./hidden-settings.js?v=1.1.0-test2" defer></script>
 <script>
 (()=>{
   const scoreBox=document.getElementById('showScores');

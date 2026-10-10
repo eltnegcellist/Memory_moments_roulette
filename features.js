@@ -1884,7 +1884,11 @@ makeGifBtn.addEventListener('click',async()=>{
     return;
   }
   const frames=group.items;
-  const seconds=Number(gifSpeed?.value)===1?1:0.5;
+  // GIF89a stores each frame delay in centiseconds; keep output and preview identical.
+  const allowedGifDelays=new Set([5,10,20,50,100]);
+  const requestedDelay=Math.round(Number(gifSpeed?.value)*100);
+  const centiseconds=allowedGifDelays.has(requestedDelay)?requestedDelay:10;
+  const seconds=centiseconds/100;
   clearGifResult();
   const generation=gifGeneration;
   gifGenerating=true;
@@ -1894,7 +1898,7 @@ makeGifBtn.addEventListener('click',async()=>{
   try{
     const blob=await makeGif(frames,(done,total)=>{
       if(generation===gifGeneration)gifStatus.textContent='「'+group.label+'」のGIFを作っています… '+done+'/'+total;
-    },Math.round(seconds*100),()=>generation!==gifGeneration);
+    },centiseconds,()=>generation!==gifGeneration);
     if(generation!==gifGeneration)return;
     gifUrl=URL.createObjectURL(blob);
     startGifPreview(frames,seconds);

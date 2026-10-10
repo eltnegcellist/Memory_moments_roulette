@@ -21,6 +21,8 @@ const gifDownload=document.getElementById('labGifDownload');
 const gifSourceWrap=document.getElementById('labGifSourceWrap');
 const gifSource=document.getElementById('labGifSource');
 const gifSourceNote=document.getElementById('labGifSourceNote');
+const gifFrameInfo=document.getElementById('labGifFrameInfo');
+const gifSpeed=document.getElementById('labGifSpeed');
 if(!stageEl||!resultCardEl||!collectionEl||!historyEl)return;
 
 const gifViewer=document.createElement('div');
@@ -126,7 +128,7 @@ const LUCKY_POINTS=[
   'にぎった手','ちいさな指','ふわふわの髪','眠そうな目'
 ];
 const MIRACLE_MESSAGES=[
-  '大大吉の特別リプレイです。',
+  '特大吉の特別リプレイです。',
   'この一瞬をスローでもう一度。',
   '思いがけない一瞬まで、今日のおみくじの結果です。'
 ];
@@ -139,7 +141,10 @@ const REVERSAL_MESSAGES=[
 let currentLab=null;
 let history=[];
 let gifUrl=null;
-let gifFileName='memory-roulette-history.gif';
+let gifFileName='memory-roulette-frames.gif';
+let gifGeneration=0;
+let gifGenerating=false;
+let gifPreviewTimer=null;
 let dockTimer=null;
 let rareTimer=null;
 let miracleSequenceToken=0;
@@ -265,8 +270,8 @@ function specialFor(fortune){
 }
 window.__memoryResolveFortuneResult=baseFortune=>{
   const special=specialFor(baseFortune);
-  const displayFortune=special==='miracle'?'大大吉':baseFortune;
-  const message=special==='miracle'?FORTUNE_MESSAGES['大大吉']:null;
+  const displayFortune=special==='miracle'?'特大吉':baseFortune;
+  const message=special==='miracle'?FORTUNE_MESSAGES['特大吉']:null;
   window.__memoryPendingSpecialResult={special,baseFortune,displayFortune};
   return {fortune:displayFortune,special,baseFortune,message};
 };
@@ -288,7 +293,7 @@ function revealSpecialImmediately(special){
   return special==='miracle';
 }
 function specialFortuneDisplay(special,baseFortune){
-  if(special==='miracle')return {head:'きょうの運勢',fortune:'大大吉',badge:(FORTUNE_ICONS['大大吉']||'🎊')+' 大大吉',message:FORTUNE_MESSAGES['大大吉']};
+  if(special==='miracle')return {head:'きょうの運勢',fortune:'特大吉',badge:(FORTUNE_ICONS['特大吉']||'🎊')+' 特大吉',message:FORTUNE_MESSAGES['特大吉']};
   if(special==='reversal')return {head:'大凶かと思ったら…',fortune:'大逆転大吉',badge:'🌈 大逆転大吉',message:'大凶から一転。今日は大逆転大吉！'};
   return {head:'きょうの運勢',fortune:baseFortune,badge:(FORTUNE_ICONS[baseFortune]||'🎴')+' '+baseFortune};
 }
@@ -369,13 +374,13 @@ function specialSequenceSpec(kind,replay=null){
     introDuration:t.intro,
     intro:kind==='reversal'
       ? {kicker:'大凶……',title:'……あれ？',sub:'まだ終わっていません'}
-      : {kicker:'特別な一瞬を、もう一度',title:'大大吉',sub:'スローリプレイで振り返ります'},
+      : {kicker:'特別な一瞬を、もう一度',title:'特大吉',sub:'スローリプレイで振り返ります'},
     replay:kind==='reversal'
       ? {kicker:'大逆転の一瞬へ',title:'',sub:'0.42× SLOW REPLAY'}
-      : {kicker:'大大吉の一瞬へ',title:'',sub:'0.42× SLOW REPLAY'},
+      : {kicker:'特大吉の一瞬へ',title:'',sub:'0.42× SLOW REPLAY'},
     final:kind==='reversal'
       ? {duration:t.final,kicker:'大凶かと思ったら…',title:'大逆転大吉！',sub:'🌈 SPECIAL FORTUNE 🌈'}
-      : {duration:t.final,kicker:'特別な一瞬を引きました',title:'大大吉！',sub:'✨ SPECIAL FORTUNE ✨'}
+      : {duration:t.final,kicker:'特別な一瞬を引きました',title:'特大吉！',sub:'✨ SPECIAL FORTUNE ✨'}
   };
 }
 function specialMovieMimeType(){
@@ -1315,10 +1320,10 @@ function showFinalMiraclePhoto(kind,frameSrc){
     if(navigator.vibrate)navigator.vibrate([120,40,120,40,220,60,320]);
   }else{
     const baseFortune=currentMiracleReplay?.fortune||currentLab?.fortune||'吉';
-    // The special moment is itself the rare fortune: 大大吉.
+    // The special moment is itself the rare fortune: 特大吉.
     applySpecialFortuneDisplay('miracle',baseFortune);
     miracleKicker.textContent='特別な一瞬を引きました';
-    miracleTitle.textContent='大大吉！';
+    miracleTitle.textContent='特大吉！';
     miracleSub.textContent='✨ SPECIAL FORTUNE ✨';
     playSpecialSound('miracle');
     if(navigator.vibrate)navigator.vibrate([90,45,120,55,180,60,260]);
@@ -1351,7 +1356,7 @@ async function playMiracleSequence(kind,replayAgain=false){
 
   miracleOverlay.className='show '+(kind==='reversal'?'reversal-wait-mode':'miracle-intro-mode');
   miracleKicker.textContent=replayAgain?'もう一度、その瞬間へ':spec.intro.kicker;
-  miracleTitle.textContent=replayAgain?(kind==='reversal'?'大逆転の瞬間':'大大吉の一瞬'):spec.intro.title;
+  miracleTitle.textContent=replayAgain?(kind==='reversal'?'大逆転の瞬間':'特大吉の一瞬'):spec.intro.title;
   miracleSub.textContent=replayAgain?'まもなくスローリプレイ':spec.intro.sub;
   if(kind==='reversal'&&!replayAgain&&navigator.vibrate)navigator.vibrate([70,80,70]);
   await sleep(replayAgain?280:Math.round(spec.introDuration*1000));
@@ -1482,43 +1487,46 @@ const closeMiracle=()=>{
 };
 miracleBack.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();closeMiracle();});
 
-function historySourceGroups(){
+// A GIF is a time-ordered animation of all extracted roulette frames, not drawn results.
+function gifFrameGroups(){
   const map=new Map();
-  history.forEach((x,i)=>{
-    const key=x.deckMode?(x.sourceVideoId||('deck-'+(x.sourceName||'unknown'))):'single-source';
-    if(!map.has(key))map.set(key,{key,label:x.deckMode?(x.sourceName||'元動画'):'元動画',items:[]});
-    map.get(key).items.push({...x,historyIndex:i});
+  const creation=activeCreation;
+  const frames=Array.isArray(creation?.frames)?creation.frames:[];
+  frames.forEach((image,index)=>{
+    if(typeof image!=='string'||!image)return;
+    const deck=!!creation?.deckMode;
+    const key=deck?String(creation?.deckSourceIds?.[index]||creation?.deckSourceNames?.[index]||'source-unknown'):'single-source';
+    const label=deck?(creation?.deckSourceNames?.[index]||'元動画'):(creation?.title||'今回の動画');
+    if(!map.has(key))map.set(key,{key,label,items:[]});
+    const time=Number(creation?.times?.[index]);
+    map.get(key).items.push({image,time:Number.isFinite(time)?time:index,index});
   });
-  return Array.from(map.values());
+  return Array.from(map.values()).map(g=>({...g,items:g.items.sort((a,b)=>a.time-b.time||a.index-b.index)}));
 }
 function syncGifSourceChooser(){
   if(!gifSourceWrap||!gifSource||!gifSourceNote)return;
-  const groups=historySourceGroups();
-  const deckHistory=history.some(x=>x.deckMode);
-  const previous=gifSource.value;
+  const groups=gifFrameGroups();
+  const old=gifSource.value;
   gifSource.innerHTML='';
   groups.forEach(g=>{
-    const o=document.createElement('option');
-    o.value=g.key;
-    o.textContent=g.label+'（'+g.items.length+'枚）';
-    o.disabled=g.items.length<2;
-    gifSource.appendChild(o);
+    const option=document.createElement('option');
+    option.value=g.key;
+    option.textContent=g.label+'（'+g.items.length+'コマ）';
+    option.disabled=g.items.length<2;
+    gifSource.appendChild(option);
   });
   const eligible=groups.filter(g=>g.items.length>=2);
-  const keep=eligible.find(g=>g.key===previous);
-  if(keep)gifSource.value=keep.key;
-  else if(eligible[0])gifSource.value=eligible[0].key;
-  gifSourceWrap.style.display=deckHistory&&groups.length>1?'block':'none';
-  makeGifBtn.disabled=!eligible.length;
-  if(!history.length){
-    gifSourceNote.textContent='';
-  }else if(!eligible.length){
-    gifSourceNote.textContent='同じ元動画から2枚以上引くとGIFを作れます。';
-  }else if(deckHistory&&groups.length>1){
-    gifSourceNote.textContent='複数動画のコマは混ぜず、選んだ元動画の中だけを時間順に並べます。';
-  }else{
-    gifSourceNote.textContent='';
+  const chosen=eligible.find(g=>g.key===old)||eligible[0];
+  if(chosen)gifSource.value=chosen.key;
+  gifSourceWrap.style.display=groups.length>1?'grid':'none';
+  makeGifBtn.disabled=gifGenerating||!eligible.length;
+  if(gifFrameInfo){
+    const count=groups.reduce((n,g)=>n+g.items.length,0);
+    gifFrameInfo.textContent=!count?'使えるコマがありません。先にルーレットを作成してください。'
+      :groups.length>1?'今回のルーレット：全'+count+'コマ（'+groups.length+'本の動画）。動画を選ぶと、その動画の全コマを使用します。'
+      :'今回のルーレット：'+count+'コマ。引いた回数に関係なく全コマで作ります。';
   }
+  gifSourceNote.textContent=groups.length>1?'複数の元動画のコマは混ぜません。選んだ動画の全コマを使用します。':'';
 }
 function renderHistory(){
   historyEl.innerHTML='';
@@ -1619,7 +1627,7 @@ function showHistoryEntry(x){
       resultTextEl.style.color=FORTUNE_COLORS[x.fortune]||'#700';
     }
     messageEl.textContent=x.special==='miracle'
-      ? FORTUNE_MESSAGES['大大吉']
+      ? FORTUNE_MESSAGES['特大吉']
       : x.special==='reversal'
         ? '大凶から一転。今日は大逆転大吉！'
         : (x.message||'このときの結果です。');
@@ -1634,7 +1642,7 @@ function showHistoryEntry(x){
       };
       replaySpecialBtn.style.display='block';
       movieResultBtn.style.display='block';
-      specialLine.textContent=x.special==='reversal'?'🌈 大逆転大吉・特別リプレイ':'✨ 大大吉・特別リプレイ';
+      specialLine.textContent=x.special==='reversal'?'🌈 大逆転大吉・特別リプレイ':'✨ 特大吉・特別リプレイ';
       specialLine.className=x.special==='reversal'?'reversal':'miracle';
       specialLine.style.display='block';
     }
@@ -1653,7 +1661,27 @@ function showHistoryEntry(x){
   window.__memoryNavigate?.('play');
   document.getElementById('playSection')?.scrollIntoView({behavior:'smooth',block:'start'});
 }
+function stopGifPreview(){
+  if(gifPreviewTimer!==null)clearInterval(gifPreviewTimer);
+  gifPreviewTimer=null;
+}
+// Preview frames directly so large GIF decoding cannot slow down the screen's playback.
+// The saved GIF still encodes the same frames and the same selected delay.
+function startGifPreview(frames,seconds){
+  stopGifPreview();
+  if(!frames.length)return;
+  let index=0;
+  gifPreview.src=frames[0].image;
+  gifPreviewTimer=setInterval(()=>{
+    if(document.hidden||gifResult.style.display==='none')return;
+    const gifSection=document.getElementById('labGifSection');
+    if(gifSection&&gifSection.getClientRects().length===0)return;
+    index=(index+1)%frames.length;
+    gifPreview.src=frames[index].image;
+  },Math.round(seconds*1000));
+}
 function clearGifResult(){
+  stopGifPreview();
   closeGifViewer();
   if(gifUrl){
     URL.revokeObjectURL(gifUrl);
@@ -1662,7 +1690,9 @@ function clearGifResult(){
   gifResult.style.display='none';
   gifPreview.removeAttribute('src');
   gifDownload.removeAttribute('href');
-  gifFileName='memory-roulette-history.gif';
+  gifFileName='memory-roulette-frames.gif';
+  gifGeneration++;
+  gifGenerating=false;
 }
 function showLabResult(){
   if(!activeCreation||running)return;
@@ -1776,6 +1806,7 @@ window.__memoryOnRoulettePrepared=x=>{
   clearLab();
   restoreDrawHistory(x);
   clearGifResult();
+  syncGifSourceChooser();
   primeMiracleReplaySource(x);
 };
 window.__memoryOnRouletteExit=()=>{
@@ -1821,8 +1852,7 @@ clearHistoryBtn.addEventListener('click',()=>{
   history=[];
   if(activeCreation?.id){activeCreation.drawHistory=[];activeCreation.updatedAt=Date.now();if(typeof dbPut==='function')dbPut(activeCreation).catch(e=>console.error('draw history clear failed',e));}
   renderHistory();
-  clearGifResult();
-  gifStatus.style.display='none';
+  // Draw history is independent from the GIF of all extracted frames.
 });
 
 gifDownload.addEventListener('click',e=>{
@@ -1844,43 +1874,52 @@ gifDownload.addEventListener('click',e=>{
 });
 
 makeGifBtn.addEventListener('click',async()=>{
-  if(history.length<2)return;
-  makeGifBtn.disabled=true;
+  if(gifGenerating)return;
+  const groups=gifFrameGroups();
+  const eligible=groups.filter(g=>g.items.length>=2);
+  const group=eligible.find(g=>g.key===gifSource?.value)||eligible[0]||null;
+  if(!group){
+    gifStatus.style.display='block';
+    gifStatus.textContent='GIFには同じ元動画のコマが2枚以上必要です。';
+    return;
+  }
+  const frames=group.items;
+  const seconds=Number(gifSpeed?.value)===1?1:0.5;
   clearGifResult();
+  const generation=gifGeneration;
+  gifGenerating=true;
+  syncGifSourceChooser();
   gifStatus.style.display='block';
-  gifStatus.textContent='GIFを作っています… 0/'+history.length;
-
+  gifStatus.textContent='「'+group.label+'」の全'+frames.length+'コマからGIFを作っています… 0/'+frames.length;
   try{
-    const groups=historySourceGroups();
-    const eligible=groups.filter(g=>g.items.length>=2);
-    let group=null;
-    if(history.some(x=>x.deckMode)){
-      group=eligible.find(g=>g.key===gifSource?.value)||eligible[0]||null;
-    }else{
-      group=eligible[0]||null;
-    }
-    if(!group)throw new Error('同じ元動画から2枚以上の履歴が必要です');
-    const sorted=group.items.slice().sort((a,b)=>a.time-b.time||a.drawnAt-b.drawnAt);
-    gifStatus.textContent='「'+group.label+'」を時間順に並べています… 0/'+sorted.length;
-    const blob=await makeGif(sorted,(done,total)=>{
-      gifStatus.textContent='「'+group.label+'」を時間順に並べています… '+done+'/'+total;
-    });
+    const blob=await makeGif(frames,(done,total)=>{
+      if(generation===gifGeneration)gifStatus.textContent='「'+group.label+'」のGIFを作っています… '+done+'/'+total;
+    },Math.round(seconds*100),()=>generation!==gifGeneration);
+    if(generation!==gifGeneration)return;
     gifUrl=URL.createObjectURL(blob);
-    gifPreview.src=gifUrl;
+    startGifPreview(frames,seconds);
     gifDownload.href=gifUrl;
-    const safe=(group.label||'video').replace(/[\\/:*?"<>|]/g,'_').slice(0,48);
+    const safe=(group.label||'video').replace(/[^a-zA-Z0-9ぁ-んァ-ヶ一-龠_-]/g,'_').slice(0,48);
     gifFileName='memory-roulette-'+safe+'.gif';
     gifDownload.download=gifFileName;
     gifResult.style.display='block';
-    gifStatus.textContent='「'+group.label+'」の'+sorted.length+'枚を、元動画の時間順に並べてGIFを作りました。';
+    gifStatus.textContent='「'+group.label+'」の全'+frames.length+'コマを時間順に並べました（'+seconds+'秒ごとに切り替え）。';
   }catch(err){
-    console.error(err);
-    gifStatus.textContent='GIFを作れませんでした: '+err.message;
+    if(generation===gifGeneration){
+      console.error(err);
+      gifStatus.textContent='GIFを作れませんでした: '+err.message;
+    }
   }finally{
+    if(generation===gifGeneration)gifGenerating=false;
     syncGifSourceChooser();
   }
 });
-gifSource?.addEventListener('change',()=>clearGifResult());
+gifSource?.addEventListener('change',()=>{clearGifResult();syncGifSourceChooser();});
+gifSpeed?.addEventListener('change',()=>{
+  clearGifResult();
+  gifStatus.style.display='none';
+  syncGifSourceChooser();
+});
 
 async function loadImage(src){
   return new Promise((resolve,reject)=>{
@@ -2023,7 +2062,7 @@ function appendSubBlocks(writer,data){
   }
   writer.push(0);
 }
-async function makeGif(entries,onProgress){
+async function makeGif(entries,onProgress,delay=50,isCancelled=()=>false){
   const first=await loadImage(entries[0].image);
   const maxW=360,maxH=480;
   const scale=Math.min(1,maxW/first.naturalWidth,maxH/first.naturalHeight);
@@ -2040,6 +2079,7 @@ async function makeGif(entries,onProgress){
   bytes.push(0x21,0xFF,0x0B,...Array.from('NETSCAPE2.0').map(c=>c.charCodeAt(0)),0x03,0x01,0x00,0x00,0x00);
 
   for(let fi=0;fi<entries.length;fi++){
+    if(isCancelled())throw new Error('GIF生成が中断されました');
     const img=fi===0?first:await loadImage(entries[fi].image);
     ctx.clearRect(0,0,w,h);
     ctx.fillStyle='#000';
@@ -2053,7 +2093,6 @@ async function makeGif(entries,onProgress){
     const d=ctx.getImageData(0,0,w,h).data;
     const palette=buildAdaptivePalette(d,256);
     const idx=mapToPalette(d,palette);
-    const delay=32;
 
     bytes.push(0x21,0xF9,0x04,0x00,...u16(delay),0x00,0x00);
     bytes.push(0x2C,0,0,0,0,...u16(w),...u16(h),0x87);

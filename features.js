@@ -1232,18 +1232,17 @@ async function replayReverseFramesFallback(targetTime,token){
 }
 async function executeReplayPlan(targetTime,token,frameSrc){
   const deckCandidateId=activeCreation?.deckCandidateIds?.[currentIndex];
-  const storedDeckReplay=!!(
+  const canTryStoredDeckReplay=!!(
     activeCreation?.deckMode&&
     deckCandidateId&&
-    Number(activeCreation?.deckReplaySpans?.[currentIndex])>0&&
     typeof window.__memoryDeckLoadReplay==='function'
   );
-  const pendingDeckReplay=!!(activeCreation?.deckMode&&deckCandidateId&&!storedDeckReplay);
-  const plan=storedDeckReplay
+  // The replay store itself is the source of truth. Try it whenever a deck
+  // candidate exists; if the optional frames are not there yet, fall back
+  // naturally to the special-photo treatment with no user-facing error state.
+  const plan=canTryStoredDeckReplay
     ? {route:'stored-deck-frames',early:(activeCreation?.deckReplayModes?.[currentIndex]==='reverse'),targetTime:Math.max(0,Number(targetTime)||0)}
-    : pendingDeckReplay
-      ? {route:'photo-only',early:false,targetTime:Math.max(0,Number(targetTime)||0),pending:true}
-      : replayPlan(targetTime,replaySourceAvailable());
+    : replayPlan(targetTime,replaySourceAvailable());
   lastReplayPlan=plan;
   diag('plan',{...plan,sourceState:safeReplayState()});
 
@@ -1274,7 +1273,7 @@ async function executeReplayPlan(targetTime,token,frameSrc){
     miracleStill.src=frameSrc;
     miracleBackdropImage.src=frameSrc;
     miracleReplayLabel.textContent='SPECIAL PHOTO';
-    miracleSub.textContent=plan.pending?'仕上げ処理中のため、この一枚をゆっくり表示します':'この一枚をゆっくり表示します';
+    miracleSub.textContent='この一枚をゆっくり表示します';
     try{
       miracleStill.getAnimations?.().forEach(x=>x.cancel());
       miracleStill.animate?.(

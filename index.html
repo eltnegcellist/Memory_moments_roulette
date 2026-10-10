@@ -21,9 +21,9 @@
 <link rel="apple-touch-icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2">
 <link rel="icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2" type="image/png">
 <title>思い出ルーレットおみくじ</title>
-<link rel="stylesheet" href="./style.css?v=1.1.0-h14-published-gif-picker">
-<link rel="stylesheet" href="./deluxe.css?v=1.1.0-h14-published-gif-picker">
-<link rel="stylesheet" href="./features.css?v=1.1.0-h14-published-gif-picker">
+<link rel="stylesheet" href="./style.css?v=1.1.0-h15-gif-fast">
+<link rel="stylesheet" href="./deluxe.css?v=1.1.0-h15-gif-fast">
+<link rel="stylesheet" href="./features.css?v=1.1.0-h15-gif-fast">
 <style>
 body:not(.show-score-details) .scoreChip,
 body:not(.show-score-details) .scoreDetails,
@@ -39,7 +39,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <header class="hero" data-app-view="home">
   <div class="heroMark" aria-hidden="true"><img src="./icons/memory-roulette-omikuji.png?v=memorybrand2" alt=""></div>
   <div class="heroText">
-    <div class="heroTopline"><span class="eyebrow">MEMORY MOMENTS</span><span class="versionBadge" id="labSettingsTrigger" data-lab-trigger title="5回タップでラボ設定">v1.1.0-h14</span></div>
+    <div class="heroTopline"><span class="eyebrow">MEMORY MOMENTS</span><span class="versionBadge" id="labSettingsTrigger" data-lab-trigger title="5回タップでラボ設定">v1.1.0-h15</span></div>
     <h1><span class="titlePart">思い出ルーレット</span><span class="titlePart">おみくじ</span></h1>
     <p class="heroCatch">動画に隠れた、いろいろな一瞬を。</p>
     <p class="lead">写真には残さなかった一瞬まで、動画には残っています。自分では選ばなかった一枚に偶然出会い、おみくじと一緒に楽しむアプリです。</p>
@@ -82,7 +82,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <p class="note viewIntro">今回選んだ動画だけでルーレットを作ります。過去の動画は混ざりません。</p>
   <div class="filebox newVideoPicker">
     <input id="fileInput" type="file" accept="video/*" multiple hidden>
-    <button id="createPickBtn" class="primary newVideoPickButton" type="button">動画を選ぶ・選び直す</button>
+    <button id="createPickBtn" class="primary newVideoPickButton" type="button">動画を選び直す</button>
     <div class="note">1本でも複数本でも選べます。処理はブラウザ内だけで行い、元動画は外部へ送信しません。</div>
   </div>
   <div id="progressWrap"><div class="progress"><div id="progressBar"></div></div><div id="progressText">準備中...</div></div>
@@ -170,8 +170,11 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <div class="labGifSpeed">
     <label for="labGifSpeed">GIFの切り替え間隔（プレビュー・保存共通）</label>
     <select id="labGifSpeed">
-      <option value="0.5" selected>0.5秒ごと（おすすめ）</option>
-      <option value="1">1秒ごと</option>
+      <option value="0.05">0.05秒ごと（速い・20fps）</option>
+      <option value="0.1" selected>0.1秒ごと（おすすめ・10fps）</option>
+      <option value="0.2">0.2秒ごと（普通・5fps）</option>
+      <option value="0.5">0.5秒ごと（ゆっくり・2fps）</option>
+      <option value="1">1秒ごと（とてもゆっくり・1fps）</option>
     </select>
   </div>
   <div class="labGifActions">
@@ -225,7 +228,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 
   <button id="settingsVersionTrigger" class="settingsVersionTrigger" data-lab-trigger type="button" title="5回タップでLAB設定を表示">
     <span>アプリバージョン</span>
-    <strong>v1.1.0-h14</strong>
+    <strong>v1.1.0-h15</strong>
   </button>
   <div id="labSettingsHint" class="labSettingsHint settingsLabHint">LAB設定：上のバージョン表示を5回タップで表示</div>
 
@@ -368,7 +371,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
         <div class="howtoFeature"><b>🎯 通常ルーレット</b><span>運勢を付けず、純粋に「どの瞬間で止まるか」だけを楽しみたいときに使えます。</span></div>
         <div class="howtoFeature featureSave"><b>🖼 今日の一枚</b><span>気に入った停止写真をアプリ内に残せます。あとから「開く」で大きく見返せます。</span></div>
         <div class="howtoFeature featureSave"><b>↓ 画像をダウンロード</b><span>「今日の一枚」に残した写真は、コレクションから端末へ画像ファイルとして保存できます。</span></div>
-        <div class="howtoFeature"><b>🎞 全コマからGIF</b><span>ルーレットに使うすべてのコマを元動画の時間順にGIFへ。0.5秒・1秒ごとの切り替えを選べます。</span></div>
+        <div class="howtoFeature"><b>🎞 全コマからGIF</b><span>ルーレットに使うすべてのコマを元動画の時間順にGIFへ。0.05秒～1秒の速度を選べます。おすすめは一般的なGIFに近い0.1秒／コマです。</span></div>
         <div class="howtoFeature"><b>💾 デッキのバックアップ</b><span>育てたデッキはファイルに書き出して復元できます。機種変更やブラウザデータ消去への備えに使えます。</span></div>
       </div>
     </section>
@@ -380,12 +383,12 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <video id="video" playsinline muted preload="metadata" style="display:none"></video><canvas id="captureCanvas" style="display:none"></canvas><canvas id="smallCanvas" width="28" height="28" style="display:none"></canvas>
 </div>
 <div id="bigOverlay"><div id="bigText">大吉！</div></div>
-<script src="./navigation.js?v=1.1.0-h14-published-gif-picker" defer></script>
-<script src="./app.js?v=1.1.0-h14-published-gif-picker" defer></script>
-<script src="./deck.js?v=1.1.0-h14-published-gif-picker" defer></script>
-<script src="./deluxe.js?v=1.1.0-h14-published-gif-picker" defer></script>
-<script src="./features.js?v=1.1.0-h14-published-gif-picker" defer></script>
-<script src="./hidden-settings.js?v=1.1.0-h14-published-gif-picker" defer></script>
+<script src="./navigation.js?v=1.1.0-h15-gif-fast" defer></script>
+<script src="./app.js?v=1.1.0-h15-gif-fast" defer></script>
+<script src="./deck.js?v=1.1.0-h15-gif-fast" defer></script>
+<script src="./deluxe.js?v=1.1.0-h15-gif-fast" defer></script>
+<script src="./features.js?v=1.1.0-h15-gif-fast" defer></script>
+<script src="./hidden-settings.js?v=1.1.0-h15-gif-fast" defer></script>
 <script>
 (()=>{
   const scoreBox=document.getElementById('showScores');

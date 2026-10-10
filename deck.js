@@ -36,6 +36,20 @@ const homeSavedVideoCount=document.getElementById('homeSavedVideoCount');
 if(!deckCard||!deckDrawBtn||!deckPicker)return;
 
 let processing=false;
+let latestVideoSelectionId=0;
+let queuedVideoSelection=null;
+function checkVideoSelection(options){
+  if(options?.shouldCancel?.()){
+    const error=new Error('別の動画を選んだため抽出を中断しました');
+    error.name='VideoSelectionReplaced';
+    throw error;
+  }
+}
+function reportVideoSelectionError(error){
+  console.error('video selection failed',error);
+  progressWrap.style.display='block';
+  progressText.textContent='動画の選択を処理できませんでした: '+(error?.message||error);
+}
 let libraryManageMode=false;
 const selectedSourceIds=new Set();
 const thumbnailJobs=new Map();
@@ -835,25 +849,28 @@ async function resumeInterruptedAnalyses(){
           continue;
         }
         processing=true;
-        fileInput.disabled=true;
         try{
           const patch={analysisResuming:true,resumeNeedsFile:false};
           await updateSourceRecord(src.id,patch);
           patchSourceProgressState(src.id,patch);
           deckNotice.textContent='前回中断した動画のシーン分析を自動再開しています…';
           deckNotice.className='note deckNotice';
-          const r=await extractOne(file,1,1,{skipResumeCopy:true,resumeSourceId:src.id});
+          const r=await extractOne(file,1,1,{skipResumeCopy:true,resumeSourceId:src.id,shouldCancel:()=>!!queuedVideoSelection});
           if(r?.backgroundJob)enqueueBackgroundJobs([r.backgroundJob]);
           deckNotice.textContent='前回中断した動画の分析を再開しました。仕上げ処理を続けています。';
           deckNotice.className='note deckNotice ok';
         }catch(err){
-          console.warn('analysis resume failed',err);
-          const retries=(Number(src.analysisRetryCount)||0)+1;
-          await updateSourceRecord(src.id,{analysisResuming:false,analysisRetryCount:retries,analysisLastError:String(err?.message||err)});
+          if(err?.name==='VideoSelectionReplaced'){
+            await updateSourceRecord(src.id,{analysisResuming:false});
+          }else{
+            console.warn('analysis resume failed',err);
+            const retries=(Number(src.analysisRetryCount)||0)+1;
+            await updateSourceRecord(src.id,{analysisResuming:false,analysisRetryCount:retries,analysisLastError:String(err?.message||err)});
+          }
         }finally{
           processing=false;
-          fileInput.disabled=false;
           analysisResumeSourceIds.delete(src.id);
+          if(queuedVideoSelection)void runQueuedVideoSelection().catch(reportVideoSelectionError);
           renderDeck().catch(()=>{});
         }
       }
@@ -1078,8 +1095,10 @@ window.__memoryDeckLoadReplay=async candidateId=>{
 };
 async function extractOne(file,overallIndex,total,options={}){
   await waitUntilVisible();
+  checkVideoSelection(options);
   progressText.textContent='動画 '+overallIndex+' / '+total+' を読み込んでいます…';
   await loadVideo(file);
+  checkVideoSelection(options);
   setupCanvas();
   const duration=video.duration;
   const resumeById=options.resumeSourceId
@@ -1103,7 +1122,9 @@ async function extractOne(file,overallIndex,total,options={}){
     }
   }
   const before=await stats();
+  checkVideoSelection(options);
   const sourceId=resumeAnalysisSource?.id||('s'+Date.now().toString(36)+hashString(fingerprint+Math.random()));
+  try{
   const provisional={
     id:sourceId,fingerprint,
     fileName:resumeAnalysisSource?.fileName||file.name,
@@ -1123,11 +1144,14 @@ async function extractOne(file,overallIndex,total,options={}){
   const start=Math.min(.12,duration*.02),end=Math.max(start,duration-.06);
   const candidates=[];
   for(let i=0;i<sampleCount;i++){
+    checkVideoSelection(options);
     await waitUntilVisible();
+    checkVideoSelection(options);
     const t=start+(end-start)*(sampleCount===1?0:i/(sampleCount-1));
     progressText.textContent='動画 '+overallIndex+' / '+total+' ・ 一瞬を探しています '+(i+1)+' / '+sampleCount;
     progressBar.style.width=(5+80*((overallIndex-1)+(i+1)/sampleCount)/total)+'%';
     const c=await captureCandidate(t);
+    checkVideoSelection(options);
     if(isUsableCandidate(c))candidates.push(c);
   }
   const deduped=[];
@@ -1136,6 +1160,7 @@ async function extractOne(file,overallIndex,total,options={}){
     if(prev&&dist(c.desc,prev.desc)<3.2)continue;
     deduped.push(c);
   }
+  checkVideoSelection(options);
   const picked=selectDiverseMoments(deduped.length?deduped:candidates,target);
   if(!picked.length)throw new Error('保存できる一瞬を見つけられませんでした');
   const details=computeAppealDetails(picked);
@@ -1182,7 +1207,9 @@ async function extractOne(file,overallIndex,total,options={}){
   source.replayPending=frames.length;
   source.replayReadyCount=0;
   source.replaySpec={edge:REPLAY_EDGE,frames:REPLAY_FRAME_COUNT,quality:REPLAY_QUALITY,seconds:REPLAY_SECONDS};
+  checkVideoSelection(options);
   await saveSourceAndFrames(source,frames,[]);
+  checkVideoSelection(options);
   patchSourceProgressState(sourceId,source);
   return {
     duplicate:false,name:file.name,count:frames.length,sourceId,
@@ -1191,15 +1218,29 @@ async function extractOne(file,overallIndex,total,options={}){
       targets:frames.map(x=>({id:x.id,time:x.timestamp,imageSize:x.imageSize,needImage:true,needReplay:true}))
     }
   };
+  }catch(error){
+    if(error?.name==='VideoSelectionReplaced'){
+      if(resumeAnalysisSource){
+        await updateSourceRecord(sourceId,{analysisResuming:false}).catch(console.warn);
+      }else{
+        await deleteSource(sourceId).catch(err=>console.warn('cancelled source cleanup failed',err));
+      }
+    }
+    throw error;
+  }
 }
 async function requestPersistence(){
   if(!navigator.storage?.persist)return false;
   try{return await navigator.storage.persist();}catch(e){return false;}
 }
-window.__memoryDeckHandleFiles=async files=>{
-  if(processing||analysisResumeSourceIds.size||!files?.length)return;
+// Choose a replacement video even while an older selection is being analysed.
+async function runQueuedVideoSelection(){
+  if(processing||!queuedVideoSelection)return;
+  const request=queuedVideoSelection;
+  queuedVideoSelection=null;
+  const {files,id}=request;
+  const replaced=()=>id!==latestVideoSelectionId;
   processing=true;
-  fileInput.disabled=true;
   deckDrawBtn.disabled=true;
   progressWrap.style.display='block';
   previewSection.classList.remove('has-content');
@@ -1208,31 +1249,40 @@ window.__memoryDeckHandleFiles=async files=>{
   let added=0,duplicates=0,failed=0;
   const errors=[];
   const batchSourceIds=[];
+  const createdSourceIds=[];
   const backgroundJobs=[];
   try{
     for(let i=0;i<files.length;i++){
+      if(replaced())break;
       try{
-        const r=await extractOne(files[i],i+1,files.length);
-        if(r.sourceId)batchSourceIds.push(r.sourceId);
-        if(r.backgroundJob)backgroundJobs.push(r.backgroundJob);
-        if(r.duplicate)duplicates++;else added+=r.count;
-      }catch(e){
+        const result=await extractOne(files[i],i+1,files.length,{shouldCancel:replaced});
+        if(replaced())break;
+        if(result.sourceId)batchSourceIds.push(result.sourceId);
+        if(result.backgroundJob)backgroundJobs.push(result.backgroundJob);
+        if(result.duplicate)duplicates++;
+        else{
+          added+=result.count;
+          if(result.sourceId)createdSourceIds.push(result.sourceId);
+        }
+      }catch(error){
+        if(error?.name==='VideoSelectionReplaced')break;
         failed++;
-        errors.push(files[i].name+': '+(e?.message||e));
+        errors.push(files[i].name+': '+(error?.message||error));
       }
     }
+    if(replaced())return;
     requestPersistence().catch(()=>{});
     if(batchSourceIds.length){
       selectedSourceIds.clear();
-      batchSourceIds.forEach(id=>selectedSourceIds.add(id));
+      batchSourceIds.forEach(sourceId=>selectedSourceIds.add(sourceId));
       selectionLoaded=true;
       await saveSelectedSources();
     }
+    if(replaced())return;
     progressBar.style.width='100%';
     let msg=added+'個の一瞬を準備しました。ルーレットはすぐに始められます。';
     if(duplicates)msg+=' '+duplicates+'本は追加済みのためスキップしました。';
     if(failed)msg+=' '+failed+'本は処理できませんでした。';
-    // Optional quality/replay enhancement work continues silently in the background.
     progressText.textContent=msg;
     const standalone=window.matchMedia?.('(display-mode: standalone)')?.matches||navigator.standalone===true;
     let notice=errors.length?errors.join(' / '):msg;
@@ -1248,6 +1298,7 @@ window.__memoryDeckHandleFiles=async files=>{
     deckNotice.className='note deckNotice '+(failed?'warn':'ok');
     if(batchSourceIds.length){
       const creation=await buildDeckCreation(batchSourceIds);
+      if(replaced())return;
       if(creation){
         window.__memoryNavigate?.('play');
         currentCreation=null;
@@ -1257,13 +1308,33 @@ window.__memoryDeckHandleFiles=async files=>{
         }
       }
     }
+    if(replaced())return;
     enqueueBackgroundJobs(backgroundJobs);
     renderDeck().catch(()=>{});
   }finally{
+    // Never let a replaced batch appear in the selected deck.
+    if(replaced()){
+      for(const sourceId of createdSourceIds){
+        try{await deleteSource(sourceId);}catch(error){console.warn('replaced video cleanup failed',error);}
+      }
+    }
     processing=false;
-    fileInput.disabled=false;
-    fileInput.value='';
+    if(queuedVideoSelection){
+      progressText.textContent='選び直した動画の分析を始めます…';
+      void runQueuedVideoSelection().catch(reportVideoSelectionError);
+    }
     renderDeck().catch(()=>{});
+  }
+}
+window.__memoryDeckHandleFiles=files=>{
+  if(!files?.length)return;
+  const id=++latestVideoSelectionId;
+  queuedVideoSelection={id,files:Array.from(files)};
+  if(processing){
+    progressWrap.style.display='block';
+    progressText.textContent='別の動画を受け付けました。前の分析を中断して選び直しています…';
+  }else{
+    void runQueuedVideoSelection().catch(reportVideoSelectionError);
   }
 };
 

@@ -604,3 +604,23 @@ body.labPhotoViewerOpen{overflow:hidden}
 .labGifSourceWrap label{font-size:11px;font-weight:900;color:#5f493f}
 .labGifSourceWrap select{width:100%;padding:9px 10px;border:1px solid #ddcec6;border-radius:10px;background:#fff;color:#4f3b32}
 .labGifSourceWrap .note{margin:0}
+
+/* GIF creation is separate from drawn-photo history. */
+.labGifCard{border-color:#ead6c8}
+.labGifCard #labGifFrameInfo{margin:8px 0;font-weight:800}
+.labGifSpeed{display:grid;gap:6px;margin-top:12px;padding:11px 12px;border:1px solid #eadcd5;border-radius:14px;background:#fffaf7}
+.labGifSpeed label{font-size:11px;font-weight:900;color:#5f493f}
+.labGifSpeed select{width:100%;padding:9px 10px;border:1px solid #ddcec6;border-radius:10px;background:#fff;color:#4f3b32}
+.labGifCard .labGifActions .primary{width:100%;min-width:0}
+/* Special fortune badges must stay on one line even on small screens. */
+#stage #fortuneBadge{
+  white-space:nowrap!important;
+  max-width:calc(100% - 22px);
+  width:max-content;
+  font-size:clamp(16px,4.7vw,23px);
+  line-height:1.2;
+  overflow:hidden;
+}
+@media(max-width:520px){
+  #stage.photo-focus #fortuneBadge{font-size:clamp(14px,4vw,17px)}
+}

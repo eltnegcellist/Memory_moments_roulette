@@ -21,9 +21,9 @@
 <link rel="apple-touch-icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2">
 <link rel="icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2" type="image/png">
 <title>思い出ルーレットおみくじ</title>
-<link rel="stylesheet" href="./style.css?v=1.1.0-test3-h13">
-<link rel="stylesheet" href="./deluxe.css?v=1.1.0-test3-h13">
-<link rel="stylesheet" href="./features.css?v=1.1.0-test3-h13">
+<link rel="stylesheet" href="./style.css?v=1.1.0-h14-published-gif-picker">
+<link rel="stylesheet" href="./deluxe.css?v=1.1.0-h14-published-gif-picker">
+<link rel="stylesheet" href="./features.css?v=1.1.0-h14-published-gif-picker">
 <style>
 body:not(.show-score-details) .scoreChip,
 body:not(.show-score-details) .scoreDetails,
@@ -39,7 +39,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <header class="hero" data-app-view="home">
   <div class="heroMark" aria-hidden="true"><img src="./icons/memory-roulette-omikuji.png?v=memorybrand2" alt=""></div>
   <div class="heroText">
-    <div class="heroTopline"><span class="eyebrow">MEMORY MOMENTS</span><span class="versionBadge" id="labSettingsTrigger" data-lab-trigger title="5回タップでラボ設定">v1.1.0-h13</span></div>
+    <div class="heroTopline"><span class="eyebrow">MEMORY MOMENTS</span><span class="versionBadge" id="labSettingsTrigger" data-lab-trigger title="5回タップでラボ設定">v1.1.0-h14</span></div>
     <h1><span class="titlePart">思い出ルーレット</span><span class="titlePart">おみくじ</span></h1>
     <p class="heroCatch">動画に隠れた、いろいろな一瞬を。</p>
     <p class="lead">写真には残さなかった一瞬まで、動画には残っています。自分では選ばなかった一枚に偶然出会い、おみくじと一緒に楽しむアプリです。</p>
@@ -148,24 +148,39 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <div id="tapHint">画像をタップすると止まります</div>
 </section>
 <section id="labHistorySection" class="card labHistoryCard appView" data-app-view="play">
-  <div class="step">HISTORY / GIF</div>
+  <div class="step">HISTORY</div>
   <h2>今回引いた写真</h2>
-  <p class="note">止まった写真を自動でためます。GIFは同じ元動画から引いた一瞬だけを使い、動画内の時間順に並べます。複数動画のコマは混ぜません。</p>
+  <p class="note">ルーレットで止まった写真と、おみくじの結果を見返せます。</p>
   <div id="labHistoryEmpty" class="note">まだ履歴はありません。</div>
   <div id="labHistory"></div>
+  <div class="labGifActions">
+    <button id="labClearHistory" class="secondary" type="button" disabled>履歴をクリア</button>
+  </div>
+</section>
+<section id="labGifSection" class="card labGifCard appView" data-app-view="play">
+  <div class="step">GIF</div>
+  <h2>ルーレットのコマからGIFを作る</h2>
+  <p class="note">今回のルーレットに使われているすべてのコマを、元動画の時間順に並べてGIFにします。引いた回数とは関係なく作れます。複数の元動画は混ぜません。</p>
+  <p id="labGifFrameInfo" class="note" aria-live="polite">ルーレットのコマを読み込んでいます。</p>
   <div id="labGifSourceWrap" class="labGifSourceWrap" style="display:none">
     <label for="labGifSource">GIFにする元動画</label>
     <select id="labGifSource"></select>
     <p id="labGifSourceNote" class="note"></p>
   </div>
-  <div class="labGifActions">
-    <button id="labMakeGif" class="primary" type="button" disabled>履歴からGIFを作る</button>
-    <button id="labClearHistory" class="secondary" type="button" disabled>履歴をクリア</button>
+  <div class="labGifSpeed">
+    <label for="labGifSpeed">GIFの切り替え間隔（プレビュー・保存共通）</label>
+    <select id="labGifSpeed">
+      <option value="0.5" selected>0.5秒ごと（おすすめ）</option>
+      <option value="1">1秒ごと</option>
+    </select>
   </div>
-  <div id="labGifStatus" class="note" style="display:none"></div>
+  <div class="labGifActions">
+    <button id="labMakeGif" class="primary" type="button" disabled>すべてのコマからGIFを作る</button>
+  </div>
+  <div id="labGifStatus" class="note" aria-live="polite" style="display:none"></div>
   <div id="labGifResult" style="display:none">
-    <img id="labGifPreview" alt="履歴から作ったGIF">
-    <a id="labGifDownload" class="labDownload" download="memory-roulette-history.gif">GIFを保存して見る</a>
+    <img id="labGifPreview" alt="GIFに使う全コマの切り替えプレビュー">
+    <a id="labGifDownload" class="labDownload" download="memory-roulette-frames.gif">GIFを保存して見る</a>
   </div>
 </section>
 <section id="labCollectionSection" class="card labCollectionCard appView" data-app-view="favorites">
@@ -210,7 +225,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 
   <button id="settingsVersionTrigger" class="settingsVersionTrigger" data-lab-trigger type="button" title="5回タップでLAB設定を表示">
     <span>アプリバージョン</span>
-    <strong>v1.1.0-h13</strong>
+    <strong>v1.1.0-h14</strong>
   </button>
   <div id="labSettingsHint" class="labSettingsHint settingsLabHint">LAB設定：上のバージョン表示を5回タップで表示</div>
 
@@ -235,7 +250,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
           <select id="labSpecialMode">
             <option value="normal" selected>通常（確率どおり）</option>
             <option value="slow">毎回スローモーション</option>
-            <option value="miracle">大大吉を毎回表示</option>
+            <option value="miracle">特大吉を毎回表示</option>
             <option value="reversal">大逆転大吉を毎回表示</option>
           </select>
         </label>
@@ -332,16 +347,16 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
     </div>
 
     <section class="howtoSecret">
-      <div class="secretBadge">✨ 特別運勢「大大吉」</div>
+      <div class="secretBadge">✨ 特別運勢「特大吉」</div>
       <h3>ときどき、特別な運勢とリプレイが登場</h3>
       <div class="secretVisual" aria-hidden="true">
         <div class="secretFortune">おみくじ</div>
         <div class="secretArrow">→</div>
         <div class="secretReplay"><span>▶</span><b>SLOW REPLAY</b></div>
         <div class="secretArrow">→</div>
-        <div class="secretFortune special">大大吉</div>
+        <div class="secretFortune special">特大吉</div>
       </div>
-      <p>おみくじでは、<b>大凶以外で低い確率で「大大吉」</b>が出て、特別リプレイが始まることがあります。大大吉は写真の良し悪しを評価するものではなく、その場でしか引けなかった一瞬との出会いそのものを特別な運勢として扱います。</p>
+      <p>おみくじでは、<b>大凶以外で低い確率で「特大吉」</b>が出て、特別リプレイが始まることがあります。特大吉は写真の良し悪しを評価するものではなく、その場でしか引けなかった一瞬との出会いそのものを特別な運勢として扱います。</p>
       <p><b>大凶では、一定確率で「大逆転大吉」</b>が発生します。どちらも写真とは別の賞ではなく、その回のおみくじ結果です。</p>
     </section>
 
@@ -353,7 +368,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
         <div class="howtoFeature"><b>🎯 通常ルーレット</b><span>運勢を付けず、純粋に「どの瞬間で止まるか」だけを楽しみたいときに使えます。</span></div>
         <div class="howtoFeature featureSave"><b>🖼 今日の一枚</b><span>気に入った停止写真をアプリ内に残せます。あとから「開く」で大きく見返せます。</span></div>
         <div class="howtoFeature featureSave"><b>↓ 画像をダウンロード</b><span>「今日の一枚」に残した写真は、コレクションから端末へ画像ファイルとして保存できます。</span></div>
-        <div class="howtoFeature"><b>🎞 履歴からGIF</b><span>同じ元動画から引いた一瞬だけを、元動画の時間順に並べてGIFにできます。複数動画のコマは混ぜません。</span></div>
+        <div class="howtoFeature"><b>🎞 全コマからGIF</b><span>ルーレットに使うすべてのコマを元動画の時間順にGIFへ。0.5秒・1秒ごとの切り替えを選べます。</span></div>
         <div class="howtoFeature"><b>💾 デッキのバックアップ</b><span>育てたデッキはファイルに書き出して復元できます。機種変更やブラウザデータ消去への備えに使えます。</span></div>
       </div>
     </section>
@@ -365,12 +380,12 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <video id="video" playsinline muted preload="metadata" style="display:none"></video><canvas id="captureCanvas" style="display:none"></canvas><canvas id="smallCanvas" width="28" height="28" style="display:none"></canvas>
 </div>
 <div id="bigOverlay"><div id="bigText">大吉！</div></div>
-<script src="./navigation.js?v=1.1.0-test3-h13" defer></script>
-<script src="./app.js?v=1.1.0-test3-h13" defer></script>
-<script src="./deck.js?v=1.1.0-test3-h13" defer></script>
-<script src="./deluxe.js?v=1.1.0-test3-h13" defer></script>
-<script src="./features.js?v=1.1.0-test3-h13" defer></script>
-<script src="./hidden-settings.js?v=1.1.0-test3-h13" defer></script>
+<script src="./navigation.js?v=1.1.0-h14-published-gif-picker" defer></script>
+<script src="./app.js?v=1.1.0-h14-published-gif-picker" defer></script>
+<script src="./deck.js?v=1.1.0-h14-published-gif-picker" defer></script>
+<script src="./deluxe.js?v=1.1.0-h14-published-gif-picker" defer></script>
+<script src="./features.js?v=1.1.0-h14-published-gif-picker" defer></script>
+<script src="./hidden-settings.js?v=1.1.0-h14-published-gif-picker" defer></script>
 <script>
 (()=>{
   const scoreBox=document.getElementById('showScores');

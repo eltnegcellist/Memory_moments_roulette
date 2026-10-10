@@ -866,6 +866,7 @@ async function resumeInterruptedAnalyses(){
         }finally{
           processing=false;
           analysisResumeSourceIds.delete(src.id);
+          if(queuedVideoSelection)void runQueuedVideoSelection().catch(reportVideoSelectionError);
           renderDeck().catch(()=>{});
         }
       }
@@ -1228,8 +1229,13 @@ async function requestPersistence(){
   if(!navigator.storage?.persist)return false;
   try{return await navigator.storage.persist();}catch(e){return false;}
 }
-window.__memoryDeckHandleFiles=async files=>{
-  if(processing||analysisResumeSourceIds.size||!files?.length)return;
+// Choose a replacement video even while an older selection is being analysed.
+async function runQueuedVideoSelection(){
+  if(processing||!queuedVideoSelection)return;
+  const request=queuedVideoSelection;
+  queuedVideoSelection=null;
+  const {files,id}=request;
+  const replaced=()=>id!==latestVideoSelectionId;
   processing=true;
   deckDrawBtn.disabled=true;
   progressWrap.style.display='block';
@@ -1239,31 +1245,40 @@ window.__memoryDeckHandleFiles=async files=>{
   let added=0,duplicates=0,failed=0;
   const errors=[];
   const batchSourceIds=[];
+  const createdSourceIds=[];
   const backgroundJobs=[];
   try{
     for(let i=0;i<files.length;i++){
+      if(replaced())break;
       try{
-        const r=await extractOne(files[i],i+1,files.length);
-        if(r.sourceId)batchSourceIds.push(r.sourceId);
-        if(r.backgroundJob)backgroundJobs.push(r.backgroundJob);
-        if(r.duplicate)duplicates++;else added+=r.count;
-      }catch(e){
+        const result=await extractOne(files[i],i+1,files.length,{shouldCancel:replaced});
+        if(replaced())break;
+        if(result.sourceId)batchSourceIds.push(result.sourceId);
+        if(result.backgroundJob)backgroundJobs.push(result.backgroundJob);
+        if(result.duplicate)duplicates++;
+        else{
+          added+=result.count;
+          if(result.sourceId)createdSourceIds.push(result.sourceId);
+        }
+      }catch(error){
+        if(error?.name==='VideoSelectionReplaced')break;
         failed++;
-        errors.push(files[i].name+': '+(e?.message||e));
+        errors.push(files[i].name+': '+(error?.message||error));
       }
     }
+    if(replaced())return;
     requestPersistence().catch(()=>{});
     if(batchSourceIds.length){
       selectedSourceIds.clear();
-      batchSourceIds.forEach(id=>selectedSourceIds.add(id));
+      batchSourceIds.forEach(sourceId=>selectedSourceIds.add(sourceId));
       selectionLoaded=true;
       await saveSelectedSources();
     }
+    if(replaced())return;
     progressBar.style.width='100%';
     let msg=added+'個の一瞬を準備しました。ルーレットはすぐに始められます。';
     if(duplicates)msg+=' '+duplicates+'本は追加済みのためスキップしました。';
     if(failed)msg+=' '+failed+'本は処理できませんでした。';
-    // Optional quality/replay enhancement work continues silently in the background.
     progressText.textContent=msg;
     const standalone=window.matchMedia?.('(display-mode: standalone)')?.matches||navigator.standalone===true;
     let notice=errors.length?errors.join(' / '):msg;
@@ -1279,6 +1294,7 @@ window.__memoryDeckHandleFiles=async files=>{
     deckNotice.className='note deckNotice '+(failed?'warn':'ok');
     if(batchSourceIds.length){
       const creation=await buildDeckCreation(batchSourceIds);
+      if(replaced())return;
       if(creation){
         window.__memoryNavigate?.('play');
         currentCreation=null;
@@ -1288,12 +1304,33 @@ window.__memoryDeckHandleFiles=async files=>{
         }
       }
     }
+    if(replaced())return;
     enqueueBackgroundJobs(backgroundJobs);
     renderDeck().catch(()=>{});
   }finally{
+    // Never let a replaced batch appear in the selected deck.
+    if(replaced()){
+      for(const sourceId of createdSourceIds){
+        try{await deleteSource(sourceId);}catch(error){console.warn('replaced video cleanup failed',error);}
+      }
+    }
     processing=false;
-    fileInput.value='';
+    if(queuedVideoSelection){
+      progressText.textContent='選び直した動画の分析を始めます…';
+      void runQueuedVideoSelection().catch(reportVideoSelectionError);
+    }
     renderDeck().catch(()=>{});
+  }
+}
+window.__memoryDeckHandleFiles=files=>{
+  if(!files?.length)return;
+  const id=++latestVideoSelectionId;
+  queuedVideoSelection={id,files:Array.from(files)};
+  if(processing){
+    progressWrap.style.display='block';
+    progressText.textContent='別の動画を受け付けました。前の分析を中断して選び直しています…';
+  }else{
+    void runQueuedVideoSelection().catch(reportVideoSelectionError);
   }
 };
 

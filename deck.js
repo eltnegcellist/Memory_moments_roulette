@@ -404,49 +404,33 @@ async function storageText(localBytes){
 }
 
 function sourceProgressState(src){
-  const total=Math.max(0,Number(src?.candidateCount)||0);
   if(src?.analysisPending){
     return {
       pending:true,
       text:src.resumeNeedsFile
-        ? 'シーン分析未完了 ・ 同じ動画を選ぶと再開'
+        ? 'シーン分析未完了 ・ 同じ動画を選ぶと分析を再開'
         : (analysisResumeSourceIds.has(src.id)||src.analysisResuming?'シーン分析を自動再開中':'シーン分析の再開待ち'),
       percent:0
     };
   }
-  if(!total)return {pending:false,text:'',percent:100};
-  const imageReady=Math.max(0,Math.min(total,Number(src.imageReadyCount)||Math.max(0,total-(Number(src.imagePending)||0))));
-  const replayReady=Math.max(0,Math.min(total,Number(src.replayReadyCount)||Math.max(0,total-(Number(src.replayPending)||0))));
-  const pending=imageReady<total||replayReady<total;
-  if(!pending)return {pending:false,text:'',percent:100,imageReady,replayReady,total};
-  const suffix=src.resumeNeedsFile?' ・ 同じ動画を選ぶと再開':' ・ 仕上げ中';
-  return {
-    pending:true,
-    text:'リプレイ '+replayReady+'/'+total+suffix,
-    percent:Math.round(((imageReady+replayReady)/(total*2))*100),
-    imageReady,replayReady,total
-  };
+  // High-resolution stills and special replay frames are optional enhancements.
+  // They continue in the background when possible, but are not user-facing
+  // completion requirements and must not make an otherwise usable video look incomplete.
+  return {pending:false,text:'',percent:100};
 }
 function renderProcessingSummary(sources){
   if(!deckProcessingSummary)return;
-  const list=(sources||[]).filter(src=>sourceProgressState(src).pending);
+  const list=(sources||[]).filter(src=>src?.analysisPending);
   if(!list.length){
     deckProcessingSummary.hidden=true;
     deckProcessingSummary.textContent='';
     return;
   }
-  let total=0,imageReady=0,replayReady=0,analysis=0,needsFile=0;
-  for(const src of list){
-    const p=sourceProgressState(src);
-    if(src.analysisPending){analysis++;if(src.resumeNeedsFile)needsFile++;continue;}
-    total+=p.total||0;imageReady+=p.imageReady||0;replayReady+=p.replayReady||0;
-    if(src.resumeNeedsFile)needsFile++;
-  }
-  const parts=[];
-  if(analysis)parts.push('分析 '+analysis+'本');
-  if(total)parts.push('リプレイ '+replayReady+'/'+total);
-  if(needsFile)parts.push(needsFile+'本は元動画の再選択で再開');
-  else parts.push('バックグラウンドで仕上げ中');
+  const needsFile=list.filter(src=>src.resumeNeedsFile).length;
+  const resuming=list.length-needsFile;
+  const parts=['シーン分析 '+list.length+'本'];
+  if(resuming)parts.push('自動再開中 '+resuming+'本');
+  if(needsFile)parts.push('中断 '+needsFile+'本（同じ動画を選ぶと分析を再開）');
   deckProcessingSummary.textContent=parts.join(' ・ ');
   deckProcessingSummary.hidden=false;
 }
@@ -455,6 +439,11 @@ function patchSourceProgressState(sourceId,patch){
   if(src)Object.assign(src,patch);
   const state=sourceProgressState(src||patch);
   document.querySelectorAll('[data-source-id="'+sourceId+'"]').forEach(card=>{
+    const progress=card.querySelector('.deckVideoProgress');
+    if(!state.pending){
+      progress?.remove();
+      return;
+    }
     const text=card.querySelector('.deckVideoProgressText');
     const fill=card.querySelector('.deckVideoProgressFill');
     if(text)text.textContent=state.text;
@@ -1243,7 +1232,7 @@ window.__memoryDeckHandleFiles=async files=>{
     let msg=added+'個の一瞬を準備しました。ルーレットはすぐに始められます。';
     if(duplicates)msg+=' '+duplicates+'本は追加済みのためスキップしました。';
     if(failed)msg+=' '+failed+'本は処理できませんでした。';
-    if(batchSourceIds.length)msg+=' 高解像度画像と特別リプレイはバックグラウンドで保存します。';
+    // Optional quality/replay enhancement work continues silently in the background.
     progressText.textContent=msg;
     const standalone=window.matchMedia?.('(display-mode: standalone)')?.matches||navigator.standalone===true;
     let notice=errors.length?errors.join(' / '):msg;

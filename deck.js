@@ -36,6 +36,20 @@ const homeSavedVideoCount=document.getElementById('homeSavedVideoCount');
 if(!deckCard||!deckDrawBtn||!deckPicker)return;
 
 let processing=false;
+let latestVideoSelectionId=0;
+let queuedVideoSelection=null;
+function checkVideoSelection(options){
+  if(options?.shouldCancel?.()){
+    const error=new Error('別の動画を選んだため抽出を中断しました');
+    error.name='VideoSelectionReplaced';
+    throw error;
+  }
+}
+function reportVideoSelectionError(error){
+  console.error('video selection failed',error);
+  progressWrap.style.display='block';
+  progressText.textContent='動画の選択を処理できませんでした: '+(error?.message||error);
+}
 let libraryManageMode=false;
 const selectedSourceIds=new Set();
 const thumbnailJobs=new Map();
@@ -835,7 +849,6 @@ async function resumeInterruptedAnalyses(){
           continue;
         }
         processing=true;
-        fileInput.disabled=true;
         try{
           const patch={analysisResuming:true,resumeNeedsFile:false};
           await updateSourceRecord(src.id,patch);
@@ -852,7 +865,6 @@ async function resumeInterruptedAnalyses(){
           await updateSourceRecord(src.id,{analysisResuming:false,analysisRetryCount:retries,analysisLastError:String(err?.message||err)});
         }finally{
           processing=false;
-          fileInput.disabled=false;
           analysisResumeSourceIds.delete(src.id);
           renderDeck().catch(()=>{});
         }
@@ -1078,8 +1090,10 @@ window.__memoryDeckLoadReplay=async candidateId=>{
 };
 async function extractOne(file,overallIndex,total,options={}){
   await waitUntilVisible();
+  checkVideoSelection(options);
   progressText.textContent='動画 '+overallIndex+' / '+total+' を読み込んでいます…';
   await loadVideo(file);
+  checkVideoSelection(options);
   setupCanvas();
   const duration=video.duration;
   const resumeById=options.resumeSourceId
@@ -1103,7 +1117,9 @@ async function extractOne(file,overallIndex,total,options={}){
     }
   }
   const before=await stats();
+  checkVideoSelection(options);
   const sourceId=resumeAnalysisSource?.id||('s'+Date.now().toString(36)+hashString(fingerprint+Math.random()));
+  try{
   const provisional={
     id:sourceId,fingerprint,
     fileName:resumeAnalysisSource?.fileName||file.name,
@@ -1123,11 +1139,14 @@ async function extractOne(file,overallIndex,total,options={}){
   const start=Math.min(.12,duration*.02),end=Math.max(start,duration-.06);
   const candidates=[];
   for(let i=0;i<sampleCount;i++){
+    checkVideoSelection(options);
     await waitUntilVisible();
+    checkVideoSelection(options);
     const t=start+(end-start)*(sampleCount===1?0:i/(sampleCount-1));
     progressText.textContent='動画 '+overallIndex+' / '+total+' ・ 一瞬を探しています '+(i+1)+' / '+sampleCount;
     progressBar.style.width=(5+80*((overallIndex-1)+(i+1)/sampleCount)/total)+'%';
     const c=await captureCandidate(t);
+    checkVideoSelection(options);
     if(isUsableCandidate(c))candidates.push(c);
   }
   const deduped=[];
@@ -1136,6 +1155,7 @@ async function extractOne(file,overallIndex,total,options={}){
     if(prev&&dist(c.desc,prev.desc)<3.2)continue;
     deduped.push(c);
   }
+  checkVideoSelection(options);
   const picked=selectDiverseMoments(deduped.length?deduped:candidates,target);
   if(!picked.length)throw new Error('保存できる一瞬を見つけられませんでした');
   const details=computeAppealDetails(picked);
@@ -1182,7 +1202,9 @@ async function extractOne(file,overallIndex,total,options={}){
   source.replayPending=frames.length;
   source.replayReadyCount=0;
   source.replaySpec={edge:REPLAY_EDGE,frames:REPLAY_FRAME_COUNT,quality:REPLAY_QUALITY,seconds:REPLAY_SECONDS};
+  checkVideoSelection(options);
   await saveSourceAndFrames(source,frames,[]);
+  checkVideoSelection(options);
   patchSourceProgressState(sourceId,source);
   return {
     duplicate:false,name:file.name,count:frames.length,sourceId,
@@ -1191,6 +1213,16 @@ async function extractOne(file,overallIndex,total,options={}){
       targets:frames.map(x=>({id:x.id,time:x.timestamp,imageSize:x.imageSize,needImage:true,needReplay:true}))
     }
   };
+  }catch(error){
+    if(error?.name==='VideoSelectionReplaced'){
+      if(resumeAnalysisSource){
+        await updateSourceRecord(sourceId,{analysisResuming:false}).catch(console.warn);
+      }else{
+        await deleteSource(sourceId).catch(err=>console.warn('cancelled source cleanup failed',err));
+      }
+    }
+    throw error;
+  }
 }
 async function requestPersistence(){
   if(!navigator.storage?.persist)return false;
@@ -1199,7 +1231,6 @@ async function requestPersistence(){
 window.__memoryDeckHandleFiles=async files=>{
   if(processing||analysisResumeSourceIds.size||!files?.length)return;
   processing=true;
-  fileInput.disabled=true;
   deckDrawBtn.disabled=true;
   progressWrap.style.display='block';
   previewSection.classList.remove('has-content');
@@ -1261,7 +1292,6 @@ window.__memoryDeckHandleFiles=async files=>{
     renderDeck().catch(()=>{});
   }finally{
     processing=false;
-    fileInput.disabled=false;
     fileInput.value='';
     renderDeck().catch(()=>{});
   }

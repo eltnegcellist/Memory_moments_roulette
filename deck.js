@@ -855,14 +855,18 @@ async function resumeInterruptedAnalyses(){
           patchSourceProgressState(src.id,patch);
           deckNotice.textContent='前回中断した動画のシーン分析を自動再開しています…';
           deckNotice.className='note deckNotice';
-          const r=await extractOne(file,1,1,{skipResumeCopy:true,resumeSourceId:src.id});
+          const r=await extractOne(file,1,1,{skipResumeCopy:true,resumeSourceId:src.id,shouldCancel:()=>!!queuedVideoSelection});
           if(r?.backgroundJob)enqueueBackgroundJobs([r.backgroundJob]);
           deckNotice.textContent='前回中断した動画の分析を再開しました。仕上げ処理を続けています。';
           deckNotice.className='note deckNotice ok';
         }catch(err){
-          console.warn('analysis resume failed',err);
-          const retries=(Number(src.analysisRetryCount)||0)+1;
-          await updateSourceRecord(src.id,{analysisResuming:false,analysisRetryCount:retries,analysisLastError:String(err?.message||err)});
+          if(err?.name==='VideoSelectionReplaced'){
+            await updateSourceRecord(src.id,{analysisResuming:false});
+          }else{
+            console.warn('analysis resume failed',err);
+            const retries=(Number(src.analysisRetryCount)||0)+1;
+            await updateSourceRecord(src.id,{analysisResuming:false,analysisRetryCount:retries,analysisLastError:String(err?.message||err)});
+          }
         }finally{
           processing=false;
           analysisResumeSourceIds.delete(src.id);

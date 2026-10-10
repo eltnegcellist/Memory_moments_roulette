@@ -67,7 +67,14 @@ document.addEventListener('click',e=>{
   const newBtn=e.target.closest?.('#homeNewVideoBtn,#createPickBtn');
   if(newBtn){
     e.preventDefault();
-    document.getElementById('fileInput')?.click();
+    const input=document.getElementById('fileInput');
+    if(input){
+      // Clearing before opening allows choosing the same video again.
+      // The active extraction holds its own File[] snapshot.
+      input.disabled=false;
+      input.value='';
+      input.click();
+    }
     return;
   }
   const back=e.target.closest?.('[data-nav-back]');

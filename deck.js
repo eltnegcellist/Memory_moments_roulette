@@ -1303,7 +1303,10 @@ window.__memoryDeckHandleFiles=async(files,options={})=>{
       }
     }
     requestPersistence().catch(()=>{});
-    if(batchSourceIds.length){
+    // Both entry points save into the same deckSources/deckFrames stores.
+    // Only the roulette entry point may change its selected video IDs.
+    // GIF imports must not modify in-memory or persisted roulette selections.
+    if(batchSourceIds.length&&!options.gifOnly){
       selectedSourceIds.clear();
       batchSourceIds.forEach(id=>selectedSourceIds.add(id));
       selectionLoaded=true;

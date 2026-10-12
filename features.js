@@ -20,6 +20,7 @@ const gifPreview=document.getElementById('labGifPreview');
 const gifDownload=document.getElementById('labGifDownload');
 const gifSourceWrap=document.getElementById('labGifSourceWrap');
 const gifSource=document.getElementById('labGifSource');
+const gifSourceGrid=document.getElementById('labGifSourceGrid');
 const gifSourceNote=document.getElementById('labGifSourceNote');
 const gifFrameInfo=document.getElementById('labGifFrameInfo');
 const gifSpeed=document.getElementById('labGifSpeed');
@@ -145,6 +146,9 @@ let gifFileName='memory-roulette-frames.gif';
 let gifGeneration=0;
 let gifGenerating=false;
 let gifPreviewTimer=null;
+let gifChooserCreation=null;
+let gifChooserFrames=null;
+let gifChooserSignature='';
 let dockTimer=null;
 let rareTimer=null;
 let miracleSequenceToken=0;
@@ -1503,11 +1507,71 @@ function gifFrameGroups(){
   });
   return Array.from(map.values()).map(g=>({...g,items:g.items.sort((a,b)=>a.time-b.time||a.index-b.index)}));
 }
+// Reuse the already-extracted roulette images; the original video is not stored.
+function renderGifSourceCards(groups){
+  if(!gifSourceGrid)return;
+  const signature=JSON.stringify(groups.map(g=>[g.key,g.label,g.items.length]));
+  if(gifChooserCreation!==activeCreation
+      ||gifChooserFrames!==activeCreation?.frames
+      ||gifChooserSignature!==signature){
+    gifChooserCreation=activeCreation;
+    gifChooserFrames=activeCreation?.frames;
+    gifChooserSignature=signature;
+    gifSourceGrid.replaceChildren();
+    groups.forEach(g=>{
+      const card=document.createElement('button');
+      card.type='button';
+      card.className='labGifSourceCard';
+      card.dataset.sourceKey=g.key;
+      card.disabled=g.items.length<2;
+      card.setAttribute('aria-pressed','false');
+      card.setAttribute('aria-label',g.label+'、'+g.items.length+'コマ'+(card.disabled?'、GIF作成不可':''));
+      const thumbnails=document.createElement('span');
+      thumbnails.className='labGifSourceThumbs';
+      // The middle frame identifies the scene; the first and last provide context.
+      const picks=[g.items[Math.floor((g.items.length-1)/2)],g.items[0],g.items[g.items.length-1]];
+      picks.forEach(item=>{
+        const img=document.createElement('img');
+        img.src=item.image;
+        img.alt='';
+        img.loading='lazy';
+        img.decoding='async';
+        thumbnails.appendChild(img);
+      });
+      const details=document.createElement('span');
+      details.className='labGifSourceCardDetails';
+      const title=document.createElement('strong');
+      title.textContent=g.label;
+      const count=document.createElement('small');
+      count.textContent=g.items.length+'コマ'+(card.disabled?' ・ GIF作成には2コマ必要':'');
+      const check=document.createElement('span');
+      check.className='labGifSourceCardCheck';
+      check.textContent='✓ 選択中';
+      check.setAttribute('aria-hidden','true');
+      details.append(title,count,check);
+      card.append(thumbnails,details);
+      card.addEventListener('click',()=>{
+        if(gifSource.value===g.key)return;
+        gifSource.value=g.key;
+        clearGifResult();
+        gifStatus.style.display='none';
+        syncGifSourceChooser();
+      });
+      gifSourceGrid.appendChild(card);
+    });
+  }
+  const chosenKey=gifSource.value;
+  gifSourceGrid.querySelectorAll('.labGifSourceCard').forEach(card=>{
+    const selected=card.dataset.sourceKey===chosenKey;
+    card.classList.toggle('is-selected',selected);
+    card.setAttribute('aria-pressed',String(selected));
+  });
+}
 function syncGifSourceChooser(){
   if(!gifSourceWrap||!gifSource||!gifSourceNote)return;
   const groups=gifFrameGroups();
   const old=gifSource.value;
-  gifSource.innerHTML='';
+  gifSource.replaceChildren();
   groups.forEach(g=>{
     const option=document.createElement('option');
     option.value=g.key;
@@ -1519,6 +1583,7 @@ function syncGifSourceChooser(){
   const chosen=eligible.find(g=>g.key===old)||eligible[0];
   if(chosen)gifSource.value=chosen.key;
   gifSourceWrap.style.display=groups.length>1?'grid':'none';
+  renderGifSourceCards(groups);
   makeGifBtn.disabled=gifGenerating||!eligible.length;
   if(gifFrameInfo){
     const count=groups.reduce((n,g)=>n+g.items.length,0);
@@ -1526,7 +1591,7 @@ function syncGifSourceChooser(){
       :groups.length>1?'今回のルーレット：全'+count+'コマ（'+groups.length+'本の動画）。動画を選ぶと、その動画の全コマを使用します。'
       :'今回のルーレット：'+count+'コマ。引いた回数に関係なく全コマで作ります。';
   }
-  gifSourceNote.textContent=groups.length>1?'複数の元動画のコマは混ぜません。選んだ動画の全コマを使用します。':'';
+  gifSourceNote.textContent=groups.length>1?'各動画の3コマを見て選べます。複数の元動画のコマは混ぜません。':'';
 }
 function renderHistory(){
   historyEl.innerHTML='';

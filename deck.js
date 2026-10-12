@@ -1278,7 +1278,7 @@ async function requestPersistence(){
   if(!navigator.storage?.persist)return false;
   try{return await navigator.storage.persist();}catch(e){return false;}
 }
-window.__memoryDeckHandleFiles=async files=>{
+window.__memoryDeckHandleFiles=async(files,options={})=>{
   if(processing||analysisResumeSourceIds.size||!files?.length)return;
   processing=true;
   fileInput.disabled=true;
@@ -1310,7 +1310,9 @@ window.__memoryDeckHandleFiles=async files=>{
       await saveSelectedSources();
     }
     progressBar.style.width='100%';
-    let msg=added+'個の一瞬を準備しました。ルーレットはすぐに始められます。';
+    let msg=options.gifOnly
+      ? added+'個のコマを準備しました。GIFの動画一覧から選べます。'
+      : added+'個の一瞬を準備しました。ルーレットはすぐに始められます。';
     if(duplicates)msg+=' '+duplicates+'本は追加済みのためスキップしました。';
     if(failed)msg+=' '+failed+'本は処理できませんでした。';
     // Optional quality/replay enhancement work continues silently in the background.
@@ -1327,7 +1329,7 @@ window.__memoryDeckHandleFiles=async files=>{
     }
     deckNotice.textContent=notice;
     deckNotice.className='note deckNotice '+(failed?'warn':'ok');
-    if(batchSourceIds.length){
+    if(batchSourceIds.length&&!options.gifOnly){
       const creation=await buildDeckCreation(batchSourceIds);
       if(creation){
         window.__memoryNavigate?.('play');
@@ -1340,6 +1342,7 @@ window.__memoryDeckHandleFiles=async files=>{
     }
     enqueueBackgroundJobs(backgroundJobs);
     renderDeck().catch(()=>{});
+    return batchSourceIds;
   }finally{
     processing=false;
     fileInput.disabled=false;
@@ -1571,6 +1574,20 @@ window.addEventListener('pageshow',()=>{
   resumePendingBackgroundWork().catch(err=>console.warn('background resume failed',err));
 });
 requestPersistence().catch(()=>{});
+// GIF page uses saved extracted frames without starting a roulette.
+window.__memoryGifListSources=async()=>{
+  const s=await stats();
+  return s.sources.slice()
+    .sort((a,b)=>(Number(b.addedAt)||Number(b.lastModified)||0)-(Number(a.addedAt)||Number(a.lastModified)||0))
+    .map(src=>({id:String(src.id),label:sourceDisplayName(src),
+      count:Number(src.candidateCount)||0,thumbnail:src.thumbnailData||''}));
+};
+window.__memoryGifLoadSource=async sourceId=>{
+  const frames=await framesForSource(sourceId);
+  return frames.filter(fr=>typeof fr.imageData==='string'&&fr.imageData)
+    .sort((a,b)=>(Number(a.timestamp)||0)-(Number(b.timestamp)||0)||String(a.id).localeCompare(String(b.id)))
+    .map((fr,index)=>({image:fr.imageData,time:Number(fr.timestamp)||index,index}));
+};
 window.__memoryDeckRender=()=>renderDeck();
 window.__memoryDeckStartSelection=async()=>{
   libraryManageMode=false;

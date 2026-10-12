@@ -452,14 +452,22 @@ function patchSourceProgressState(sourceId,patch){
   renderProcessingSummary(lastDeckSources);
 }
 
+function sourceDrawCount(src){
+  const count=Number(src?.drawCount);
+  return Number.isFinite(count)&&count>=0?Math.floor(count):0;
+}
 function filteredSortedSources(sources){
   const q=(deckSearch?.value||'').trim().toLowerCase();
-  const newest=(deckSort?.value||'newest')!=='oldest';
+  const sort=deckSort?.value||'newest';
   return sources
     .filter(src=>!q||sourceSearchText(src).includes(q))
     .sort((a,b)=>{
+      if(sort==='mostPlayed'){
+        const diff=sourceDrawCount(b)-sourceDrawCount(a);
+        if(diff)return diff;
+      }
       const d=sourceMomentDate(a)-sourceMomentDate(b);
-      return newest?-d:d;
+      return sort==='oldest'?d:-d;
     });
 }
 function makeSourceTile(src,{selectable=false,manageable=false}={}){
@@ -496,7 +504,8 @@ function makeSourceTile(src,{selectable=false,manageable=false}={}){
   const name=document.createElement('strong');
   name.textContent=displayName;
   const meta=document.createElement('small');
-  meta.textContent=(Number(src.candidateCount)||0)+'個の一瞬 ・ '+formatDuration(src.duration);
+  meta.textContent=(Number(src.candidateCount)||0)+'個の一瞬 ・ '+formatDuration(src.duration)
+    +(deckSort?.value==='mostPlayed'?' ・ '+sourceDrawCount(src)+'回登場':'');
   info.append(name,meta);
   const progressState=sourceProgressState(src);
   if(progressState.pending){
@@ -553,9 +562,10 @@ function renderGroupedLibrary(container,sources,options){
     container.innerHTML='<div class="note">'+(sources.length?'検索条件に合う動画がありません。':'追加した動画がここに並びます。')+'</div>';
     return;
   }
+  const mostPlayed=deckSort?.value==='mostPlayed';
   let currentKey=null,grid=null;
   for(const src of visible){
-    const key=sourceMonthKey(src);
+    const key=mostPlayed?'mostPlayed':sourceMonthKey(src);
     if(key!==currentKey){
       currentKey=key;
       const section=document.createElement('section');
@@ -563,9 +573,9 @@ function renderGroupedLibrary(container,sources,options){
       const head=document.createElement('div');
       head.className='deckMonthHead';
       const title=document.createElement('strong');
-      title.textContent=sourceMonthLabel(src);
+      title.textContent=mostPlayed?'よく遊んだ動画':sourceMonthLabel(src);
       const count=document.createElement('span');
-      count.textContent=visible.filter(x=>sourceMonthKey(x)===key).length+'本';
+      count.textContent=(mostPlayed?visible.length:visible.filter(x=>sourceMonthKey(x)===key).length)+'本';
       head.append(title,count);
       grid=document.createElement('div');
       grid.className='deckVideoGrid';
@@ -587,7 +597,77 @@ function syncLibraryManageMode(){
     : 'タップして今回使う動画を選びます。';
   renderSourceLibraries();
 }
+
+let drawCountMigrationPromise=null;
+// The existing per-roulette drawHistory retains only the most recent 40 results.
+// Import what remains once, without overwriting counters already restored from backup.
+async function migrateSavedDrawCounts(){
+  const marker='deckSourceDrawCountMigrationV1';
+  if(await metaGet(marker))return;
+  const creations=typeof dbAll==='function'?await dbAll():[];
+  const counts=new Map();
+  for(const creation of creations){
+    for(const hit of (Array.isArray(creation?.drawHistory)?creation.drawHistory:[])){
+      if(!hit?.deckMode||!hit.sourceVideoId)continue;
+      counts.set(hit.sourceVideoId,(counts.get(hit.sourceVideoId)||0)+1);
+    }
+  }
+  const db=await openDB();
+  await new Promise((resolve,reject)=>{
+    const tx=db.transaction([SOURCE_STORE,META_STORE],'readwrite');
+    const sourceStore=tx.objectStore(SOURCE_STORE);
+    for(const [sourceId,count] of counts){
+      const req=sourceStore.get(sourceId);
+      req.onsuccess=()=>{
+        const src=req.result;
+        if(src&&src.drawCount===undefined){
+          sourceStore.put({...src,drawCount:count});
+        }
+      };
+    }
+    tx.objectStore(META_STORE).put({key:marker,value:true,updatedAt:Date.now()});
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error);
+  });
+}
+function ensureSavedDrawCounts(){
+  if(!drawCountMigrationPromise){
+    drawCountMigrationPromise=migrateSavedDrawCounts().catch(err=>{
+      drawCountMigrationPromise=null;
+      console.warn('Previous draw counts could not be migrated',err);
+    });
+  }
+  return drawCountMigrationPromise;
+}
+// Count only confirmed stops, not selections, starts, or interrupted spins.
+// Each increment reads the latest IndexedDB record within a readwrite transaction.
+window.__memoryDeckRecordDraw=sourceId=>{
+  if(!sourceId)return;
+  openDB().then(db=>new Promise((resolve,reject)=>{
+    const tx=db.transaction(SOURCE_STORE,'readwrite');
+    const store=tx.objectStore(SOURCE_STORE);
+    let nextCount=null;
+    const req=store.get(sourceId);
+    req.onsuccess=()=>{
+      const src=req.result;
+      if(!src)return;
+      nextCount=sourceDrawCount(src)+1;
+      store.put({...src,drawCount:nextCount,lastDrawnAt:Date.now()});
+    };
+    tx.oncomplete=()=>resolve(nextCount);
+    tx.onerror=()=>reject(tx.error);
+  })).then(nextCount=>{
+    if(nextCount===null)return;
+    const src=lastDeckSources.find(x=>x.id===sourceId);
+    if(src)src.drawCount=Math.max(sourceDrawCount(src),nextCount);
+    if(deckSort?.value==='mostPlayed'&&document.body.dataset.appView==='library'){
+      renderSourceLibraries();
+    }
+  }).catch(err=>console.error('Could not save video draw count',err));
+};
+
 async function renderDeck(){
+  await ensureSavedDrawCounts();
   const s=await stats();
   lastDeckSources=s.sources;
   await loadSelectedSources(s.sources);

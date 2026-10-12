@@ -1720,13 +1720,20 @@ async function putRestoreRecord(storeName,value){
 }
 async function restoreDeckStream(file){
   const cur=await stats();
+  const previousDrawState=await metaGet('drawState');
+  const previousSelectedIds=[...selectedSourceIds];
   const existingFp=new Set(cur.sources.map(x=>x.fingerprint));
   const restoreLimit=await effectiveByteLimit(cur.bytes);
   const acceptedSources=new Map();
   const acceptedFrameIds=new Set();
+  const restoredReplayIds=new Set();
+  const insertedFrameIds=[];
+  const insertedReplayIds=[];
+  const insertedSourceIds=[];
   const sourceStats=new Map();
   let header=null,count=cur.count,bytes=cur.bytes,added=0,readCount=0;
 
+  try{
   await readNdjson(file,async record=>{
     if(!header){
       if(record?.format!=='memory-moments-roulette-deck-stream'||Number(record.version)<4)throw new Error('対応するストリーム形式のバックアップではありません');
@@ -1749,13 +1756,18 @@ async function restoreDeckStream(file){
       delete clean.replayFrames;
       await putRestoreRecord(FRAME_STORE,clean);
       acceptedFrameIds.add(fr.id);
+      insertedFrameIds.push(fr.id);
       const st=sourceStats.get(fr.sourceVideoId);
       st.count++;st.bytes+=b;
       st.hasPending=st.hasPending||!!fr.imagePending||!(Number(fr.replayFrameCount)>=2&&replayBytes>0);
       count++;bytes+=b;added++;
     }else if(record?.type==='replay'){
       const replay=record.data;
-      if(replay?.id&&acceptedFrameIds.has(replay.id))await putRestoreRecord(REPLAY_STORE,replay);
+      if(replay?.id&&acceptedFrameIds.has(replay.id)){
+        await putRestoreRecord(REPLAY_STORE,replay);
+        restoredReplayIds.add(replay.id);
+        insertedReplayIds.push(replay.id);
+      }
     }
     readCount++;
     if(deckNotice&&readCount%20===0){
@@ -1768,10 +1780,15 @@ async function restoreDeckStream(file){
   for(const [sourceId,src] of acceptedSources){
     const st=sourceStats.get(sourceId);
     if(!st?.count)continue;
+    const restoredFrames=(await framesForSource(sourceId)).filter(fr=>acceptedFrameIds.has(fr.id));
+    const missingReplay=restoredFrames.some(fr=>
+      Number(fr.replayFrameCount)>=2&&Number(fr.replaySize)>0&&!restoredReplayIds.has(fr.id)
+    );
     await putRestoreRecord(SOURCE_STORE,{
       ...src,candidateCount:st.count,storageBytes:st.bytes,
-      opfsName:null,opfsReady:false,opfsWriting:false,resumeNeedsFile:st.hasPending
+      opfsName:null,opfsReady:false,opfsWriting:false,resumeNeedsFile:st.hasPending||missingReplay
     });
+    insertedSourceIds.push(sourceId);
   }
 
   const after=await getAll(FRAME_STORE);
@@ -1798,6 +1815,30 @@ async function restoreDeckStream(file){
     deckNotice.textContent=added+'個の一瞬をバックアップから復元しました。';
     deckNotice.className='note deckNotice ok';
   }
+  }catch(err){
+    try{
+      const db=await openDB();
+      await new Promise(resolve=>{
+        const tx=db.transaction([SOURCE_STORE,FRAME_STORE,REPLAY_STORE],'readwrite');
+        const ss=tx.objectStore(SOURCE_STORE),fs=tx.objectStore(FRAME_STORE),rs=tx.objectStore(REPLAY_STORE);
+        insertedSourceIds.forEach(id=>ss.delete(id));
+        insertedFrameIds.forEach(id=>fs.delete(id));
+        insertedReplayIds.forEach(id=>rs.delete(id));
+        tx.oncomplete=()=>resolve();
+        tx.onerror=()=>resolve();
+        tx.onabort=()=>resolve();
+      });
+    }catch(e){}
+    try{
+      await metaPut('drawState',previousDrawState||{universeIds:[],remainingIds:[],cycle:1});
+      selectedSourceIds.clear();
+      previousSelectedIds.forEach(id=>selectedSourceIds.add(id));
+      selectionLoaded=true;
+      await saveSelectedSources();
+      await renderDeck();
+    }catch(e){}
+    throw err;
+  }
 }
 async function restoreDeck(file){
   const prefix=await file.slice(0,8192).text();
@@ -1809,7 +1850,7 @@ async function restoreDeck(file){
   return restoreDeckLegacy(file);
 }
 deckClearBtn?.addEventListener('click',async()=>{
-  if(!confirm('思い出おみくじデッキをすべて削除しますか？ 今日の一枚や従来の保存ルーレットは削除しません。'))return;
+  if(!confirm('思い出おみくじデッキをすべて削除しますか？ お気に入りや保存済みルーレット履歴は削除しません。'))return;
   const db=await openDB();
   await new Promise((res,rej)=>{
     const tx=db.transaction([SOURCE_STORE,FRAME_STORE,META_STORE,REPLAY_STORE],'readwrite');

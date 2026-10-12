@@ -21,9 +21,9 @@
 <link rel="apple-touch-icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2">
 <link rel="icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2" type="image/png">
 <title>思い出ルーレットおみくじ</title>
-<link rel="stylesheet" href="./style.css?v=1.1.0-h19-gif-standalone">
-<link rel="stylesheet" href="./deluxe.css?v=1.1.0-h19-gif-standalone">
-<link rel="stylesheet" href="./features.css?v=1.1.0-h19-gif-standalone">
+<link rel="stylesheet" href="./style.css?v=1.1.0-h20-gif-video-picker">
+<link rel="stylesheet" href="./deluxe.css?v=1.1.0-h20-gif-video-picker">
+<link rel="stylesheet" href="./features.css?v=1.1.0-h20-gif-video-picker">
 <style>
 body:not(.show-score-details) .scoreChip,
 body:not(.show-score-details) .scoreDetails,
@@ -39,7 +39,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <header class="hero" data-app-view="home">
   <div class="heroMark" aria-hidden="true"><img src="./icons/memory-roulette-omikuji.png?v=memorybrand2" alt=""></div>
   <div class="heroText">
-    <div class="heroTopline"><span class="eyebrow">MEMORY MOMENTS</span><span class="versionBadge" id="labSettingsTrigger" data-lab-trigger title="5回タップでラボ設定">v1.1.0-h19</span></div>
+    <div class="heroTopline"><span class="eyebrow">MEMORY MOMENTS</span><span class="versionBadge" id="labSettingsTrigger" data-lab-trigger title="5回タップでラボ設定">v1.1.0-h20</span></div>
     <h1><span class="titlePart">思い出ルーレット</span><span class="titlePart">おみくじ</span></h1>
     <p class="heroCatch">動画に隠れた、いろいろな一瞬を。</p>
     <p class="lead">写真には残さなかった一瞬まで、動画には残っています。自分では選ばなかった一枚に偶然出会い、おみくじと一緒に楽しむアプリです。</p>
@@ -162,36 +162,62 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <div class="viewTopbar"><button class="viewBack" type="button" data-nav-back>← ホーム</button><span>GIF作成</span></div>
   <div class="step">GIF</div>
   <h2>動画からGIFを作る</h2>
-  <p class="note">保存した動画のコマを時間順に並べてGIFにします。ルーレットを回す必要はありません。複数の動画のコマは混ぜません。</p>
-  <div class="labGifImport">
-    <input id="labGifFileInput" type="file" accept="video/*" multiple hidden>
-    <button id="labGifAddVideo" class="secondary" type="button">＋ 新しい動画から作る</button>
-    <p class="note">新しい動画は端末内でコマを抽出し、動画一覧にも追加します。元動画は外部に送信しません。</p>
+  <p class="note viewIntro">動画を選ぶだけでGIFを作れます。ルーレットを回す必要はありません。</p>
+  <div class="homeChoiceGrid labGifChoices" aria-label="GIFに使う動画を選ぶ方法">
+    <button id="labGifAddVideo" class="homeChoice homeChoicePrimary" type="button">
+      <span class="homeChoiceIcon" aria-hidden="true">＋</span>
+      <span class="homeChoiceCopy"><strong>新しい動画から作る</strong><small>端末から新しい動画を選ぶ</small></span>
+      <span class="homeChoiceArrow" aria-hidden="true">›</span>
+    </button>
+    <button id="labGifChoosePast" class="homeChoice" type="button" aria-expanded="false" aria-controls="labGifPast">
+      <span class="homeChoiceIcon" aria-hidden="true">▦</span>
+      <span class="homeChoiceCopy"><strong>過去の動画から作る</strong><small>保存済みの動画・以前のルーレット</small></span>
+      <span class="homeChoiceArrow" aria-hidden="true">›</span>
+    </button>
+    <input id="labGifFileInput" type="file" accept="video/*" hidden>
   </div>
-  <p id="labGifFrameInfo" class="note" aria-live="polite">保存した動画を読み込んでいます。</p>
-  <div id="labGifSourceWrap" class="labGifSourceWrap" style="display:none">
-    <div id="labGifSourceHeading" class="labGifSourceHeading">GIFにする動画（画像をタップして選択）</div>
-    <select id="labGifSource" hidden aria-hidden="true" tabindex="-1"></select>
-    <div id="labGifSourceGrid" class="labGifSourceGrid" role="group" aria-labelledby="labGifSourceHeading"></div>
-    <p id="labGifSourceNote" class="note"></p>
-  </div>
-  <div class="labGifSpeed">
-    <label for="labGifSpeed">GIFの切り替え間隔（プレビュー・保存共通）</label>
-    <select id="labGifSpeed">
-      <option value="0.05">0.05秒ごと（最速・毎秒20コマ）</option>
-      <option value="0.1">0.1秒ごと（毎秒10コマ）</option>
-      <option value="0.2" selected>0.2秒ごと（おすすめ・毎秒5コマ）</option>
-      <option value="0.5">0.5秒ごと（毎秒2コマ）</option>
-      <option value="1">1秒ごと（毎秒1コマ）</option>
-    </select>
-  </div>
-  <div class="labGifActions">
-    <button id="labMakeGif" class="primary" type="button" disabled>選んだ動画からGIFを作る</button>
+  <div id="labGifPast" class="labGifPast" hidden>
+    <div class="deckLibraryToolbar labGifLibraryToolbar">
+      <div class="deckLibrarySearch"><span aria-hidden="true">⌕</span>
+        <input id="labGifSearch" type="search" placeholder="日付・動画名で検索" autocomplete="off" aria-label="GIFにする動画を検索">
+      </div>
+      <select id="labGifSort" aria-label="動画の並び順">
+        <option value="newest" selected>新しい順</option>
+        <option value="oldest">古い順</option>
+      </select>
+    </div>
+    <p id="labGifFrameInfo" class="note" aria-live="polite">保存した動画を読み込んでいます。</p>
+    <div id="labGifSourceWrap" class="labGifSourceWrap" style="display:none">
+      <div id="labGifSourceHeading" class="labGifSourceHeading">GIFにする動画を1本選ぶ</div>
+      <select id="labGifSource" hidden aria-hidden="true" tabindex="-1"></select>
+      <div id="labGifSourceGrid" class="deckPhotoLibrary labGifPhotoLibrary" role="group" aria-labelledby="labGifSourceHeading"></div>
+      <p id="labGifSourceNote" class="note"></p>
+    </div>
   </div>
   <div id="labGifStatus" class="note" aria-live="polite" style="display:none"></div>
-  <div id="labGifResult" style="display:none">
-    <img id="labGifPreview" alt="GIFに使う全コマの切り替えプレビュー">
-    <a id="labGifDownload" class="labDownload" download="memory-roulette-frames.gif">GIFを保存して見る</a>
+  <div id="labGifEditor" class="labGifEditor" hidden>
+    <div class="labGifEditorHeader">
+      <strong id="labGifSelectedTitle">選択した動画</strong>
+      <button id="labGifChangeVideo" class="secondary" type="button">別の動画を選ぶ</button>
+    </div>
+    <div id="labGifSelectedFrames" class="labGifSelectedFrames" aria-label="選んだ動画のコマ見本"></div>
+    <div class="labGifSpeed">
+      <label for="labGifSpeed">GIFの切り替え間隔（プレビュー・保存共通）</label>
+      <select id="labGifSpeed">
+        <option value="0.05">0.05秒ごと（最速・毎秒20コマ）</option>
+        <option value="0.1">0.1秒ごと（毎秒10コマ）</option>
+        <option value="0.2" selected>0.2秒ごと（おすすめ・毎秒5コマ）</option>
+        <option value="0.5">0.5秒ごと（毎秒2コマ）</option>
+        <option value="1">1秒ごと（毎秒1コマ）</option>
+      </select>
+    </div>
+    <div class="labGifActions">
+      <button id="labMakeGif" class="primary" type="button" disabled>選んだ動画からGIFを作る</button>
+    </div>
+    <div id="labGifResult" style="display:none">
+      <img id="labGifPreview" alt="GIFに使う全コマの切り替えプレビュー">
+      <a id="labGifDownload" class="labDownload" download="memory-roulette-frames.gif">GIFを保存して見る</a>
+    </div>
   </div>
 </section>
 <section id="labCollectionSection" class="card labCollectionCard appView" data-app-view="favorites">
@@ -236,7 +262,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 
   <button id="settingsVersionTrigger" class="settingsVersionTrigger" data-lab-trigger type="button" title="5回タップでLAB設定を表示">
     <span>アプリバージョン</span>
-    <strong>v1.1.0-h19</strong>
+    <strong>v1.1.0-h20</strong>
   </button>
   <div id="labSettingsHint" class="labSettingsHint settingsLabHint">LAB設定：上のバージョン表示を5回タップで表示</div>
 
@@ -397,12 +423,12 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <video id="video" playsinline muted preload="metadata" style="display:none"></video><canvas id="captureCanvas" style="display:none"></canvas><canvas id="smallCanvas" width="28" height="28" style="display:none"></canvas>
 </div>
 <div id="bigOverlay"><div id="bigText">大吉！</div></div>
-<script src="./navigation.js?v=1.1.0-h19-gif-standalone" defer></script>
-<script src="./app.js?v=1.1.0-h19-gif-standalone" defer></script>
-<script src="./deck.js?v=1.1.0-h19-gif-standalone" defer></script>
-<script src="./deluxe.js?v=1.1.0-h19-gif-standalone" defer></script>
-<script src="./features.js?v=1.1.0-h19-gif-standalone" defer></script>
-<script src="./hidden-settings.js?v=1.1.0-h19-gif-standalone" defer></script>
+<script src="./navigation.js?v=1.1.0-h20-gif-video-picker" defer></script>
+<script src="./app.js?v=1.1.0-h20-gif-video-picker" defer></script>
+<script src="./deck.js?v=1.1.0-h20-gif-video-picker" defer></script>
+<script src="./deluxe.js?v=1.1.0-h20-gif-video-picker" defer></script>
+<script src="./features.js?v=1.1.0-h20-gif-video-picker" defer></script>
+<script src="./hidden-settings.js?v=1.1.0-h20-gif-video-picker" defer></script>
 <script>
 (()=>{
   const scoreBox=document.getElementById('showScores');

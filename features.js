@@ -1603,18 +1603,33 @@ function syncGifSourceChooser(){
 async function loadGifSource(sourceKey){
   const token=++gifLoadToken;
   gifLoading=true;gifLoadedSourceKey=null;gifLoadedFrames=[];
+  gifEditor.hidden=true;
   syncGifSourceChooser();
-  gifStatus.style.display='block';gifStatus.textContent='GIFに使うコマを読み込んでいます…';
+  gifStatus.style.display='block';
+  gifStatus.textContent='選んだ動画のコマを読み込んでいます…';
   try{
     const frames=await window.__memoryGifLoadSource?.(sourceKey);
     if(token!==gifLoadToken||document.body.dataset.appView!=='gif')return;
-    gifLoadedSourceKey=sourceKey;gifLoadedFrames=Array.isArray(frames)?frames:[];
-    gifStatus.textContent=gifLoadedFrames.length<2?'この動画にはGIFに使えるコマが2枚以上ありません。':'';
-    gifStatus.style.display=gifLoadedFrames.length<2?'block':'none';
+    gifLoadedSourceKey=sourceKey;
+    gifLoadedFrames=Array.isArray(frames)?frames:[];
+    if(gifLoadedFrames.length<2){
+      gifStatus.textContent='GIFには2枚以上の保存画像が必要です。別の動画を選ぶか、新しい動画を追加してください。';
+      return;
+    }
+    const name=gifSourceCatalog.find(g=>g.id===sourceKey)?.label||'選択した動画';
+    gifSelectedTitle.textContent=name+'（'+gifLoadedFrames.length+'コマ）';
+    gifSelectedFrames.replaceChildren();
+    [gifLoadedFrames[0],gifLoadedFrames[Math.floor((gifLoadedFrames.length-1)/2)],gifLoadedFrames[gifLoadedFrames.length-1]].forEach(frame=>{
+      const img=document.createElement('img');
+      img.src=frame.image;img.alt='選択した動画のコマ';
+      gifSelectedFrames.appendChild(img);
+    });
+    gifEditor.hidden=false;gifStatus.style.display='none';
+    gifEditor.scrollIntoView({behavior:'smooth',block:'start'});
   }catch(err){
     if(token!==gifLoadToken)return;
     console.error('GIF source load failed',err);
-    gifStatus.textContent='動画のコマを読み込めませんでした。もう一度選択してください。';
+    gifStatus.textContent='この動画のコマを読み込めませんでした。別の動画を選んでください。';
   }finally{
     if(token===gifLoadToken){gifLoading=false;syncGifSourceChooser();}
   }

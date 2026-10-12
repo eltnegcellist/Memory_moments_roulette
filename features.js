@@ -2395,4 +2395,8 @@ async function renderCollection(){
 
 renderHistory();
 renderCollection().catch(console.error);
+// On a direct #gif URL or refresh, navigation.js runs before this script is loaded.
+if(document.body.dataset.appView==='gif'){
+  window.__memoryGifOpen().catch(err=>console.error('GIF initial load failed',err));
+}
 })();

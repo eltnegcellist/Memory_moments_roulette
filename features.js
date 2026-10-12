@@ -22,6 +22,8 @@ const gifSourceWrap=document.getElementById('labGifSourceWrap');
 const gifSource=document.getElementById('labGifSource');
 const gifSourceGrid=document.getElementById('labGifSourceGrid');
 const gifSourceNote=document.getElementById('labGifSourceNote');
+const gifAddVideo=document.getElementById('labGifAddVideo');
+const gifFileInput=document.getElementById('labGifFileInput');
 const gifFrameInfo=document.getElementById('labGifFrameInfo');
 const gifSpeed=document.getElementById('labGifSpeed');
 if(!stageEl||!resultCardEl||!collectionEl||!historyEl)return;
@@ -146,9 +148,12 @@ let gifFileName='memory-roulette-frames.gif';
 let gifGeneration=0;
 let gifGenerating=false;
 let gifPreviewTimer=null;
-let gifChooserCreation=null;
-let gifChooserFrames=null;
 let gifChooserSignature='';
+let gifSourceCatalog=[];
+let gifLoadedSourceKey=null;
+let gifLoadedFrames=[];
+let gifLoading=false;
+let gifLoadToken=0;
 let dockTimer=null;
 let rareTimer=null;
 let miracleSequenceToken=0;
@@ -1491,108 +1496,161 @@ const closeMiracle=()=>{
 };
 miracleBack.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();closeMiracle();});
 
-// A GIF is a time-ordered animation of all extracted roulette frames, not drawn results.
+// Standalone GIF page: use saved candidate frames, independent of the active roulette.
 function gifFrameGroups(){
-  const map=new Map();
-  const creation=activeCreation;
-  const frames=Array.isArray(creation?.frames)?creation.frames:[];
-  frames.forEach((image,index)=>{
-    if(typeof image!=='string'||!image)return;
-    const deck=!!creation?.deckMode;
-    const key=deck?String(creation?.deckSourceIds?.[index]||creation?.deckSourceNames?.[index]||'source-unknown'):'single-source';
-    const label=deck?(creation?.deckSourceNames?.[index]||'元動画'):(creation?.title||'今回の動画');
-    if(!map.has(key))map.set(key,{key,label,items:[]});
-    const time=Number(creation?.times?.[index]);
-    map.get(key).items.push({image,time:Number.isFinite(time)?time:index,index});
-  });
-  return Array.from(map.values()).map(g=>({...g,items:g.items.sort((a,b)=>a.time-b.time||a.index-b.index)}));
+  return gifSourceCatalog.map(src=>({
+    key:src.id,label:src.label,count:src.count,thumbnail:src.thumbnail,
+    items:gifLoadedSourceKey===src.id?gifLoadedFrames:[]
+  }));
 }
-// Reuse the already-extracted roulette images; the original video is not stored.
 function renderGifSourceCards(groups){
   if(!gifSourceGrid)return;
-  const signature=JSON.stringify(groups.map(g=>[g.key,g.label,g.items.length]));
-  if(gifChooserCreation!==activeCreation
-      ||gifChooserFrames!==activeCreation?.frames
-      ||gifChooserSignature!==signature){
-    gifChooserCreation=activeCreation;
-    gifChooserFrames=activeCreation?.frames;
+  const signature=JSON.stringify(groups.map(g=>[g.key,g.label,g.count,g.items.length]));
+  if(gifChooserSignature!==signature){
     gifChooserSignature=signature;
     gifSourceGrid.replaceChildren();
     groups.forEach(g=>{
       const card=document.createElement('button');
-      card.type='button';
-      card.className='labGifSourceCard';
-      card.dataset.sourceKey=g.key;
-      card.disabled=g.items.length<2;
-      card.setAttribute('aria-pressed','false');
-      card.setAttribute('aria-label',g.label+'、'+g.items.length+'コマ'+(card.disabled?'、GIF作成不可':''));
-      const thumbnails=document.createElement('span');
-      thumbnails.className='labGifSourceThumbs';
-      // The middle frame identifies the scene; the first and last provide context.
-      const picks=[g.items[Math.floor((g.items.length-1)/2)],g.items[0],g.items[g.items.length-1]];
-      picks.forEach(item=>{
-        const img=document.createElement('img');
-        img.src=item.image;
-        img.alt='';
-        img.loading='lazy';
-        img.decoding='async';
-        thumbnails.appendChild(img);
+      card.type='button';card.className='labGifSourceCard';card.dataset.sourceKey=g.key;
+      card.disabled=g.count<2;card.setAttribute('aria-pressed','false');
+      card.setAttribute('aria-label',g.label+'、'+g.count+'コマ'+(card.disabled?'、GIF作成不可':''));
+      const thumbs=document.createElement('span');thumbs.className='labGifSourceThumbs';
+      const pictures=g.items.length
+        ? [g.items[Math.floor((g.items.length-1)/2)].image,g.items[0].image,g.items[g.items.length-1].image]
+        :g.thumbnail?[g.thumbnail]:[];
+      if(pictures.length===1)thumbs.classList.add('labGifSourceThumbsSingle');
+      pictures.forEach(source=>{
+        const img=document.createElement('img');img.src=source;img.alt='';img.loading='lazy';img.decoding='async';
+        thumbs.appendChild(img);
       });
-      const details=document.createElement('span');
-      details.className='labGifSourceCardDetails';
-      const title=document.createElement('strong');
-      title.textContent=g.label;
+      if(!pictures.length){
+        const empty=document.createElement('span');empty.className='labGifNoThumb';empty.textContent='画像準備中';thumbs.appendChild(empty);
+      }
+      const info=document.createElement('span');info.className='labGifSourceCardDetails';
+      const title=document.createElement('strong');title.textContent=g.label;
       const count=document.createElement('small');
-      count.textContent=g.items.length+'コマ'+(card.disabled?' ・ GIF作成には2コマ必要':'');
-      const check=document.createElement('span');
-      check.className='labGifSourceCardCheck';
-      check.textContent='✓ 選択中';
+      count.textContent=g.count+'コマ'+(card.disabled?' ・ GIF作成には2コマ必要':'');
+      const check=document.createElement('span');check.className='labGifSourceCardCheck';check.textContent='✓ 選択中';
       check.setAttribute('aria-hidden','true');
-      details.append(title,count,check);
-      card.append(thumbnails,details);
+      info.append(title,count,check);card.append(thumbs,info);
       card.addEventListener('click',()=>{
         if(gifSource.value===g.key)return;
         gifSource.value=g.key;
-        clearGifResult();
-        gifStatus.style.display='none';
-        syncGifSourceChooser();
+        clearGifResult();gifStatus.style.display='none';
+        syncGifSourceChooser();loadGifSource(g.key);
       });
       gifSourceGrid.appendChild(card);
     });
   }
-  const chosenKey=gifSource.value;
   gifSourceGrid.querySelectorAll('.labGifSourceCard').forEach(card=>{
-    const selected=card.dataset.sourceKey===chosenKey;
-    card.classList.toggle('is-selected',selected);
-    card.setAttribute('aria-pressed',String(selected));
+    const selected=card.dataset.sourceKey===gifSource.value;
+    card.classList.toggle('is-selected',selected);card.setAttribute('aria-pressed',String(selected));
   });
 }
 function syncGifSourceChooser(){
   if(!gifSourceWrap||!gifSource||!gifSourceNote)return;
-  const groups=gifFrameGroups();
-  const old=gifSource.value;
+  const groups=gifFrameGroups(),old=gifSource.value;
   gifSource.replaceChildren();
   groups.forEach(g=>{
-    const option=document.createElement('option');
-    option.value=g.key;
-    option.textContent=g.label+'（'+g.items.length+'コマ）';
-    option.disabled=g.items.length<2;
+    const option=document.createElement('option');option.value=g.key;
+    option.textContent=g.label+'（'+g.count+'コマ）';option.disabled=g.count<2;
     gifSource.appendChild(option);
   });
-  const eligible=groups.filter(g=>g.items.length>=2);
+  const eligible=groups.filter(g=>g.count>=2);
   const chosen=eligible.find(g=>g.key===old)||eligible[0];
   if(chosen)gifSource.value=chosen.key;
-  gifSourceWrap.style.display=groups.length>1?'grid':'none';
+  gifSourceWrap.style.display=groups.length?'grid':'none';
   renderGifSourceCards(groups);
-  makeGifBtn.disabled=gifGenerating||!eligible.length;
+  makeGifBtn.disabled=gifGenerating||gifLoading||!chosen||gifLoadedSourceKey!==chosen.key||gifLoadedFrames.length<2;
   if(gifFrameInfo){
-    const count=groups.reduce((n,g)=>n+g.items.length,0);
-    gifFrameInfo.textContent=!count?'使えるコマがありません。先にルーレットを作成してください。'
-      :groups.length>1?'今回のルーレット：全'+count+'コマ（'+groups.length+'本の動画）。動画を選ぶと、その動画の全コマを使用します。'
-      :'今回のルーレット：'+count+'コマ。引いた回数に関係なく全コマで作ります。';
+    const total=groups.reduce((sum,g)=>sum+g.count,0);
+    gifFrameInfo.textContent=!groups.length
+      ? '保存した動画がありません。上の「新しい動画から作る」で追加できます。'
+      :eligible.length
+        ? '保存済み：'+groups.length+'本・'+total+'コマ。GIFにする動画を1本選んでください。'
+        :'GIFを作るには同じ動画に2コマ以上必要です。';
   }
-  gifSourceNote.textContent=groups.length>1?'各動画の3コマを見て選べます。複数の元動画のコマは混ぜません。':'';
+  gifSourceNote.textContent=groups.length
+    ?'動画ごとにコマを時間順に使用します。別の動画のコマは混ぜません。':'';
 }
+async function loadGifSource(sourceKey){
+  const token=++gifLoadToken;
+  gifLoading=true;gifLoadedSourceKey=null;gifLoadedFrames=[];
+  syncGifSourceChooser();
+  gifStatus.style.display='block';gifStatus.textContent='GIFに使うコマを読み込んでいます…';
+  try{
+    const frames=await window.__memoryGifLoadSource?.(sourceKey);
+    if(token!==gifLoadToken||document.body.dataset.appView!=='gif')return;
+    gifLoadedSourceKey=sourceKey;gifLoadedFrames=Array.isArray(frames)?frames:[];
+    gifStatus.textContent=gifLoadedFrames.length<2?'この動画にはGIFに使えるコマが2枚以上ありません。':'';
+    gifStatus.style.display=gifLoadedFrames.length<2?'block':'none';
+  }catch(err){
+    if(token!==gifLoadToken)return;
+    console.error('GIF source load failed',err);
+    gifStatus.textContent='動画のコマを読み込めませんでした。もう一度選択してください。';
+  }finally{
+    if(token===gifLoadToken){gifLoading=false;syncGifSourceChooser();}
+  }
+}
+window.__memoryGifOpen=async(preselectId=null)=>{
+  const token=++gifLoadToken;
+  clearGifResult();
+  gifSourceCatalog=[];gifLoadedSourceKey=null;gifLoadedFrames=[];
+  gifChooserSignature='';gifLoading=true;
+  gifFrameInfo.textContent='保存した動画を読み込んでいます…';
+  gifStatus.style.display='none';syncGifSourceChooser();
+  try{
+    const sources=await window.__memoryGifListSources?.();
+    if(token!==gifLoadToken||document.body.dataset.appView!=='gif')return;
+    gifSourceCatalog=Array.isArray(sources)?sources:[];
+    gifLoading=false;syncGifSourceChooser();
+    const chosen=gifSourceCatalog.find(s=>s.id===preselectId&&s.count>=2)
+      ||gifSourceCatalog.find(s=>s.id===gifSource.value&&s.count>=2)
+      ||gifSourceCatalog.find(s=>s.count>=2);
+    if(chosen){
+      gifSource.value=chosen.id;syncGifSourceChooser();
+      await loadGifSource(chosen.id);
+    }
+  }catch(err){
+    if(token!==gifLoadToken)return;
+    console.error('GIF library load failed',err);
+    gifStatus.style.display='block';
+    gifStatus.textContent='保存した動画を読み込めませんでした。画面を開き直してください。';
+  }finally{
+    if(token===gifLoadToken){gifLoading=false;syncGifSourceChooser();}
+  }
+};
+window.__memoryGifClose=()=>{
+  ++gifLoadToken;gifLoading=false;
+  gifSourceCatalog=[];gifLoadedFrames=[];gifLoadedSourceKey=null;gifChooserSignature='';
+  clearGifResult();
+};
+gifAddVideo?.addEventListener('click',()=>{
+  if(!gifFileInput)return;
+  gifFileInput.value='';gifFileInput.click();
+});
+gifFileInput?.addEventListener('change',async()=>{
+  const files=Array.from(gifFileInput.files||[]);
+  if(!files.length)return;
+  gifAddVideo.disabled=true;
+  gifStatus.style.display='block';
+  gifStatus.textContent='動画からGIF用のコマを抽出しています。端末内で処理します…';
+  try{
+    const imported=await window.__memoryDeckHandleFiles?.(files,{gifOnly:true});
+    if(document.body.dataset.appView==='gif'){
+      await window.__memoryGifOpen?.(Array.isArray(imported)?imported[0]:null);
+      if(!imported?.length){
+        gifStatus.style.display='block';
+        gifStatus.textContent='動画を取り込めませんでした。形式や保存状態を確認してください。';
+      }
+    }
+  }catch(err){
+    console.error('GIF video import failed',err);
+    gifStatus.style.display='block';gifStatus.textContent='動画を取り込めませんでした: '+(err?.message||err);
+  }finally{
+    gifAddVideo.disabled=false;gifFileInput.value='';
+  }
+});
 function renderHistory(){
   historyEl.innerHTML='';
   historyEmpty.style.display=history.length?'none':'block';
@@ -1871,7 +1929,6 @@ window.__memoryOnRoulettePrepared=x=>{
   clearLab();
   restoreDrawHistory(x);
   clearGifResult();
-  syncGifSourceChooser();
   primeMiracleReplaySource(x);
 };
 window.__memoryOnRouletteExit=()=>{
@@ -1941,8 +1998,7 @@ gifDownload.addEventListener('click',e=>{
 makeGifBtn.addEventListener('click',async()=>{
   if(gifGenerating)return;
   const groups=gifFrameGroups();
-  const eligible=groups.filter(g=>g.items.length>=2);
-  const group=eligible.find(g=>g.key===gifSource?.value)||eligible[0]||null;
+  const group=groups.find(g=>g.key===gifSource?.value&&g.items.length>=2&&g.key===gifLoadedSourceKey)||null;
   if(!group){
     gifStatus.style.display='block';
     gifStatus.textContent='GIFには同じ元動画のコマが2枚以上必要です。';
@@ -1983,7 +2039,7 @@ makeGifBtn.addEventListener('click',async()=>{
     syncGifSourceChooser();
   }
 });
-gifSource?.addEventListener('change',()=>{clearGifResult();syncGifSourceChooser();});
+gifSource?.addEventListener('change',()=>{clearGifResult();syncGifSourceChooser();loadGifSource(gifSource.value);});
 gifSpeed?.addEventListener('change',()=>{
   clearGifResult();
   gifStatus.style.display='none';

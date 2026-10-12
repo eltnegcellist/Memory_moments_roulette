@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const VALID=new Set(['home','create','library','play','favorites','history','settings']);
+const VALID=new Set(['home','create','library','play','favorites','history','settings','gif']);
 let currentView='home';
 let returnFromPlay='home';
 let scrollToken=0;
@@ -27,9 +27,13 @@ function applyView(view){
   if(currentView==='play'&&target!=='play'){
     try{window.__memoryExitRoulette?.();}catch(err){console.error('roulette exit failed',err);}
   }
+  if(currentView==='gif'&&target!=='gif'){
+    try{window.__memoryGifClose?.();}catch(err){console.error('GIF cleanup failed',err);}
+  }
   if(currentView==='favorites'&&target!=='favorites'){
     Promise.resolve(window.__memoryCommitFavoriteDeletes?.()).catch(err=>console.error('favorite delete commit failed',err));
   }
+  const enteringGif=target==='gif'&&currentView!=='gif';
   document.body.dataset.appView=target;
   document.querySelectorAll('[data-app-view]').forEach(el=>{
     const active=el.dataset.appView===target;
@@ -39,6 +43,7 @@ function applyView(view){
   });
   currentView=target;
   if(target==='library')window.__memoryDeckRender?.();
+  if(enteringGif)Promise.resolve(window.__memoryGifOpen?.()).catch(err=>console.error('GIF page init failed',err));
   forceTop();
 }
 function writeRoute(target,replace=false){

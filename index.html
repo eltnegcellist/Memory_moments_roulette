@@ -22,8 +22,8 @@
 <link rel="icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2" type="image/png">
 <title>思い出ルーレットおみくじ</title>
 <link rel="stylesheet" href="./style.css?v=1.1.0-h18-howto-thumbnails">
-<link rel="stylesheet" href="./deluxe.css?v=1.1.0-h17-most-played">
-<link rel="stylesheet" href="./features.css?v=1.1.0-h17-most-played">
+<link rel="stylesheet" href="./deluxe.css?v=1.1.0-h18-gif-standalone">
+<link rel="stylesheet" href="./features.css?v=1.1.0-h18-gif-standalone">
 <style>
 body:not(.show-score-details) .scoreChip,
 body:not(.show-score-details) .scoreDetails,
@@ -61,6 +61,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <nav class="homeShortcuts" aria-label="保存した内容">
     <button type="button" data-route="favorites"><span aria-hidden="true">♡</span><strong>お気に入り</strong><small id="homeFavoriteCount">保存した写真</small></button>
     <button type="button" data-route="history"><span aria-hidden="true">↺</span><strong>履歴</strong><small id="homeHistoryCount">作ったルーレット</small></button>
+    <button type="button" data-route="gif" aria-label="動画からGIFを作る"><span aria-hidden="true">▣</span><strong>GIF作成</strong><small>動画から作る</small></button>
     <button type="button" data-route="settings"><span aria-hidden="true">⚙</span><strong>設定</strong><small>ルーレット・データ</small></button>
   </nav>
 </section>
@@ -157,13 +158,19 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
     <button id="labClearHistory" class="secondary" type="button" disabled>履歴をクリア</button>
   </div>
 </section>
-<section id="labGifSection" class="card labGifCard appView" data-app-view="play">
+<section id="labGifSection" class="card labGifCard appView" data-app-view="gif">
+  <div class="viewTopbar"><button class="viewBack" type="button" data-nav-back>← ホーム</button><span>GIF作成</span></div>
   <div class="step">GIF</div>
-  <h2>ルーレットのコマからGIFを作る</h2>
-  <p class="note">今回のルーレットに使われているすべてのコマを、元動画の時間順に並べてGIFにします。引いた回数とは関係なく作れます。複数の元動画は混ぜません。</p>
-  <p id="labGifFrameInfo" class="note" aria-live="polite">ルーレットのコマを読み込んでいます。</p>
+  <h2>動画からGIFを作る</h2>
+  <p class="note">保存した動画のコマを時間順に並べてGIFにします。ルーレットを回す必要はありません。複数の動画のコマは混ぜません。</p>
+  <div class="labGifImport">
+    <input id="labGifFileInput" type="file" accept="video/*" multiple hidden>
+    <button id="labGifAddVideo" class="secondary" type="button">＋ 新しい動画から作る</button>
+    <p class="note">新しい動画は端末内でコマを抽出し、動画一覧にも追加します。元動画は外部に送信しません。</p>
+  </div>
+  <p id="labGifFrameInfo" class="note" aria-live="polite">保存した動画を読み込んでいます。</p>
   <div id="labGifSourceWrap" class="labGifSourceWrap" style="display:none">
-    <div id="labGifSourceHeading" class="labGifSourceHeading">GIFにする元動画（画像をタップして選択）</div>
+    <div id="labGifSourceHeading" class="labGifSourceHeading">GIFにする動画（画像をタップして選択）</div>
     <select id="labGifSource" hidden aria-hidden="true" tabindex="-1"></select>
     <div id="labGifSourceGrid" class="labGifSourceGrid" role="group" aria-labelledby="labGifSourceHeading"></div>
     <p id="labGifSourceNote" class="note"></p>
@@ -179,7 +186,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
     </select>
   </div>
   <div class="labGifActions">
-    <button id="labMakeGif" class="primary" type="button" disabled>すべてのコマからGIFを作る</button>
+    <button id="labMakeGif" class="primary" type="button" disabled>選んだ動画からGIFを作る</button>
   </div>
   <div id="labGifStatus" class="note" aria-live="polite" style="display:none"></div>
   <div id="labGifResult" style="display:none">
@@ -390,12 +397,12 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <video id="video" playsinline muted preload="metadata" style="display:none"></video><canvas id="captureCanvas" style="display:none"></canvas><canvas id="smallCanvas" width="28" height="28" style="display:none"></canvas>
 </div>
 <div id="bigOverlay"><div id="bigText">大吉！</div></div>
-<script src="./navigation.js?v=1.1.0-h17-most-played" defer></script>
-<script src="./app.js?v=1.1.0-h17-most-played" defer></script>
-<script src="./deck.js?v=1.1.0-h17-most-played" defer></script>
-<script src="./deluxe.js?v=1.1.0-h17-most-played" defer></script>
-<script src="./features.js?v=1.1.0-h17-most-played" defer></script>
-<script src="./hidden-settings.js?v=1.1.0-h17-most-played" defer></script>
+<script src="./navigation.js?v=1.1.0-h18-gif-standalone" defer></script>
+<script src="./app.js?v=1.1.0-h18-gif-standalone" defer></script>
+<script src="./deck.js?v=1.1.0-h18-gif-standalone" defer></script>
+<script src="./deluxe.js?v=1.1.0-h18-gif-standalone" defer></script>
+<script src="./features.js?v=1.1.0-h18-gif-standalone" defer></script>
+<script src="./hidden-settings.js?v=1.1.0-h18-gif-standalone" defer></script>
 <script>
 (()=>{
   const scoreBox=document.getElementById('showScores');

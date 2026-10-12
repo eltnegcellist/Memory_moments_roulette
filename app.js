@@ -249,6 +249,10 @@ if(activeCreation.mode==='omikuji'){
   rouletteBadge.style.display='block'; rouletteBadge.textContent='この瞬間！'; playSound('吉');
 }
 tapHint.textContent='もう一度タップすると再開します';
+if(activeCreation?.deckMode){
+  const sourceId=activeCreation.deckSourceIds?.[currentIndex];
+  if(sourceId)window.__memoryDeckRecordDraw?.(sourceId);
+}
 window.__memoryOnRouletteStopped?.();
 }
 function celebrate(){ bigOverlay.classList.remove('show'); void bigOverlay.offsetWidth; bigOverlay.classList.add('show'); const pal=['#ffd700','#fff0a0','#fff','#ff5a61','#ff9d00']; for(let i=0;i<90;i++){ const e=document.createElement('div'); e.className='confetti'; e.style.left=Math.random()*100+'vw'; e.style.width=7+Math.random()*9+'px'; e.style.height=10+Math.random()*18+'px'; e.style.background=pal[Math.floor(Math.random()*pal.length)]; e.style.animationDuration=1.8+Math.random()*1.6+'s'; e.style.animationDelay=Math.random()*.3+'s'; document.body.appendChild(e); setTimeout(()=>e.remove(),3800); } if(navigator.vibrate) navigator.vibrate([100,60,140,70,260]); playSound('大吉'); setTimeout(()=>bigOverlay.classList.remove('show'),2500); }

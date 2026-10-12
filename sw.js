@@ -1,4 +1,4 @@
-const CACHE='baby-roulette-pages-1.1.0-h21-gif-video-picker';
+const CACHE='baby-roulette-pages-1.1.0-h22-howto-branches';
 const ASSETS=['./','./index.html','./style.css?v=1.1.0-h21-gif-video-picker','./deluxe.css?v=1.1.0-h21-gif-video-picker','./features.css?v=1.1.0-h21-gif-video-picker','./navigation.js?v=1.1.0-h21-gif-video-picker','./app.js?v=1.1.0-h21-gif-video-picker','./deck.js?v=1.1.0-h21-gif-video-picker','./deluxe.js?v=1.1.0-h21-gif-video-picker','./features.js?v=1.1.0-h21-gif-video-picker','./hidden-settings.js?v=1.1.0-h21-gif-video-picker','./manifest.webmanifest?v=memorybrand2','./icons/memory-roulette-omikuji.png?v=memorybrand2'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));

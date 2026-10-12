@@ -24,6 +24,14 @@ const gifSourceGrid=document.getElementById('labGifSourceGrid');
 const gifSourceNote=document.getElementById('labGifSourceNote');
 const gifAddVideo=document.getElementById('labGifAddVideo');
 const gifFileInput=document.getElementById('labGifFileInput');
+const gifChoosePast=document.getElementById('labGifChoosePast');
+const gifPast=document.getElementById('labGifPast');
+const gifEditor=document.getElementById('labGifEditor');
+const gifSearch=document.getElementById('labGifSearch');
+const gifSort=document.getElementById('labGifSort');
+const gifSelectedTitle=document.getElementById('labGifSelectedTitle');
+const gifSelectedFrames=document.getElementById('labGifSelectedFrames');
+const gifChangeVideo=document.getElementById('labGifChangeVideo');
 const gifFrameInfo=document.getElementById('labGifFrameInfo');
 const gifSpeed=document.getElementById('labGifSpeed');
 if(!stageEl||!resultCardEl||!collectionEl||!historyEl)return;
@@ -154,6 +162,7 @@ let gifLoadedSourceKey=null;
 let gifLoadedFrames=[];
 let gifLoading=false;
 let gifLoadToken=0;
+let gifPastOpen=false;
 let dockTimer=null;
 let rareTimer=null;
 let miracleSequenceToken=0;
@@ -1500,131 +1509,175 @@ miracleBack.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();
 function gifFrameGroups(){
   return gifSourceCatalog.map(src=>({
     key:src.id,label:src.label,count:src.count,thumbnail:src.thumbnail,
+    origin:src.origin,dateMs:src.dateMs,dateLabel:src.dateLabel,
+    monthKey:src.monthKey,monthLabel:src.monthLabel,
     items:gifLoadedSourceKey===src.id?gifLoadedFrames:[]
   }));
 }
 function renderGifSourceCards(groups){
   if(!gifSourceGrid)return;
-  const signature=JSON.stringify(groups.map(g=>[g.key,g.label,g.count,g.items.length]));
+  const q=(gifSearch?.value||'').trim().toLowerCase();
+  const oldest=gifSort?.value==='oldest';
+  const visible=groups.filter(g=>!q||[g.label,g.dateLabel,g.monthLabel,g.origin==='legacy'?'旧履歴':'動画'].join(' ').toLowerCase().includes(q))
+    .sort((a,b)=>oldest?a.dateMs-b.dateMs:b.dateMs-a.dateMs);
+  const signature=JSON.stringify(visible.map(g=>[g.key,g.label,g.count,g.monthKey]));
   if(gifChooserSignature!==signature){
     gifChooserSignature=signature;
     gifSourceGrid.replaceChildren();
-    groups.forEach(g=>{
-      const card=document.createElement('button');
-      card.type='button';card.className='labGifSourceCard';card.dataset.sourceKey=g.key;
-      card.disabled=g.count<2;card.setAttribute('aria-pressed','false');
-      card.setAttribute('aria-label',g.label+'、'+g.count+'コマ'+(card.disabled?'、GIF作成不可':''));
-      const thumbs=document.createElement('span');thumbs.className='labGifSourceThumbs';
-      const pictures=g.items.length
-        ? [g.items[Math.floor((g.items.length-1)/2)].image,g.items[0].image,g.items[g.items.length-1].image]
-        :g.thumbnail?[g.thumbnail]:[];
-      if(pictures.length===1)thumbs.classList.add('labGifSourceThumbsSingle');
-      pictures.forEach(source=>{
-        const img=document.createElement('img');img.src=source;img.alt='';img.loading='lazy';img.decoding='async';
-        thumbs.appendChild(img);
-      });
-      if(!pictures.length){
-        const empty=document.createElement('span');empty.className='labGifNoThumb';empty.textContent='画像準備中';thumbs.appendChild(empty);
+    let month=null,grid=null;
+    for(const g of visible){
+      if(month!==g.monthKey){
+        month=g.monthKey;
+        const section=document.createElement('section');section.className='deckMonthGroup';
+        const head=document.createElement('div');head.className='deckMonthHead';
+        const title=document.createElement('strong');title.textContent=g.monthLabel||'保存済み動画';
+        const count=document.createElement('span');
+        count.textContent=visible.filter(v=>v.monthKey===month).length+'本';
+        head.append(title,count);
+        grid=document.createElement('div');grid.className='deckVideoGrid';
+        section.append(head,grid);gifSourceGrid.appendChild(section);
       }
-      const info=document.createElement('span');info.className='labGifSourceCardDetails';
-      const title=document.createElement('strong');title.textContent=g.label;
-      const count=document.createElement('small');
-      count.textContent=g.count+'コマ'+(card.disabled?' ・ GIF作成には2コマ必要':'');
-      const check=document.createElement('span');check.className='labGifSourceCardCheck';check.textContent='✓ 選択中';
-      check.setAttribute('aria-hidden','true');
-      info.append(title,count,check);card.append(thumbs,info);
-      card.addEventListener('click',()=>{
-        if(gifSource.value===g.key)return;
+      const tile=document.createElement('article');
+      tile.className='deckVideoTile';tile.dataset.sourceKey=g.key;
+      const button=document.createElement('button');
+      button.type='button';button.className='deckVideoPick';
+      button.setAttribute('aria-pressed','false');
+      button.setAttribute('aria-label',g.label+'、'+g.count+'コマからGIFを作る');
+      const media=document.createElement('div');media.className='deckVideoThumb';
+      if(g.thumbnail){
+        const img=document.createElement('img');
+        img.src=g.thumbnail;img.alt='';img.loading='lazy';img.decoding='async';
+        media.appendChild(img);
+      }
+      const icon=document.createElement('span');icon.className='deckVideoIcon';icon.textContent=g.origin==='legacy'?'▤':'▶';
+      const check=document.createElement('span');check.className='deckVideoCheck';check.textContent='✓';
+      media.append(icon,check);
+      const info=document.createElement('div');info.className='deckVideoInfo';
+      const name=document.createElement('strong');name.textContent=g.label;
+      const note=document.createElement('small');
+      note.textContent=g.count+'コマ'+(g.origin==='legacy'?' ・ 旧履歴':'');
+      info.append(name,note);button.append(media,info);tile.appendChild(button);grid.appendChild(tile);
+      button.addEventListener('click',()=>{
+        if(gifSource.value===g.key&&gifLoadedFrames.length>=2&&gifLoadedSourceKey===g.key){
+          gifEditor.hidden=false;gifEditor.scrollIntoView({behavior:'smooth',block:'start'});
+          return;
+        }
         gifSource.value=g.key;
-        clearGifResult();gifStatus.style.display='none';
+        clearGifResult();
+        gifStatus.style.display='none';
         syncGifSourceChooser();loadGifSource(g.key);
       });
-      gifSourceGrid.appendChild(card);
-    });
+    }
+    if(!visible.length){
+      const note=document.createElement('p');note.className='note';
+      note.textContent=groups.length?'検索条件に合う動画はありません。':'保存した動画がありません。新しい動画を選んでください。';
+      gifSourceGrid.appendChild(note);
+    }
   }
-  gifSourceGrid.querySelectorAll('.labGifSourceCard').forEach(card=>{
-    const selected=card.dataset.sourceKey===gifSource.value;
-    card.classList.toggle('is-selected',selected);card.setAttribute('aria-pressed',String(selected));
+  gifSourceGrid.querySelectorAll('.deckVideoTile').forEach(tile=>{
+    const active=tile.dataset.sourceKey===gifSource.value;
+    tile.classList.toggle('selected',active);
+    tile.querySelector('.deckVideoPick')?.setAttribute('aria-pressed',String(active));
   });
 }
 function syncGifSourceChooser(){
   if(!gifSourceWrap||!gifSource||!gifSourceNote)return;
   const groups=gifFrameGroups(),old=gifSource.value;
   gifSource.replaceChildren();
-  groups.forEach(g=>{
-    const option=document.createElement('option');option.value=g.key;
-    option.textContent=g.label+'（'+g.count+'コマ）';option.disabled=g.count<2;
+  for(const g of groups){
+    const option=document.createElement('option');
+    option.value=g.key;option.textContent=g.label+'（'+g.count+'コマ）';
     gifSource.appendChild(option);
-  });
-  const eligible=groups.filter(g=>g.count>=2);
-  const chosen=eligible.find(g=>g.key===old)||eligible[0];
-  if(chosen)gifSource.value=chosen.key;
-  gifSourceWrap.style.display=groups.length?'grid':'none';
-  renderGifSourceCards(groups);
-  makeGifBtn.disabled=gifGenerating||gifLoading||!chosen||gifLoadedSourceKey!==chosen.key||gifLoadedFrames.length<2;
-  if(gifFrameInfo){
-    const total=groups.reduce((sum,g)=>sum+g.count,0);
-    gifFrameInfo.textContent=!groups.length
-      ? '保存した動画がありません。上の「新しい動画から作る」で追加できます。'
-      :eligible.length
-        ? '保存済み：'+groups.length+'本・'+total+'コマ。GIFにする動画を1本選んでください。'
-        :'GIFを作るには同じ動画に2コマ以上必要です。';
   }
-  gifSourceNote.textContent=groups.length
-    ?'動画ごとにコマを時間順に使用します。別の動画のコマは混ぜません。':'';
+  if(groups.some(g=>g.key===old))gifSource.value=old;
+  else gifSource.selectedIndex=-1;
+  gifSourceWrap.style.display=gifPastOpen?'grid':'none';
+  renderGifSourceCards(groups);
+  const chosen=groups.find(g=>g.key===gifSource.value);
+  makeGifBtn.disabled=gifGenerating||gifLoading||!chosen||gifLoadedSourceKey!==chosen.key||gifLoadedFrames.length<2;
+  gifFrameInfo.textContent=groups.length
+    ? '保存済み：'+groups.length+'本。画像をタップしてGIFにする動画を選んでください。'
+    : '過去の動画がありません。新しい動画を選んでください。';
+  gifSourceNote.textContent='1本ずつGIFにします。別の動画のコマは混ぜません。';
 }
 async function loadGifSource(sourceKey){
   const token=++gifLoadToken;
   gifLoading=true;gifLoadedSourceKey=null;gifLoadedFrames=[];
+  gifEditor.hidden=true;
   syncGifSourceChooser();
-  gifStatus.style.display='block';gifStatus.textContent='GIFに使うコマを読み込んでいます…';
+  gifStatus.style.display='block';
+  gifStatus.textContent='選んだ動画のコマを読み込んでいます…';
   try{
     const frames=await window.__memoryGifLoadSource?.(sourceKey);
     if(token!==gifLoadToken||document.body.dataset.appView!=='gif')return;
-    gifLoadedSourceKey=sourceKey;gifLoadedFrames=Array.isArray(frames)?frames:[];
-    gifStatus.textContent=gifLoadedFrames.length<2?'この動画にはGIFに使えるコマが2枚以上ありません。':'';
-    gifStatus.style.display=gifLoadedFrames.length<2?'block':'none';
+    gifLoadedSourceKey=sourceKey;
+    gifLoadedFrames=Array.isArray(frames)?frames:[];
+    if(gifLoadedFrames.length<2){
+      gifStatus.textContent='GIFには2枚以上の保存画像が必要です。別の動画を選ぶか、新しい動画を追加してください。';
+      return;
+    }
+    const name=gifSourceCatalog.find(g=>g.id===sourceKey)?.label||'選択した動画';
+    gifSelectedTitle.textContent=name+'（'+gifLoadedFrames.length+'コマ）';
+    gifSelectedFrames.replaceChildren();
+    [gifLoadedFrames[0],gifLoadedFrames[Math.floor((gifLoadedFrames.length-1)/2)],gifLoadedFrames[gifLoadedFrames.length-1]].forEach(frame=>{
+      const img=document.createElement('img');
+      img.src=frame.image;img.alt='選択した動画のコマ';
+      gifSelectedFrames.appendChild(img);
+    });
+    gifEditor.hidden=false;gifStatus.style.display='none';
+    gifEditor.scrollIntoView({behavior:'smooth',block:'start'});
   }catch(err){
     if(token!==gifLoadToken)return;
     console.error('GIF source load failed',err);
-    gifStatus.textContent='動画のコマを読み込めませんでした。もう一度選択してください。';
+    gifStatus.textContent='この動画のコマを読み込めませんでした。別の動画を選んでください。';
   }finally{
     if(token===gifLoadToken){gifLoading=false;syncGifSourceChooser();}
   }
 }
-window.__memoryGifOpen=async(preselectId=null)=>{
+window.__memoryGifOpen=async()=>{
   const token=++gifLoadToken;
   clearGifResult();
-  gifSourceCatalog=[];gifLoadedSourceKey=null;gifLoadedFrames=[];
+  gifPastOpen=false;gifSourceCatalog=[];gifLoadedSourceKey=null;gifLoadedFrames=[];
   gifChooserSignature='';gifLoading=true;
-  gifFrameInfo.textContent='保存した動画を読み込んでいます…';
-  gifStatus.style.display='none';syncGifSourceChooser();
+  gifPast.hidden=true;gifEditor.hidden=true;
+  gifChoosePast?.setAttribute('aria-expanded','false');
+  if(gifSearch)gifSearch.value='';
+  if(gifSort)gifSort.value='newest';
+  gifStatus.style.display='none';
+  syncGifSourceChooser();
   try{
     const sources=await window.__memoryGifListSources?.();
     if(token!==gifLoadToken||document.body.dataset.appView!=='gif')return;
     gifSourceCatalog=Array.isArray(sources)?sources:[];
-    gifLoading=false;syncGifSourceChooser();
-    const chosen=gifSourceCatalog.find(s=>s.id===preselectId&&s.count>=2)
-      ||gifSourceCatalog.find(s=>s.id===gifSource.value&&s.count>=2)
-      ||gifSourceCatalog.find(s=>s.count>=2);
-    if(chosen){
-      gifSource.value=chosen.id;syncGifSourceChooser();
-      await loadGifSource(chosen.id);
-    }
+    gifSource.selectedIndex=-1;
+    gifChooserSignature='';
   }catch(err){
     if(token!==gifLoadToken)return;
-    console.error('GIF library load failed',err);
+    console.error('GIF video library failed',err);
     gifStatus.style.display='block';
-    gifStatus.textContent='保存した動画を読み込めませんでした。画面を開き直してください。';
+    gifStatus.textContent='保存した動画の一覧を読み込めませんでした。画面を開き直してください。';
   }finally{
     if(token===gifLoadToken){gifLoading=false;syncGifSourceChooser();}
   }
 };
 window.__memoryGifClose=()=>{
-  ++gifLoadToken;gifLoading=false;
+  ++gifLoadToken;gifLoading=false;gifPastOpen=false;
   gifSourceCatalog=[];gifLoadedFrames=[];gifLoadedSourceKey=null;gifChooserSignature='';
   clearGifResult();
 };
+function openGifPast(){
+  gifPastOpen=true;
+  gifPast.hidden=false;
+  gifChoosePast?.setAttribute('aria-expanded','true');
+  syncGifSourceChooser();
+  gifPast.scrollIntoView({behavior:'smooth',block:'start'});
+}
+gifChoosePast?.addEventListener('click',openGifPast);
+gifSearch?.addEventListener('input',()=>{gifChooserSignature='';syncGifSourceChooser();});
+gifSort?.addEventListener('change',()=>{gifChooserSignature='';syncGifSourceChooser();});
+gifChangeVideo?.addEventListener('click',()=>{
+  gifEditor.hidden=true;clearGifResult();openGifPast();
+});
 gifAddVideo?.addEventListener('click',()=>{
   if(!gifFileInput)return;
   gifFileInput.value='';gifFileInput.click();
@@ -1633,20 +1686,28 @@ gifFileInput?.addEventListener('change',async()=>{
   const files=Array.from(gifFileInput.files||[]);
   if(!files.length)return;
   gifAddVideo.disabled=true;
+  gifEditor.hidden=true;clearGifResult();
   gifStatus.style.display='block';
   gifStatus.textContent='動画からGIF用のコマを抽出しています。端末内で処理します…';
   try{
     const imported=await window.__memoryDeckHandleFiles?.(files,{gifOnly:true});
-    if(document.body.dataset.appView==='gif'){
-      await window.__memoryGifOpen?.(Array.isArray(imported)?imported[0]:null);
-      if(!imported?.length){
-        gifStatus.style.display='block';
-        gifStatus.textContent='動画を取り込めませんでした。形式や保存状態を確認してください。';
-      }
+    if(document.body.dataset.appView!=='gif')return;
+    await window.__memoryGifOpen?.();
+    if(document.body.dataset.appView!=='gif')return;
+    const sourceKey=Array.isArray(imported)?String(imported[0]||''):'';
+    if(sourceKey&&gifSourceCatalog.some(g=>g.id===sourceKey)){
+      gifSource.value=sourceKey;
+      syncGifSourceChooser();
+      await loadGifSource(sourceKey);
+    }else{
+      openGifPast();
+      gifStatus.style.display='block';
+      gifStatus.textContent='新しく取り込める動画がありませんでした。保存済みの動画を選ぶか形式を確認してください。';
     }
   }catch(err){
     console.error('GIF video import failed',err);
-    gifStatus.style.display='block';gifStatus.textContent='動画を取り込めませんでした: '+(err?.message||err);
+    gifStatus.style.display='block';
+    gifStatus.textContent='動画を取り込めませんでした: '+(err?.message||err);
   }finally{
     gifAddVideo.disabled=false;gifFileInput.value='';
   }

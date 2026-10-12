@@ -643,3 +643,27 @@ body.labPhotoViewerOpen{overflow:hidden}
 @media(max-width:520px){
   #stage.photo-focus #fortuneBadge{font-size:clamp(14px,4vw,17px)}
 }
+
+
+/* GIF uses the same compact 3-column video tiles as the roulette library. */
+.labGifChoices{margin:12px 0}
+.labGifPast[hidden],.labGifEditor[hidden]{display:none!important}
+.labGifPast{margin-top:18px;border-top:1px solid #eaddd5;padding-top:12px}
+.labGifLibraryToolbar{margin:0 0 8px}
+.labGifSourceWrap{background:transparent;border:0;padding:0;margin:8px 0}
+.labGifSourceHeading{font-size:13px}
+.labGifPhotoLibrary{max-height:min(58vh,560px);overflow:auto;scrollbar-gutter:stable}
+.labGifPhotoLibrary .deckMonthHead{z-index:2}
+.labGifPhotoLibrary .deckVideoPick{cursor:pointer}
+.labGifPhotoLibrary .deckVideoTile.selected .deckVideoPick{border-color:#dd6c8b}
+.labGifPhotoLibrary .deckVideoCheck{opacity:0}
+.labGifPhotoLibrary .deckVideoTile.selected .deckVideoCheck{opacity:1}
+.labGifEditor{margin-top:18px;padding:14px 12px;border:1px solid #eadcd5;border-radius:16px;background:#fffaf7}
+.labGifEditorHeader{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.labGifEditorHeader strong{font-size:14px;min-width:0;overflow-wrap:anywhere}
+.labGifEditorHeader .secondary{font-size:11px;padding:8px 10px;flex:0 0 auto}
+.labGifSelectedFrames{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;border-radius:11px;overflow:hidden}
+.labGifSelectedFrames img{display:block;width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:7px;background:#f1e9e2}
+.labGifEditor .labGifSpeed{margin-top:12px}
+#labGifStatus{margin:12px 0;font-size:12px}
+@media(max-width:420px){.labGifPhotoLibrary .deckVideoGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}

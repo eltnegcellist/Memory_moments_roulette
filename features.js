@@ -1634,39 +1634,50 @@ async function loadGifSource(sourceKey){
     if(token===gifLoadToken){gifLoading=false;syncGifSourceChooser();}
   }
 }
-window.__memoryGifOpen=async(preselectId=null)=>{
+window.__memoryGifOpen=async()=>{
   const token=++gifLoadToken;
   clearGifResult();
-  gifSourceCatalog=[];gifLoadedSourceKey=null;gifLoadedFrames=[];
+  gifPastOpen=false;gifSourceCatalog=[];gifLoadedSourceKey=null;gifLoadedFrames=[];
   gifChooserSignature='';gifLoading=true;
-  gifFrameInfo.textContent='保存した動画を読み込んでいます…';
-  gifStatus.style.display='none';syncGifSourceChooser();
+  gifPast.hidden=true;gifEditor.hidden=true;
+  gifChoosePast?.setAttribute('aria-expanded','false');
+  if(gifSearch)gifSearch.value='';
+  if(gifSort)gifSort.value='newest';
+  gifStatus.style.display='none';
+  syncGifSourceChooser();
   try{
     const sources=await window.__memoryGifListSources?.();
     if(token!==gifLoadToken||document.body.dataset.appView!=='gif')return;
     gifSourceCatalog=Array.isArray(sources)?sources:[];
-    gifLoading=false;syncGifSourceChooser();
-    const chosen=gifSourceCatalog.find(s=>s.id===preselectId&&s.count>=2)
-      ||gifSourceCatalog.find(s=>s.id===gifSource.value&&s.count>=2)
-      ||gifSourceCatalog.find(s=>s.count>=2);
-    if(chosen){
-      gifSource.value=chosen.id;syncGifSourceChooser();
-      await loadGifSource(chosen.id);
-    }
+    gifSource.selectedIndex=-1;
+    gifChooserSignature='';
   }catch(err){
     if(token!==gifLoadToken)return;
-    console.error('GIF library load failed',err);
+    console.error('GIF video library failed',err);
     gifStatus.style.display='block';
-    gifStatus.textContent='保存した動画を読み込めませんでした。画面を開き直してください。';
+    gifStatus.textContent='保存した動画の一覧を読み込めませんでした。画面を開き直してください。';
   }finally{
     if(token===gifLoadToken){gifLoading=false;syncGifSourceChooser();}
   }
 };
 window.__memoryGifClose=()=>{
-  ++gifLoadToken;gifLoading=false;
+  ++gifLoadToken;gifLoading=false;gifPastOpen=false;
   gifSourceCatalog=[];gifLoadedFrames=[];gifLoadedSourceKey=null;gifChooserSignature='';
   clearGifResult();
 };
+function openGifPast(){
+  gifPastOpen=true;
+  gifPast.hidden=false;
+  gifChoosePast?.setAttribute('aria-expanded','true');
+  syncGifSourceChooser();
+  gifPast.scrollIntoView({behavior:'smooth',block:'start'});
+}
+gifChoosePast?.addEventListener('click',openGifPast);
+gifSearch?.addEventListener('input',()=>{gifChooserSignature='';syncGifSourceChooser();});
+gifSort?.addEventListener('change',()=>{gifChooserSignature='';syncGifSourceChooser();});
+gifChangeVideo?.addEventListener('click',()=>{
+  gifEditor.hidden=true;clearGifResult();openGifPast();
+});
 gifAddVideo?.addEventListener('click',()=>{
   if(!gifFileInput)return;
   gifFileInput.value='';gifFileInput.click();
@@ -1675,20 +1686,28 @@ gifFileInput?.addEventListener('change',async()=>{
   const files=Array.from(gifFileInput.files||[]);
   if(!files.length)return;
   gifAddVideo.disabled=true;
+  gifEditor.hidden=true;clearGifResult();
   gifStatus.style.display='block';
   gifStatus.textContent='動画からGIF用のコマを抽出しています。端末内で処理します…';
   try{
     const imported=await window.__memoryDeckHandleFiles?.(files,{gifOnly:true});
-    if(document.body.dataset.appView==='gif'){
-      await window.__memoryGifOpen?.(Array.isArray(imported)?imported[0]:null);
-      if(!imported?.length){
-        gifStatus.style.display='block';
-        gifStatus.textContent='動画を取り込めませんでした。形式や保存状態を確認してください。';
-      }
+    if(document.body.dataset.appView!=='gif')return;
+    await window.__memoryGifOpen?.();
+    if(document.body.dataset.appView!=='gif')return;
+    const sourceKey=Array.isArray(imported)?String(imported[0]||''):'';
+    if(sourceKey&&gifSourceCatalog.some(g=>g.id===sourceKey)){
+      gifSource.value=sourceKey;
+      syncGifSourceChooser();
+      await loadGifSource(sourceKey);
+    }else{
+      openGifPast();
+      gifStatus.style.display='block';
+      gifStatus.textContent='新しく取り込める動画がありませんでした。保存済みの動画を選ぶか形式を確認してください。';
     }
   }catch(err){
     console.error('GIF video import failed',err);
-    gifStatus.style.display='block';gifStatus.textContent='動画を取り込めませんでした: '+(err?.message||err);
+    gifStatus.style.display='block';
+    gifStatus.textContent='動画を取り込めませんでした: '+(err?.message||err);
   }finally{
     gifAddVideo.disabled=false;gifFileInput.value='';
   }

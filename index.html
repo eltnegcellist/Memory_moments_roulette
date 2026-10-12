@@ -39,7 +39,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <header class="hero" data-app-view="home">
   <div class="heroMark" aria-hidden="true"><img src="./icons/memory-roulette-omikuji.png?v=memorybrand2" alt=""></div>
   <div class="heroText">
-    <div class="heroTopline"><span class="eyebrow">MEMORY MOMENTS</span><span class="versionBadge" id="labSettingsTrigger" data-lab-trigger title="5回タップでラボ設定">v1.1.0-h21</span></div>
+    <div class="heroTopline"><span class="eyebrow">MEMORY MOMENTS</span><span class="versionBadge" id="labSettingsTrigger" data-lab-trigger title="5回タップでラボ設定">v1.1.0-h22</span></div>
     <h1><span class="titlePart">思い出ルーレット</span><span class="titlePart">おみくじ</span></h1>
     <p class="heroCatch">動画に隠れた、いろいろな一瞬を。</p>
     <p class="lead">写真には残さなかった一瞬まで、動画には残っています。自分では選ばなかった一枚に偶然出会い、おみくじと一緒に楽しむアプリです。</p>
@@ -262,7 +262,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 
   <button id="settingsVersionTrigger" class="settingsVersionTrigger" data-lab-trigger type="button" title="5回タップでLAB設定を表示">
     <span>アプリバージョン</span>
-    <strong>v1.1.0-h21</strong>
+    <strong>v1.1.0-h22</strong>
   </button>
   <div id="labSettingsHint" class="labSettingsHint settingsLabHint">LAB設定：上のバージョン表示を5回タップで表示</div>
 
@@ -324,15 +324,15 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
       </div>
       <button id="howtoClose" class="howtoClose" type="button" aria-label="使い方を閉じる">×</button>
     </div>
-    <p class="howtoLead">写真では選ばなかった一瞬も、動画の中には残っています。このアプリは、その一瞬をルーレットで偶然引いて楽しみ、さらにおみくじを重ねて今日だけの結果にするためのものです。動画はブラウザ内で処理され、元動画を外部へ送信しません。</p>
+    <p class="howtoLead">写真では選ばなかった一瞬も、動画の中には残っています。まずはホームの「新しい動画から作る」「過去の動画から作る」の<b>どちらか一方</b>を選びます。どちらもそのままルーレットで遊べます。動画はブラウザ内で処理し、元動画を外部へ送信しません。</p>
 
     <div class="howtoSteps">
       
 <article class="howtoStep">
-        <div class="howtoNum">1</div>
+        <div class="howtoNum">1A</div>
         <div class="howtoCopy">
-          <h3>思い出動画を追加する</h3>
-          <p>動画は1本でも複数本でも選べます。それぞれの動画から8〜15個ほどの一瞬を切り出し、端末内の「思い出おみくじデッキ」に追加します。</p>
+          <h3>新しい動画から作る</h3>
+          <p>ホームの「新しい動画から作る」で端末の動画を1本または複数本選びます。動画から一瞬を切り出したら、そのままルーレットへ進みます。取り込んだ動画の候補画像は、次回以降も使えます。</p>
         </div>
         <div class="howtoMock mockUpload" aria-hidden="true">
           <div class="mockLabel">ADD MOMENTS</div>
@@ -343,10 +343,10 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
       </article>
 
       <article class="howtoStep">
-        <div class="howtoNum">2</div>
+        <div class="howtoNum">1B</div>
         <div class="howtoCopy">
-          <h3>過去の動画をサムネイルから選ぶ</h3>
-          <p>保存した動画は撮影時期ごとのサムネイル一覧で見返せます。検索や新しい順・古い順を使い、今回のおみくじに使う動画だけをタップして選べます。</p>
+          <h3>過去の動画から作る</h3>
+          <p>ホームの「過去の動画から作る」では、以前取り込んだ動画がサムネイルで並びます。今回使いたい動画をタップして選び、「選んだ動画でおみくじを引く」を押します。新しく動画を取り込む必要はありません。</p>
         </div>
         <div class="howtoMock mockPreview" aria-hidden="true">
           <div class="mockLabel">VIDEO LIBRARY</div>
@@ -359,9 +359,9 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
       </article>
 
       <article class="howtoStep">
-        <div class="howtoNum">3</div>
+        <div class="howtoNum">2</div>
         <div class="howtoCopy">
-          <h3>デッキから引いてストップ</h3>
+          <h3>ルーレットを回してストップ</h3>
           <p>複数の動画から集めた一瞬が次々に切り替わります。好きなタイミングでタップしてストップ。同じ一瞬は、原則としてデッキを一巡するまで結果として再登場しません。</p>
         </div>
         <div class="howtoMock mockPlay">
@@ -376,7 +376,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
       </article>
 
       <article class="howtoStep">
-        <div class="howtoNum">4</div>
+        <div class="howtoNum">3</div>
         <div class="howtoCopy">
           <h3>残したい一瞬を保存</h3>
           <p>止まった写真は履歴にたまります。きれいさに関係なく、「この一瞬を残したい」と思った写真を「今日の一枚」に保存できます。</p>

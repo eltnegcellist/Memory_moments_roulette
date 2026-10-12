@@ -601,8 +601,21 @@ body.labPhotoViewerOpen{overflow:hidden}
 }
 
 .labGifSourceWrap{display:grid;gap:6px;margin:12px 0;padding:11px 12px;border:1px solid #eadcd5;border-radius:14px;background:#fffaf7}
-.labGifSourceWrap label{font-size:11px;font-weight:900;color:#5f493f}
-.labGifSourceWrap select{width:100%;padding:9px 10px;border:1px solid #ddcec6;border-radius:10px;background:#fff;color:#4f3b32}
+.labGifSourceHeading{font-size:12px;font-weight:900;color:#5f493f}
+.labGifSourceWrap select[hidden]{display:none}
+.labGifSourceGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.labGifSourceCard{display:block;min-width:0;width:100%;padding:7px;text-align:left;cursor:pointer;background:#fff;border:2px solid #e2d6cf;border-radius:13px;color:#4f3b32;font:inherit;transition:border-color .15s,box-shadow .15s}
+.labGifSourceCard.is-selected{border-color:#ce5977;box-shadow:0 0 0 2px #f4d7e0}
+.labGifSourceCard:focus-visible{outline:3px solid #ae4767;outline-offset:2px}
+.labGifSourceCard:disabled{opacity:.55;cursor:not-allowed}
+.labGifSourceThumbs{display:grid;grid-template-columns:2fr 1fr;grid-template-rows:repeat(2,minmax(0,1fr));gap:2px;width:100%;aspect-ratio:1.55;overflow:hidden;border-radius:8px;background:#f2ebe5}
+.labGifSourceThumbs img{display:block;min-width:0;min-height:0;width:100%;height:100%;object-fit:cover}
+.labGifSourceThumbs img:first-child{grid-row:1 / span 2}
+.labGifSourceCardDetails{display:block;padding:7px 2px 1px}
+.labGifSourceCardDetails strong{display:block;font-size:12px;line-height:1.45;overflow-wrap:anywhere}
+.labGifSourceCardDetails small{display:block;margin-top:3px;font-size:11px;color:#806b62}
+.labGifSourceCardCheck{display:block;margin-top:4px;font-size:11px;font-weight:900;color:#b64c68;visibility:hidden}
+.labGifSourceCard.is-selected .labGifSourceCardCheck{visibility:visible}
 .labGifSourceWrap .note{margin:0}
 
 /* GIF creation is separate from drawn-photo history. */

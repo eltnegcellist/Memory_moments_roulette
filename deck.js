@@ -1574,19 +1574,84 @@ window.addEventListener('pageshow',()=>{
   resumePendingBackgroundWork().catch(err=>console.warn('background resume failed',err));
 });
 requestPersistence().catch(()=>{});
-// GIF page uses saved extracted frames without starting a roulette.
+// GIF list includes current saved deck videos and older standalone roulette records.
+// Earlier versions stored frames only in the 'creations' table, not 'deckSources'.
+let gifLegacyRefs=new Map();
+function gifCatalogDate(time){
+  const date=new Date(Number(time)||Date.now());
+  return {
+    dateMs:date.getTime(),
+    monthKey:date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0'),
+    monthLabel:date.getFullYear()+'年'+(date.getMonth()+1)+'月',
+    dateLabel:(date.getMonth()+1)+'/'+date.getDate()+' '+date.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})
+  };
+}
+function oldGifGroupKey(creation,index){
+  if(!creation.deckMode)return 'single';
+  const sourceId=creation.deckSourceIds?.[index]||creation.deckSourceNames?.[index];
+  return sourceId?'source:'+String(sourceId):null;
+}
 window.__memoryGifListSources=async()=>{
-  const s=await stats();
-  return s.sources.slice()
-    .sort((a,b)=>(Number(b.addedAt)||Number(b.lastModified)||0)-(Number(a.addedAt)||Number(a.lastModified)||0))
-    .map(src=>({id:String(src.id),label:sourceDisplayName(src),
-      count:Number(src.candidateCount)||0,thumbnail:src.thumbnailData||''}));
+  const [saved,creations]=await Promise.all([
+    stats(),
+    typeof dbAll==='function'?dbAll():Promise.resolve([])
+  ]);
+  const entries=saved.sources.map(src=>({
+    id:String(src.id),label:sourceDisplayName(src),
+    count:Number(src.candidateCount)||0,
+    thumbnail:src.thumbnailData||'',origin:'deck',
+    ...gifCatalogDate(src.addedAt||src.lastModified)
+  }));
+  const savedIds=new Set(saved.sources.map(x=>String(x.id)));
+  const seenOldSources=new Set();
+  const refs=new Map();
+  for(const creation of creations){
+    if(!Array.isArray(creation?.frames)||!creation.frames.length)continue;
+    const groups=new Map();
+    creation.frames.forEach((img,index)=>{
+      if(typeof img!=='string'||!img.startsWith('data:image/'))return;
+      const key=oldGifGroupKey(creation,index);
+      if(!key)return;
+      const sourceId=creation.deckSourceIds?.[index];
+      if(creation.deckMode&&sourceId&&savedIds.has(String(sourceId)))return;
+      if(!groups.has(key))groups.set(key,[]);
+      groups.get(key).push({image:img,time:Number(creation.times?.[index]),index});
+    });
+    for(const [key,frames] of groups){
+      if(frames.length<2)continue;
+      const historicalId=creation.deckMode?key:'creation:'+String(creation.id);
+      if(creation.deckMode&&seenOldSources.has(historicalId))continue;
+      seenOldSources.add(historicalId);
+      const id='legacy-gif:'+String(creation.id)+':'+key;
+      refs.set(id,{creationId:creation.id,groupKey:key});
+      const first=frames[Math.floor((frames.length-1)/2)].image;
+      const dt=gifCatalogDate(creation.createdAt||creation.updatedAt);
+      const label=creation.deckMode
+        ? String(creation.deckSourceNames?.[frames[0].index]||creation.title||dt.dateLabel)
+        : String(creation.title||dt.dateLabel);
+      entries.push({id,label,count:frames.length,thumbnail:first,origin:'legacy',...dt});
+    }
+  }
+  gifLegacyRefs=refs;
+  return entries.sort((a,b)=>b.dateMs-a.dateMs);
 };
 window.__memoryGifLoadSource=async sourceId=>{
+  const ref=gifLegacyRefs.get(sourceId);
+  if(ref){
+    const creation=await dbGet(ref.creationId);
+    const frames=[];
+    (creation?.frames||[]).forEach((img,index)=>{
+      if(typeof img!=='string'||!img.startsWith('data:image/'))return;
+      if(oldGifGroupKey(creation,index)!==ref.groupKey)return;
+      const time=Number(creation?.times?.[index]);
+      frames.push({image:img,time:Number.isFinite(time)?time:index,index});
+    });
+    return frames.sort((a,b)=>a.time-b.time||a.index-b.index);
+  }
   const frames=await framesForSource(sourceId);
-  return frames.filter(fr=>typeof fr.imageData==='string'&&fr.imageData)
+  return frames.filter(fr=>typeof fr.imageData==='string'&&fr.imageData.startsWith('data:image/'))
     .sort((a,b)=>(Number(a.timestamp)||0)-(Number(b.timestamp)||0)||String(a.id).localeCompare(String(b.id)))
-    .map((fr,index)=>({image:fr.imageData,time:Number(fr.timestamp)||index,index}));
+    .map((fr,index)=>({image:fr.imageData,time:Number.isFinite(Number(fr.timestamp))?Number(fr.timestamp):index,index}));
 };
 window.__memoryDeckRender=()=>renderDeck();
 window.__memoryDeckStartSelection=async()=>{

@@ -1509,6 +1509,8 @@ miracleBack.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();
 function gifFrameGroups(){
   return gifSourceCatalog.map(src=>({
     key:src.id,label:src.label,count:src.count,thumbnail:src.thumbnail,
+    origin:src.origin,dateMs:src.dateMs,dateLabel:src.dateLabel,
+    monthKey:src.monthKey,monthLabel:src.monthLabel,
     items:gifLoadedSourceKey===src.id?gifLoadedFrames:[]
   }));
 }
@@ -1582,27 +1584,21 @@ function syncGifSourceChooser(){
   if(!gifSourceWrap||!gifSource||!gifSourceNote)return;
   const groups=gifFrameGroups(),old=gifSource.value;
   gifSource.replaceChildren();
-  groups.forEach(g=>{
-    const option=document.createElement('option');option.value=g.key;
-    option.textContent=g.label+'（'+g.count+'コマ）';option.disabled=g.count<2;
+  for(const g of groups){
+    const option=document.createElement('option');
+    option.value=g.key;option.textContent=g.label+'（'+g.count+'コマ）';
     gifSource.appendChild(option);
-  });
-  const eligible=groups.filter(g=>g.count>=2);
-  const chosen=eligible.find(g=>g.key===old)||eligible[0];
-  if(chosen)gifSource.value=chosen.key;
-  gifSourceWrap.style.display=groups.length?'grid':'none';
-  renderGifSourceCards(groups);
-  makeGifBtn.disabled=gifGenerating||gifLoading||!chosen||gifLoadedSourceKey!==chosen.key||gifLoadedFrames.length<2;
-  if(gifFrameInfo){
-    const total=groups.reduce((sum,g)=>sum+g.count,0);
-    gifFrameInfo.textContent=!groups.length
-      ? '保存した動画がありません。上の「新しい動画から作る」で追加できます。'
-      :eligible.length
-        ? '保存済み：'+groups.length+'本・'+total+'コマ。GIFにする動画を1本選んでください。'
-        :'GIFを作るには同じ動画に2コマ以上必要です。';
   }
-  gifSourceNote.textContent=groups.length
-    ?'動画ごとにコマを時間順に使用します。別の動画のコマは混ぜません。':'';
+  if(groups.some(g=>g.key===old))gifSource.value=old;
+  else gifSource.selectedIndex=-1;
+  gifSourceWrap.style.display=gifPastOpen?'grid':'none';
+  renderGifSourceCards(groups);
+  const chosen=groups.find(g=>g.key===gifSource.value);
+  makeGifBtn.disabled=gifGenerating||gifLoading||!chosen||gifLoadedSourceKey!==chosen.key||gifLoadedFrames.length<2;
+  gifFrameInfo.textContent=groups.length
+    ? '保存済み：'+groups.length+'本。画像をタップしてGIFにする動画を選んでください。'
+    : '過去の動画がありません。新しい動画を選んでください。';
+  gifSourceNote.textContent='1本ずつGIFにします。別の動画のコマは混ぜません。';
 }
 async function loadGifSource(sourceKey){
   const token=++gifLoadToken;

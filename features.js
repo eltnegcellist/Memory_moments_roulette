@@ -1514,46 +1514,68 @@ function gifFrameGroups(){
 }
 function renderGifSourceCards(groups){
   if(!gifSourceGrid)return;
-  const signature=JSON.stringify(groups.map(g=>[g.key,g.label,g.count,g.items.length]));
+  const q=(gifSearch?.value||'').trim().toLowerCase();
+  const oldest=gifSort?.value==='oldest';
+  const visible=groups.filter(g=>!q||[g.label,g.dateLabel,g.monthLabel,g.origin==='legacy'?'旧履歴':'動画'].join(' ').toLowerCase().includes(q))
+    .sort((a,b)=>oldest?a.dateMs-b.dateMs:b.dateMs-a.dateMs);
+  const signature=JSON.stringify(visible.map(g=>[g.key,g.label,g.count,g.monthKey]));
   if(gifChooserSignature!==signature){
     gifChooserSignature=signature;
     gifSourceGrid.replaceChildren();
-    groups.forEach(g=>{
-      const card=document.createElement('button');
-      card.type='button';card.className='labGifSourceCard';card.dataset.sourceKey=g.key;
-      card.disabled=g.count<2;card.setAttribute('aria-pressed','false');
-      card.setAttribute('aria-label',g.label+'、'+g.count+'コマ'+(card.disabled?'、GIF作成不可':''));
-      const thumbs=document.createElement('span');thumbs.className='labGifSourceThumbs';
-      const pictures=g.items.length
-        ? [g.items[Math.floor((g.items.length-1)/2)].image,g.items[0].image,g.items[g.items.length-1].image]
-        :g.thumbnail?[g.thumbnail]:[];
-      if(pictures.length===1)thumbs.classList.add('labGifSourceThumbsSingle');
-      pictures.forEach(source=>{
-        const img=document.createElement('img');img.src=source;img.alt='';img.loading='lazy';img.decoding='async';
-        thumbs.appendChild(img);
-      });
-      if(!pictures.length){
-        const empty=document.createElement('span');empty.className='labGifNoThumb';empty.textContent='画像準備中';thumbs.appendChild(empty);
+    let month=null,grid=null;
+    for(const g of visible){
+      if(month!==g.monthKey){
+        month=g.monthKey;
+        const section=document.createElement('section');section.className='deckMonthGroup';
+        const head=document.createElement('div');head.className='deckMonthHead';
+        const title=document.createElement('strong');title.textContent=g.monthLabel||'保存済み動画';
+        const count=document.createElement('span');
+        count.textContent=visible.filter(v=>v.monthKey===month).length+'本';
+        head.append(title,count);
+        grid=document.createElement('div');grid.className='deckVideoGrid';
+        section.append(head,grid);gifSourceGrid.appendChild(section);
       }
-      const info=document.createElement('span');info.className='labGifSourceCardDetails';
-      const title=document.createElement('strong');title.textContent=g.label;
-      const count=document.createElement('small');
-      count.textContent=g.count+'コマ'+(card.disabled?' ・ GIF作成には2コマ必要':'');
-      const check=document.createElement('span');check.className='labGifSourceCardCheck';check.textContent='✓ 選択中';
-      check.setAttribute('aria-hidden','true');
-      info.append(title,count,check);card.append(thumbs,info);
-      card.addEventListener('click',()=>{
-        if(gifSource.value===g.key)return;
+      const tile=document.createElement('article');
+      tile.className='deckVideoTile';tile.dataset.sourceKey=g.key;
+      const button=document.createElement('button');
+      button.type='button';button.className='deckVideoPick';
+      button.setAttribute('aria-pressed','false');
+      button.setAttribute('aria-label',g.label+'、'+g.count+'コマからGIFを作る');
+      const media=document.createElement('div');media.className='deckVideoThumb';
+      if(g.thumbnail){
+        const img=document.createElement('img');
+        img.src=g.thumbnail;img.alt='';img.loading='lazy';img.decoding='async';
+        media.appendChild(img);
+      }
+      const icon=document.createElement('span');icon.className='deckVideoIcon';icon.textContent=g.origin==='legacy'?'▤':'▶';
+      const check=document.createElement('span');check.className='deckVideoCheck';check.textContent='✓';
+      media.append(icon,check);
+      const info=document.createElement('div');info.className='deckVideoInfo';
+      const name=document.createElement('strong');name.textContent=g.label;
+      const note=document.createElement('small');
+      note.textContent=g.count+'コマ'+(g.origin==='legacy'?' ・ 旧履歴':'');
+      info.append(name,note);button.append(media,info);tile.appendChild(button);grid.appendChild(tile);
+      button.addEventListener('click',()=>{
+        if(gifSource.value===g.key&&gifLoadedFrames.length>=2&&gifLoadedSourceKey===g.key){
+          gifEditor.hidden=false;gifEditor.scrollIntoView({behavior:'smooth',block:'start'});
+          return;
+        }
         gifSource.value=g.key;
-        clearGifResult();gifStatus.style.display='none';
+        clearGifResult();
+        gifStatus.style.display='none';
         syncGifSourceChooser();loadGifSource(g.key);
       });
-      gifSourceGrid.appendChild(card);
-    });
+    }
+    if(!visible.length){
+      const note=document.createElement('p');note.className='note';
+      note.textContent=groups.length?'検索条件に合う動画はありません。':'保存した動画がありません。新しい動画を選んでください。';
+      gifSourceGrid.appendChild(note);
+    }
   }
-  gifSourceGrid.querySelectorAll('.labGifSourceCard').forEach(card=>{
-    const selected=card.dataset.sourceKey===gifSource.value;
-    card.classList.toggle('is-selected',selected);card.setAttribute('aria-pressed',String(selected));
+  gifSourceGrid.querySelectorAll('.deckVideoTile').forEach(tile=>{
+    const active=tile.dataset.sourceKey===gifSource.value;
+    tile.classList.toggle('selected',active);
+    tile.querySelector('.deckVideoPick')?.setAttribute('aria-pressed',String(active));
   });
 }
 function syncGifSourceChooser(){

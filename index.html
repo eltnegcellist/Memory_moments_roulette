@@ -21,9 +21,9 @@
 <link rel="apple-touch-icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2">
 <link rel="icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2" type="image/png">
 <title>思い出ルーレットおみくじ</title>
-<link rel="stylesheet" href="./style.css?v=1.1.0-h23-shared-video-library">
-<link rel="stylesheet" href="./deluxe.css?v=1.1.0-h23-shared-video-library">
-<link rel="stylesheet" href="./features.css?v=1.1.0-h23-shared-video-library">
+<link rel="stylesheet" href="./style.css?v=1.1.0-h24-v11-hardening">
+<link rel="stylesheet" href="./deluxe.css?v=1.1.0-h24-v11-hardening">
+<link rel="stylesheet" href="./features.css?v=1.1.0-h24-v11-hardening">
 <style>
 body:not(.show-score-details) .scoreChip,
 body:not(.show-score-details) .scoreDetails,
@@ -39,7 +39,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <header class="hero" data-app-view="home">
   <div class="heroMark" aria-hidden="true"><img src="./icons/memory-roulette-omikuji.png?v=memorybrand2" alt=""></div>
   <div class="heroText">
-    <div class="heroTopline"><span class="eyebrow">MEMORY MOMENTS</span><span class="versionBadge" id="labSettingsTrigger" data-lab-trigger title="5回タップでラボ設定">v1.1.0-h23</span></div>
+    <div class="heroTopline"><span class="eyebrow">MEMORY MOMENTS</span><span class="versionBadge" id="labSettingsTrigger" data-lab-trigger title="5回タップでラボ設定">v1.1.0-h24</span></div>
     <h1><span class="titlePart">思い出ルーレット</span><span class="titlePart">おみくじ</span></h1>
     <p class="heroCatch">動画に隠れた、いろいろな一瞬を。</p>
     <p class="lead">写真には残さなかった一瞬まで、動画には残っています。自分では選ばなかった一枚に偶然出会い、おみくじと一緒に楽しむアプリです。</p>
@@ -263,7 +263,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 
   <button id="settingsVersionTrigger" class="settingsVersionTrigger" data-lab-trigger type="button" title="5回タップでLAB設定を表示">
     <span>アプリバージョン</span>
-    <strong>v1.1.0-h23</strong>
+    <strong>v1.1.0-h24</strong>
   </button>
   <div id="labSettingsHint" class="labSettingsHint settingsLabHint">LAB設定：上のバージョン表示を5回タップで表示</div>
 
@@ -293,14 +293,15 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
           </select>
         </label>
         <div class="labSettingsItem labResetItem">
-          <span><b>この端末のアプリデータを完全初期化</b><span class="note">思い出デッキ・保存済みルーレット・今日の一枚・LAB設定・キャッシュをこの端末から削除します。元に戻せません。</span></span>
+          <span><b>この端末のアプリデータを完全初期化</b><span class="note">思い出デッキ・保存済みルーレット・お気に入り・LAB設定・キャッシュをこの端末から削除します。元に戻せません。</span></span>
           <button id="labResetAppData" type="button">完全初期化</button>
         </div>
       </section>
   <h3 class="settingsSubhead">データ管理</h3>
   <div id="deckManage" class="deckManage">
     <div id="deckStorage" class="deckStorage">保存容量を確認しています…</div>
-    <div class="settingsDataSummary">この容量は、このアプリが保存している候補画像・特別リプレイ・サムネイルの合計です。元動画そのものは含みません。</div>
+    <div id="appStorageBreakdown" class="appStorageBreakdown"></div>
+    <div class="settingsDataSummary">このアプリが端末内に保存しているデータの概算です。保存済み動画の候補画像・特別リプレイ・サムネイル、ルーレット履歴、お気に入りを含みます。処理再開用の一時動画が残っている場合は、それも含めます。</div>
     <details class="storageTechnical">
       <summary>ブラウザの保存領域について</summary>
       <div id="browserStorageDetails" class="browserStorageDetails">確認しています…</div>
@@ -310,7 +311,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
       <button id="deckBackupBtn" class="secondary" type="button">バックアップを書き出す</button>
       <button id="deckRestoreBtn" class="secondary" type="button">バックアップから復元</button>
       <button id="deckClearBtn" class="danger" type="button">保存済み動画をすべて削除</button>
-      <input id="deckRestoreInput" type="file" accept="application/json,.json" hidden>
+      <input id="deckRestoreInput" type="file" accept=".mmrbackup,application/x-ndjson,application/json,.json" hidden>
     </div>
     <p class="note">元動画そのものは保存しません。候補画像と特別リプレイ用の短い連続コマを端末内へ保存します。継続利用する場合は定期的なデッキの書き出しがおすすめです。</p>
   </div>
@@ -380,12 +381,12 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
         <div class="howtoNum">3</div>
         <div class="howtoCopy">
           <h3>残したい一瞬を保存</h3>
-          <p>止まった写真は履歴にたまります。きれいさに関係なく、「この一瞬を残したい」と思った写真を「今日の一枚」に保存できます。</p>
+          <p>止まった写真は履歴にたまります。きれいさに関係なく、「この一瞬を残したい」と思った写真を「お気に入り」に保存できます。</p>
         </div>
         <div class="howtoMock mockResult" aria-hidden="true">
           <div class="mockResultPhoto">🎞️</div>
           <div class="mockFortune">🌟 大吉</div>
-          <div class="mockActions"><span>♡ 今日の一枚</span><span>↓ 画像保存</span></div>
+          <div class="mockActions"><span>♡ お気に入り</span><span>↓ 画像保存</span></div>
         </div>
       </article>
     </div>
@@ -410,8 +411,8 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
       <div class="howtoTipGrid">
         <div class="howtoFeature"><b>🎴 おみくじモード</b><span>止まった一瞬と一緒に今日の運勢やメッセージを楽しむ基本モードです。特別なリプレイが現れることもあります。</span></div>
         <div class="howtoFeature"><b>🎯 通常ルーレット</b><span>運勢を付けず、純粋に「どの瞬間で止まるか」だけを楽しみたいときに使えます。</span></div>
-        <div class="howtoFeature featureSave"><b>🖼 今日の一枚</b><span>気に入った停止写真をアプリ内に残せます。あとから「開く」で大きく見返せます。</span></div>
-        <div class="howtoFeature featureSave"><b>↓ 画像をダウンロード</b><span>「今日の一枚」に残した写真は、コレクションから端末へ画像ファイルとして保存できます。</span></div>
+        <div class="howtoFeature featureSave"><b>🖼 お気に入り</b><span>気に入った停止写真をアプリ内に残せます。あとから「開く」で大きく見返せます。</span></div>
+        <div class="howtoFeature featureSave"><b>↓ 画像をダウンロード</b><span>「お気に入り」に残した写真は、コレクションから端末へ画像ファイルとして保存できます。</span></div>
         <div class="howtoFeature"><b>🎞 動画からGIFを作る</b><span>ホームの「GIF作成」から保存済み動画や新しい動画を選び、ルーレットを回さずに抽出コマを時間順にGIFへ。0.05・0.1・0.2・0.5・1秒ごとの切り替えを選べます。標準は0.2秒です。</span></div>
         <div class="howtoFeature"><b>💾 デッキのバックアップ</b><span>育てたデッキはファイルに書き出して復元できます。機種変更やブラウザデータ消去への備えに使えます。</span></div>
       </div>
@@ -424,12 +425,12 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <video id="video" playsinline muted preload="metadata" style="display:none"></video><canvas id="captureCanvas" style="display:none"></canvas><canvas id="smallCanvas" width="28" height="28" style="display:none"></canvas>
 </div>
 <div id="bigOverlay"><div id="bigText">大吉！</div></div>
-<script src="./navigation.js?v=1.1.0-h23-shared-video-library" defer></script>
-<script src="./app.js?v=1.1.0-h23-shared-video-library" defer></script>
-<script src="./deck.js?v=1.1.0-h23-shared-video-library" defer></script>
-<script src="./deluxe.js?v=1.1.0-h23-shared-video-library" defer></script>
-<script src="./features.js?v=1.1.0-h23-shared-video-library" defer></script>
-<script src="./hidden-settings.js?v=1.1.0-h23-shared-video-library" defer></script>
+<script src="./navigation.js?v=1.1.0-h24-v11-hardening" defer></script>
+<script src="./app.js?v=1.1.0-h24-v11-hardening" defer></script>
+<script src="./deck.js?v=1.1.0-h24-v11-hardening" defer></script>
+<script src="./deluxe.js?v=1.1.0-h24-v11-hardening" defer></script>
+<script src="./features.js?v=1.1.0-h24-v11-hardening" defer></script>
+<script src="./hidden-settings.js?v=1.1.0-h24-v11-hardening" defer></script>
 <script>
 (()=>{
   const scoreBox=document.getElementById('showScores');

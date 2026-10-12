@@ -924,3 +924,12 @@ body[data-app-view] .howtoBanner{will-change:auto}
 .deckVideoProgressText{font-size:7.5px;line-height:1.25;color:#8a6f62;white-space:normal}
 .deckVideoProgressTrack{height:3px;border-radius:999px;overflow:hidden;background:#eaded8}
 .deckVideoProgressFill{height:100%;width:0;border-radius:inherit;background:currentColor;opacity:.65;transition:width .2s ease}
+
+
+/* v1.1 complete app storage estimate */
+.appStorageBreakdown{
+  margin:-2px 0 8px;
+  color:#7a675d;
+  font-size:10px;
+  line-height:1.55;
+}

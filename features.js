@@ -70,8 +70,8 @@ photoViewer.id='labPhotoViewer';
 photoViewer.innerHTML=
   '<button id="labPhotoViewerClose" type="button" aria-label="画像を閉じる">×</button>'+
   '<div class="labPhotoViewerInner">'+
-    '<div class="labPhotoViewerTitle">今日の一枚</div>'+
-    '<img id="labPhotoViewerImage" alt="保存した今日の一枚">'+
+    '<div class="labPhotoViewerTitle">お気に入り</div>'+
+    '<img id="labPhotoViewerImage" alt="保存したお気に入り写真">'+
     '<div class="labPhotoViewerNote">端末に保存した画像と同じ写真です</div>'+
     '<button id="labPhotoViewerDone" type="button">閉じる</button>'+
   '</div>';

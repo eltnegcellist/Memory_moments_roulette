@@ -21,6 +21,7 @@ const deckManageBtn=document.getElementById('deckManageBtn');
 const deckManage=document.getElementById('deckManage');
 const deckSources=document.getElementById('deckSources');
 const deckStorage=document.getElementById('deckStorage');
+const appStorageBreakdown=document.getElementById('appStorageBreakdown');
 const browserStorageDetails=document.getElementById('browserStorageDetails');
 const deckBackupBtn=document.getElementById('deckBackupBtn');
 const deckRestoreBtn=document.getElementById('deckRestoreBtn');
@@ -98,7 +99,12 @@ function approxDataUrlBytes(s){
   return Math.ceil((s.length-(comma>=0?comma+1:0))*0.75);
 }
 function sourceMomentDate(src){
-  const t=Number(src?.addedAt)||Number(src?.lastModified)||Date.now();
+  // Prefer the video's file timestamp so the library behaves more like a photo app.
+  // Browsers do not reliably expose the original camera/container capture timestamp,
+  // so addedAt remains the fallback for files whose lastModified is unavailable.
+  const fileTime=Number(src?.lastModified)||0;
+  const addedTime=Number(src?.addedAt)||0;
+  const t=fileTime>0?fileTime:(addedTime>0?addedTime:Date.now());
   return new Date(t);
 }
 function sourceDisplayName(src){
@@ -389,21 +395,75 @@ function formatBytes(n){
   if(n<1024*1024)return Math.max(0,n/1024).toFixed(n<10240?1:0)+'KB';
   return (n/1024/1024).toFixed(1)+'MB';
 }
-async function storageInfo(localBytes){
-  const appText='このアプリの保存データ：'+formatBytes(localBytes);
+function jsonApproxBytes(value){
+  try{
+    const text=JSON.stringify(value);
+    return typeof TextEncoder!=='undefined'?new TextEncoder().encode(text).byteLength:text.length;
+  }catch(e){return 0;}
+}
+async function creationHistoryBytes(){
+  try{
+    const all=typeof dbAll==='function'?await dbAll():[];
+    return all.reduce((n,x)=>n+jsonApproxBytes(x),0);
+  }catch(e){return 0;}
+}
+async function favoriteBytes(){
+  try{
+    const db=await new Promise((resolve,reject)=>{
+      const r=indexedDB.open('babyExpressionRouletteLabDB',1);
+      r.onupgradeneeded=()=>{
+        if(!r.result.objectStoreNames.contains('dailyPhotos'))r.result.createObjectStore('dailyPhotos',{keyPath:'id'});
+      };
+      r.onsuccess=()=>resolve(r.result);
+      r.onerror=()=>reject(r.error);
+    });
+    const all=await new Promise((resolve,reject)=>{
+      const tx=db.transaction('dailyPhotos','readonly');
+      const r=tx.objectStore('dailyPhotos').getAll();
+      r.onsuccess=()=>resolve(r.result||[]);
+      r.onerror=()=>reject(r.error);
+    });
+    return all.reduce((n,x)=>n+jsonApproxBytes(x),0);
+  }catch(e){return 0;}
+}
+async function opfsPendingBytes(){
+  try{
+    const root=await opfsRoot();
+    if(!root)return 0;
+    let total=0;
+    for await(const [name,handle] of root.entries()){
+      if(!name.startsWith(OPFS_PREFIX)||handle.kind!=='file')continue;
+      try{total+=(await handle.getFile()).size||0;}catch(e){}
+    }
+    return total;
+  }catch(e){return 0;}
+}
+async function storageInfo(deckBytes){
+  try{if(window.__memoryHistoryMigrationPromise)await window.__memoryHistoryMigrationPromise;}catch(e){}
+  const [historyBytes,favoritesBytes,tempBytes]=await Promise.all([
+    creationHistoryBytes(),favoriteBytes(),opfsPendingBytes()
+  ]);
+  const total=Math.max(0,Number(deckBytes)||0)+historyBytes+favoritesBytes+tempBytes;
+  const appText='このアプリの保存データ：約'+formatBytes(total);
+  const parts=[
+    '保存済み動画 '+formatBytes(deckBytes),
+    'ルーレット履歴 '+formatBytes(historyBytes),
+    'お気に入り '+formatBytes(favoritesBytes)
+  ];
+  if(tempBytes>0)parts.push('処理中の一時動画 '+formatBytes(tempBytes));
   let browserText='このブラウザでは詳細情報を取得できません。';
   if(navigator.storage?.estimate){
     try{
       const e=await navigator.storage.estimate();
       const usage=Number(e.usage)||0,quota=Number(e.quota)||0;
       const persistent=navigator.storage.persisted?await navigator.storage.persisted():false;
-      const parts=[];
-      if(quota)parts.push('同じサイト由来の保存領域：'+formatBytes(usage)+' 使用 / 上限 約'+formatBytes(quota));
-      parts.push('保存保護：'+(persistent?'有効':'通常'));
-      browserText=parts.join('\n');
+      const detail=[];
+      if(quota)detail.push('同じサイト由来の保存領域：'+formatBytes(usage)+' 使用 / 上限 約'+formatBytes(quota));
+      detail.push('保存保護：'+(persistent?'有効':'通常'));
+      browserText=detail.join('\n');
     }catch(e){}
   }
-  return {appText,browserText};
+  return {appText,breakdownText:'内訳：'+parts.join(' ・ '),browserText,total,historyBytes,favoritesBytes,tempBytes};
 }
 
 function sourceProgressState(src){
@@ -677,6 +737,7 @@ async function renderDeck(){
   renderProcessingSummary(s.sources);
   const storage=await storageInfo(s.bytes);
   if(deckStorage)deckStorage.textContent=storage.appText;
+  if(appStorageBreakdown)appStorageBreakdown.textContent=storage.breakdownText;
   if(browserStorageDetails)browserStorageDetails.textContent=storage.browserText;
   renderSourceLibraries();
 }
@@ -831,6 +892,17 @@ async function clearOpfsSourceFiles(){
   try{
     for await(const [name] of root.entries()){
       if(name.startsWith(OPFS_PREFIX)){
+        try{await root.removeEntry(name);}catch(e){}
+      }
+    }
+  }catch(e){}
+}
+async function cleanupStaleBackupExports(){
+  const root=await opfsRoot();
+  if(!root)return;
+  try{
+    for await(const [name] of root.entries()){
+      if(name.startsWith('memory-moments-backup-export-')){
         try{await root.removeEntry(name);}catch(e){}
       }
     }
@@ -1406,7 +1478,7 @@ async function buildDeckCreation(sourceIds){
   return {
     id:'deck-'+Date.now(),
     title:selectedNames.length===1?selectedNames[0]:(selectedNames.length+'本の思い出おみくじ'),
-    createdAt:Date.now(),updatedAt:Date.now(),sourceKey:null,mode,deckMode:true,
+    createdAt:Date.now(),updatedAt:Date.now(),sourceKey:null,mode,deckMode:true,storageFormat:'deck-ref-v1',
     frames:frames.map(x=>x.imageData),
     fortunes:mode==='omikuji'?frames.map(()=>drawFortune()):[],
     times:frames.map(x=>x.timestamp),
@@ -1440,20 +1512,119 @@ deckLibraryManageBtn?.addEventListener('click',()=>{
   libraryManageMode=!libraryManageMode;
   syncLibraryManageMode();
 });
-async function backupDeck(){
-  const [sources,frames,replays,drawState]=await Promise.all([getAll(SOURCE_STORE),getAll(FRAME_STORE),getAll(REPLAY_STORE),metaGet('drawState')]);
-  if(!frames.length){alert('バックアップする思い出デッキがありません。');return;}
-  const payload={format:'memory-moments-roulette-deck',version:3,exportedAt:new Date().toISOString(),sources,frames,replays,drawState,selectedSourceIds:[...selectedSourceIds]};
-  const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
+function backupDateStamp(){
   const d=new Date(),pad=n=>String(n).padStart(2,'0');
-  a.href=url;
-  a.download='memory-moments-deck-'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'.json';
-  document.body.appendChild(a);a.click();a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),1500);
+  return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate());
 }
-async function restoreDeck(file){
+async function storeKeys(store){
+  const db=await openDB();
+  return new Promise((res,rej)=>{
+    const r=db.transaction(store,'readonly').objectStore(store).getAllKeys();
+    r.onsuccess=()=>res(r.result||[]);
+    r.onerror=()=>rej(r.error);
+  });
+}
+async function storeValue(store,key){
+  const db=await openDB();
+  return new Promise((res,rej)=>{
+    const r=db.transaction(store,'readonly').objectStore(store).get(key);
+    r.onsuccess=()=>res(r.result||null);
+    r.onerror=()=>rej(r.error);
+  });
+}
+async function backupWriter(filename){
+  if(typeof window.showSaveFilePicker==='function'){
+    try{
+      const handle=await window.showSaveFilePicker({
+        suggestedName:filename,
+        types:[{description:'思い出ルーレットおみくじ バックアップ',accept:{'application/x-ndjson':['.mmrbackup']}}]
+      });
+      const writable=await handle.createWritable();
+      return {
+        async write(text){await writable.write(text);},
+        async close(){await writable.close();},
+        direct:true
+      };
+    }catch(e){
+      if(e?.name==='AbortError')throw e;
+      console.warn('direct backup writer unavailable; using download fallback',e);
+    }
+  }
+  const root=await opfsRoot();
+  if(root){
+    try{
+      const tempName='memory-moments-backup-export-'+Date.now()+'.mmrbackup';
+      const handle=await root.getFileHandle(tempName,{create:true});
+      const writable=await handle.createWritable();
+      return {
+        async write(text){await writable.write(text);},
+        async close(){
+          await writable.close();
+          const file=await handle.getFile();
+          const url=URL.createObjectURL(file);
+          const a=document.createElement('a');
+          a.href=url;a.download=filename;
+          document.body.appendChild(a);a.click();a.remove();
+          setTimeout(()=>{
+            URL.revokeObjectURL(url);
+            root.removeEntry(tempName).catch(()=>{});
+          },120000);
+        },
+        direct:false
+      };
+    }catch(e){
+      console.warn('OPFS backup staging unavailable; using memory fallback',e);
+    }
+  }
+  const parts=[];
+  return {
+    async write(text){parts.push(text);},
+    async close(){
+      const blob=new Blob(parts,{type:'application/x-ndjson'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;a.download=filename;
+      document.body.appendChild(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),30000);
+    },
+    direct:false
+  };
+}
+async function backupDeck(){
+  const [sourceKeys,frameKeys,replayKeys,drawState]=await Promise.all([
+    storeKeys(SOURCE_STORE),storeKeys(FRAME_STORE),storeKeys(REPLAY_STORE),metaGet('drawState')
+  ]);
+  if(!frameKeys.length){alert('バックアップする思い出デッキがありません。');return;}
+  const filename='memory-moments-deck-'+backupDateStamp()+'.mmrbackup';
+  let writer;
+  try{writer=await backupWriter(filename);}catch(e){if(e?.name==='AbortError')return;throw e;}
+  const total=sourceKeys.length+frameKeys.length+replayKeys.length;
+  let done=0;
+  const writeRecord=async(type,data)=>{
+    await writer.write(JSON.stringify({type,data})+'\n');
+    done++;
+    if(deckNotice&&done%10===0){
+      deckNotice.textContent='バックアップを書き出しています… '+done+' / '+total;
+      deckNotice.className='note deckNotice';
+    }
+  };
+  const header={
+    format:'memory-moments-roulette-deck-stream',version:4,exportedAt:new Date().toISOString(),
+    drawState,selectedSourceIds:[...selectedSourceIds],
+    counts:{sources:sourceKeys.length,frames:frameKeys.length,replays:replayKeys.length}
+  };
+  await writer.write(JSON.stringify(header)+'\n');
+  for(const key of sourceKeys){const value=await storeValue(SOURCE_STORE,key);if(value)await writeRecord('source',value);}
+  for(const key of frameKeys){const value=await storeValue(FRAME_STORE,key);if(value)await writeRecord('frame',value);}
+  for(const key of replayKeys){const value=await storeValue(REPLAY_STORE,key);if(value)await writeRecord('replay',value);}
+  await writer.write(JSON.stringify({type:'end'})+'\n');
+  await writer.close();
+  if(deckNotice){
+    deckNotice.textContent='バックアップを書き出しました。';
+    deckNotice.className='note deckNotice ok';
+  }
+}
+async function restoreDeckLegacy(file){
   const text=await file.text();
   const payload=JSON.parse(text);
   if(payload?.format!=='memory-moments-roulette-deck'||!Array.isArray(payload.sources)||!Array.isArray(payload.frames))throw new Error('対応する思い出デッキのバックアップではありません');
@@ -1518,6 +1689,124 @@ async function restoreDeck(file){
   await renderDeck();
   deckNotice.textContent=added+'個の一瞬をバックアップから復元しました。';
   deckNotice.className='note deckNotice ok';
+}
+async function readNdjson(file,onRecord){
+  const reader=file.stream().getReader();
+  const decoder=new TextDecoder();
+  let buf='';
+  while(true){
+    const {value,done}=await reader.read();
+    if(done)break;
+    buf+=decoder.decode(value,{stream:true});
+    let nl;
+    while((nl=buf.indexOf('\n'))>=0){
+      const line=buf.slice(0,nl).trim();
+      buf=buf.slice(nl+1);
+      if(line)await onRecord(JSON.parse(line));
+    }
+  }
+  buf+=decoder.decode();
+  const last=buf.trim();
+  if(last)await onRecord(JSON.parse(last));
+}
+async function putRestoreRecord(storeName,value){
+  const db=await openDB();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(storeName,'readwrite');
+    tx.objectStore(storeName).put(value);
+    tx.oncomplete=()=>res();
+    tx.onerror=()=>rej(tx.error);
+  });
+}
+async function restoreDeckStream(file){
+  const cur=await stats();
+  const existingFp=new Set(cur.sources.map(x=>x.fingerprint));
+  const restoreLimit=await effectiveByteLimit(cur.bytes);
+  const acceptedSources=new Map();
+  const acceptedFrameIds=new Set();
+  const sourceStats=new Map();
+  let header=null,count=cur.count,bytes=cur.bytes,added=0,readCount=0;
+
+  await readNdjson(file,async record=>{
+    if(!header){
+      if(record?.format!=='memory-moments-roulette-deck-stream'||Number(record.version)<4)throw new Error('対応するストリーム形式のバックアップではありません');
+      header=record;
+      return;
+    }
+    if(record?.type==='source'){
+      const src=record.data;
+      if(!src?.id||existingFp.has(src.fingerprint))return;
+      acceptedSources.set(src.id,src);
+      sourceStats.set(src.id,{count:0,bytes:Number(src.thumbnailSize)||0,hasPending:false});
+    }else if(record?.type==='frame'){
+      const fr=record.data;
+      if(!fr?.id||!acceptedSources.has(fr.sourceVideoId))return;
+      const imageBytes=fr.imageSize||approxDataUrlBytes(fr.imageData);
+      const replayBytes=Number(fr.replaySize)||0;
+      const b=imageBytes+replayBytes;
+      if(count>=MAX_FRAMES||bytes+b>restoreLimit)return;
+      const clean={...fr,imageSize:imageBytes,replaySize:replayBytes};
+      delete clean.replayFrames;
+      await putRestoreRecord(FRAME_STORE,clean);
+      acceptedFrameIds.add(fr.id);
+      const st=sourceStats.get(fr.sourceVideoId);
+      st.count++;st.bytes+=b;
+      st.hasPending=st.hasPending||!!fr.imagePending||!(Number(fr.replayFrameCount)>=2&&replayBytes>0);
+      count++;bytes+=b;added++;
+    }else if(record?.type==='replay'){
+      const replay=record.data;
+      if(replay?.id&&acceptedFrameIds.has(replay.id))await putRestoreRecord(REPLAY_STORE,replay);
+    }
+    readCount++;
+    if(deckNotice&&readCount%20===0){
+      deckNotice.textContent='バックアップを復元しています… '+added+'個の一瞬を復元';
+      deckNotice.className='note deckNotice';
+    }
+  });
+
+  if(!header)throw new Error('バックアップのヘッダーを読み取れませんでした');
+  for(const [sourceId,src] of acceptedSources){
+    const st=sourceStats.get(sourceId);
+    if(!st?.count)continue;
+    await putRestoreRecord(SOURCE_STORE,{
+      ...src,candidateCount:st.count,storageBytes:st.bytes,
+      opfsName:null,opfsReady:false,opfsWriting:false,resumeNeedsFile:st.hasPending
+    });
+  }
+
+  const after=await getAll(FRAME_STORE);
+  const afterIds=new Set(after.map(x=>x.id));
+  if(cur.count===0&&header.drawState){
+    await metaPut('drawState',{
+      universeIds:(header.drawState.universeIds||[]).filter(id=>afterIds.has(id)),
+      remainingIds:(header.drawState.remainingIds||[]).filter(id=>afterIds.has(id)),
+      cycle:Number(header.drawState.cycle)||1
+    });
+  }else{
+    await metaPut('drawState',{universeIds:[],remainingIds:[],cycle:1});
+  }
+  if(cur.count===0&&Array.isArray(header.selectedSourceIds)){
+    selectedSourceIds.clear();
+    const afterSourceIds=new Set((await getAll(SOURCE_STORE)).map(s=>s.id));
+    header.selectedSourceIds.filter(id=>afterSourceIds.has(id)).forEach(id=>selectedSourceIds.add(id));
+    selectionLoaded=true;
+    await saveSelectedSources();
+  }
+  await requestPersistence();
+  await renderDeck();
+  if(deckNotice){
+    deckNotice.textContent=added+'個の一瞬をバックアップから復元しました。';
+    deckNotice.className='note deckNotice ok';
+  }
+}
+async function restoreDeck(file){
+  const prefix=await file.slice(0,8192).text();
+  const firstLine=(prefix.split(/\r?\n/,1)[0]||'').trim();
+  try{
+    const first=JSON.parse(firstLine);
+    if(first?.format==='memory-moments-roulette-deck-stream')return restoreDeckStream(file);
+  }catch(e){}
+  return restoreDeckLegacy(file);
 }
 deckClearBtn?.addEventListener('click',async()=>{
   if(!confirm('思い出おみくじデッキをすべて削除しますか？ 今日の一枚や従来の保存ルーレットは削除しません。'))return;
@@ -1668,6 +1957,7 @@ window.__memoryDeckStartSelection=async()=>{
   renderSourceLibraries();
   updateSelectionStatus(lastDeckSources);
 };
+cleanupStaleBackupExports().catch(()=>{});
 renderDeck().catch(err=>{console.error(err);deckStatus.textContent='デッキ情報を読み込めませんでした。';});
 resumeInterruptedAnalyses().catch(err=>console.warn('analysis resume failed',err));
 resumePendingBackgroundWork().catch(err=>console.warn('background resume failed',err));

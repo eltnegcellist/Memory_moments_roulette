@@ -115,6 +115,10 @@ stopRun=function(){
     playSound('吉');
   }
   tapHint.textContent='もう一度タップすると再開します';
+  if(activeCreation?.deckMode){
+    const sourceId=activeCreation.deckSourceIds?.[currentIndex];
+    if(sourceId)window.__memoryDeckRecordDraw?.(sourceId);
+  }
   window.__memoryOnRouletteStopped?.();
 };
 

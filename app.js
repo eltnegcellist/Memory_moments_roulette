@@ -15,22 +15,57 @@ const playSection=$("playSection"), stage=$("stage"), playImage=$("playImage"), 
 const bigOverlay=$("bigOverlay");
 let objectUrl=null, lastFile=null, currentSourceKey=null, selectedFrames=[], selectedFortunes=[], selectedAppealDetails=[], currentCreation=null, activeCreation=null, running=false, timer=null, currentIndex=0, primed=false;
 const PUBLIC_SETTINGS_KEY='memory-roulette-settings-v1';
-function loadPublicSettings(){
-  let data={};
-  try{data=JSON.parse(localStorage.getItem(PUBLIC_SETTINGS_KEY)||'{}')||{};}catch(e){}
+let publicSettingsChanged=false;
+let publicSettingsWrites=Promise.resolve();
+function applyPublicSettings(data){
   const frame=String(data.frameCount||'auto');
   if([...frameCountEl.options].some(x=>x.value===frame))frameCountEl.value=frame;
   plainModeEl.checked=!!data.plainMode;
   if(showFortunesEl)showFortunesEl.checked=!!data.showFortunes;
 }
+function loadPublicSettings(){
+  let data={};
+  try{data=JSON.parse(localStorage.getItem(PUBLIC_SETTINGS_KEY)||'{}')||{};}catch(e){}
+  applyPublicSettings(data);
+}
 function savePublicSettings(){
+  publicSettingsChanged=true;
+  const data={
+    frameCount:frameCountEl.value||'auto',
+    plainMode:!!plainModeEl.checked,
+    showFortunes:!!showFortunesEl?.checked
+  };
   try{
-    localStorage.setItem(PUBLIC_SETTINGS_KEY,JSON.stringify({
-      frameCount:frameCountEl.value||'auto',
-      plainMode:!!plainModeEl.checked,
-      showFortunes:!!showFortunesEl?.checked
-    }));
+    localStorage.setItem(PUBLIC_SETTINGS_KEY,JSON.stringify(data));
   }catch(e){}
+  // Android Chrome may lose recent localStorage writes when force-stopped.
+  // Keep a transaction-backed copy with the deck metadata as well.
+  publicSettingsWrites=publicSettingsWrites.then(async()=>{
+    const db=await openDB();
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction('deckMeta','readwrite',{durability:'strict'});
+      tx.objectStore('deckMeta').put({key:'publicSettings',value:data,updatedAt:Date.now()});
+      tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);
+    });
+  }).catch(err=>console.warn('settings persistence failed',err));
+  window.__memorySettingsSavePromise=publicSettingsWrites;
+}
+async function restoreDurablePublicSettings(){
+  try{
+    const db=await openDB();
+    const saved=await new Promise((resolve,reject)=>{
+      const r=db.transaction('deckMeta').objectStore('deckMeta').get('publicSettings');
+      r.onsuccess=()=>resolve(r.result?.value);r.onerror=()=>reject(r.error);
+    });
+    if(saved&&!publicSettingsChanged){
+      applyPublicSettings(saved);
+      try{localStorage.setItem(PUBLIC_SETTINGS_KEY,JSON.stringify(saved));}catch(e){}
+      plainModeEl.dispatchEvent(new Event('change',{bubbles:true}));
+      showFortunesEl?.dispatchEvent(new Event('change',{bubbles:true}));
+    }else if(!saved&&!publicSettingsChanged&&localStorage.getItem(PUBLIC_SETTINGS_KEY)){
+      savePublicSettings();
+    }
+  }catch(err){console.warn('settings restore failed',err);}
 }
 loadPublicSettings();
 if(showFortunesEl)showFortunesEl.dispatchEvent(new Event('change',{bubbles:true}));
@@ -371,12 +406,16 @@ async function restoreLastRouletteAfterReload(){
     try{lastId=localStorage.getItem(LAST_ROULETTE_KEY);}catch(e){}
     if(lastId)saved=await dbGet(lastId);
     if(!saved){const all=await dbAll();saved=all[0]?.id?await dbGet(all[0].id):null;}
+    if(location.hash!=='#play'||activeCreation?.frames?.length)return;
     if(saved?.frames?.length){preparePlay(saved);return;}
   }catch(e){console.error('last roulette restore failed',e);}
-  window.__memoryNavigate?.('home',{replace:true});
+  if(location.hash==='#play'&&!activeCreation?.frames?.length)window.__memoryNavigate?.('home',{replace:true});
 }
 updatePreviewMeta();
 window.__memoryHistoryMigrationPromise=migrateDeckCreationStorageV2();
+window.__memorySettingsReady=restoreDurablePublicSettings();
 window.__memoryHistoryMigrationPromise.then(refreshLibrary).catch(e=>{console.warn('roulette history migration failed',e);refreshLibrary();});
-window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>restoreLastRouletteAfterReload(),0));
+window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{
+  window.__memorySettingsReady.then(()=>restoreLastRouletteAfterReload());
+},0));
 if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});

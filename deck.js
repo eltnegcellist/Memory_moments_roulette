@@ -45,6 +45,7 @@ const thumbnailTargets=new WeakMap();
 const thumbnailObserver=typeof IntersectionObserver!=='undefined'
   ? new IntersectionObserver(entries=>{
       for(const entry of entries){
+        if(!entry.target.isConnected){thumbnailObserver.unobserve(entry.target);continue;}
         if(!entry.isIntersecting)continue;
         const src=thumbnailTargets.get(entry.target);
         thumbnailObserver.unobserve(entry.target);
@@ -194,7 +195,6 @@ async function ensureSourceThumbnail(src,img){
   }catch(e){}
 }
 function loadSourceThumbnail(src,img){
-  if(src.thumbnailData){img.src=src.thumbnailData;return;}
   if(thumbnailObserver){
     thumbnailTargets.set(img,src);
     thumbnailObserver.observe(img);
@@ -546,8 +546,9 @@ function makeSourceTile(src,{selectable=false,manageable=false}={}){
   media.className='deckVideoThumb';
   const img=document.createElement('img');
   img.alt='';
-  if(src.thumbnailData)img.src=src.thumbnailData;
-  else ensureSourceThumbnail(src,img);
+  img.loading='lazy';
+  img.decoding='async';
+  loadSourceThumbnail(src,img);
   const play=document.createElement('span');
   play.className='deckVideoIcon';
   play.textContent='▶';
@@ -646,6 +647,7 @@ function renderGroupedLibrary(container,sources,options){
   }
 }
 function renderSourceLibraries(){
+  thumbnailObserver?.disconnect();
   renderGroupedLibrary(deckPicker,lastDeckSources,{selectable:!libraryManageMode,manageable:libraryManageMode});
   if(deckSources)renderGroupedLibrary(deckSources,lastDeckSources,{selectable:false,manageable:true});
 }
@@ -782,8 +784,22 @@ async function sourceHasReplay(sourceId){
 async function saveSourceAndFrames(source,frames,replays){
   const db=await openDB();
   return new Promise((res,rej)=>{
-    const tx=db.transaction([SOURCE_STORE,FRAME_STORE,REPLAY_STORE],'readwrite');
-    tx.objectStore(SOURCE_STORE).put(source);
+    const tx=db.transaction([SOURCE_STORE,FRAME_STORE,REPLAY_STORE],'readwrite',{durability:'strict'});
+    const ss=tx.objectStore(SOURCE_STORE);
+    if(frames.length){
+      // The OPFS copy can finish while scene analysis is running. Preserve its
+      // latest state atomically instead of overwriting it with the provisional record.
+      const req=ss.get(source.id);
+      req.onsuccess=()=>{
+        const saved={...source};
+        for(const key of ['opfsName','opfsReady','opfsWriting','opfsSize','opfsSavedAt','resumeNeedsFile']){
+          if(req.result&&key in req.result)saved[key]=req.result[key];
+        }
+        ss.put(saved);
+      };
+    }else{
+      ss.put(source);
+    }
     const fs=tx.objectStore(FRAME_STORE);
     const rs=tx.objectStore(REPLAY_STORE);
     frames.forEach(x=>fs.put(x));
@@ -796,7 +812,7 @@ async function saveSourceAndFrames(source,frames,replays){
 async function updateSourceRecord(sourceId,patch){
   const db=await openDB();
   return new Promise((res,rej)=>{
-    const tx=db.transaction(SOURCE_STORE,'readwrite');
+    const tx=db.transaction(SOURCE_STORE,'readwrite',{durability:'strict'});
     const store=tx.objectStore(SOURCE_STORE);
     const req=store.get(sourceId);
     req.onsuccess=()=>{
@@ -844,7 +860,7 @@ async function cleanupSourceOpfsIfComplete(sourceId){
   const pending=frames.some(x=>x.imagePending||!(Number(x.replayFrameCount)>=2&&Number(x.replaySize)>0));
   if(pending)return;
   await removeOpfsForSource(sourceId);
-  await updateSourceRecord(sourceId,{opfsReady:false,opfsComplete:true,resumeNeedsFile:false,backgroundCompletedAt:Date.now()});
+  await updateSourceRecord(sourceId,{opfsReady:false,opfsWriting:false,opfsComplete:true,resumeNeedsFile:false,backgroundCompletedAt:Date.now()});
 }
 function persistSourceFileForResume(file,sourceId){
   if(!file||!sourceId)return Promise.resolve(false);
@@ -1080,7 +1096,7 @@ async function storeBackgroundImage(frameId,stored){
   const db=await openDB();
   let frameFound=false;
   await new Promise((res,rej)=>{
-    const tx=db.transaction(FRAME_STORE,'readwrite');
+    const tx=db.transaction(FRAME_STORE,'readwrite',{durability:'strict'});
     const fs=tx.objectStore(FRAME_STORE);
     const req=fs.get(frameId);
     req.onsuccess=()=>{
@@ -1105,11 +1121,13 @@ async function storeBackgroundImage(frameId,stored){
   }
   return true;
 }
+// Resume videos are deleted after these writes complete; request a disk flush
+// before completion rather than Chrome's default relaxed durability.
 async function storeBackgroundReplay(sourceId,frameId,replay){
   const db=await openDB();
   let frameFound=false;
   await new Promise((res,rej)=>{
-    const tx=db.transaction([FRAME_STORE,REPLAY_STORE],'readwrite');
+    const tx=db.transaction([FRAME_STORE,REPLAY_STORE],'readwrite',{durability:'strict'});
     const fs=tx.objectStore(FRAME_STORE),rs=tx.objectStore(REPLAY_STORE);
     const req=fs.get(frameId);
     req.onsuccess=()=>{
@@ -1712,7 +1730,7 @@ async function readNdjson(file,onRecord){
 async function putRestoreRecord(storeName,value){
   const db=await openDB();
   return new Promise((res,rej)=>{
-    const tx=db.transaction(storeName,'readwrite');
+    const tx=db.transaction(storeName,'readwrite',{durability:'strict'});
     tx.objectStore(storeName).put(value);
     tx.oncomplete=()=>res();
     tx.onerror=()=>rej(tx.error);
@@ -1843,6 +1861,9 @@ async function restoreDeckStream(file){
 async function restoreDeck(file){
   const prefix=await file.slice(0,8192).text();
   const firstLine=(prefix.split(/\r?\n/,1)[0]||'').trim();
+  // A large shuffle bag can make the stream header longer than this prefix.
+  // Identify its format before parsing; readNdjson validates the complete header.
+  if(/"format"\s*:\s*"memory-moments-roulette-deck-stream"/.test(firstLine))return restoreDeckStream(file);
   try{
     const first=JSON.parse(firstLine);
     if(first?.format==='memory-moments-roulette-deck-stream')return restoreDeckStream(file);

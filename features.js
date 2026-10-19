@@ -402,13 +402,27 @@ function specialSequenceSpec(kind,replay=null){
   };
 }
 function specialMovieMimeType(){
-  if(typeof MediaRecorder==='undefined')return '';
+  if(typeof MediaRecorder==='undefined'||typeof MediaRecorder.isTypeSupported!=='function')return '';
+  // Use H.264 inside MP4, not an MP4 container with VP9/Opus.
   const types=[
+    'video/mp4;codecs=avc1.42E01F',
+    'video/mp4;codecs=avc1.42E01E',
+    'video/mp4;codecs=avc1',
     'video/webm;codecs=vp9',
     'video/webm;codecs=vp8',
     'video/webm'
   ];
-  return types.find(t=>!MediaRecorder.isTypeSupported||MediaRecorder.isTypeSupported(t))||'';
+  return types.find(t=>MediaRecorder.isTypeSupported(t))||'';
+}
+function specialMovieFormat(blob){
+  return (blob?.type||'').startsWith('video/mp4')?'mp4':'webm';
+}
+async function specialMovieDetectFormat(blob){
+  // Trust the actual file header rather than the requested MIME type.
+  const header=new Uint8Array(await blob.slice(0,12).arrayBuffer());
+  if(header.length>=8&&header[4]===0x66&&header[5]===0x74&&header[6]===0x79&&header[7]===0x70)return 'mp4'; // ftyp
+  if(header.length>=4&&header[0]===0x1a&&header[1]===0x45&&header[2]===0xdf&&header[3]===0xa3)return 'webm'; // EBML
+  return '';
 }
 function specialMovieSupported(){
   return typeof MediaRecorder!=='undefined'&&
@@ -418,9 +432,9 @@ function specialMovieSupported(){
 function specialMovieExportKey(replay){
   return replay?[(replay.kind||''),Number(replay.targetTime||0).toFixed(3),replay.index??'',replay.replayCandidateId||''].join('|'):'';
 }
-function specialMovieFilename(kind){
+function specialMovieFilename(kind,blob){
   const label=kind==='reversal'?'daigyakuten-daikichi':'dai-daikichi';
-  return 'memory-'+label+'-'+new Date().toISOString().replace(/[:.]/g,'-')+'.webm';
+  return 'memory-'+label+'-'+new Date().toISOString().replace(/[:.]/g,'-')+'.'+specialMovieFormat(blob);
 }
 function setSpecialMovieStatus(text,state=''){
   const cls=state?('state-'+state):'';
@@ -457,7 +471,7 @@ function downloadSpecialMovie(){
   if(!specialMovieUrl)specialMovieUrl=URL.createObjectURL(specialMovieBlob);
   const a=document.createElement('a');
   a.href=specialMovieUrl;
-  a.download=specialMovieFilename(currentMiracleReplay?.kind||'miracle');
+  a.download=specialMovieFilename(currentMiracleReplay?.kind||'miracle',specialMovieBlob);
   a.style.display='none';
   document.body.appendChild(a);
   a.click();
@@ -699,8 +713,8 @@ async function renderSpecialMovie(kind,replay,onProgress){
 
   const stream=canvas.captureStream(30);
   const mime=specialMovieMimeType();
-  const options={videoBitsPerSecond:4800000};
-  if(mime)options.mimeType=mime;
+  if(!mime)throw new Error('このブラウザはムービーの録画形式に対応していません');
+  const options={videoBitsPerSecond:4800000,mimeType:mime};
   const recorder=new MediaRecorder(stream,options);
   const chunks=[];
   recorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
@@ -714,7 +728,7 @@ async function renderSpecialMovie(kind,replay,onProgress){
 
   const finished=new Promise((resolve,reject)=>{
     recorder.onerror=e=>reject(e.error||new Error('動画の録画に失敗しました'));
-    recorder.onstop=()=>resolve(new Blob(chunks,{type:mime||'video/webm'}));
+    recorder.onstop=()=>resolve(new Blob(chunks,{type:recorder.mimeType||mime}));
   });
 
   recorder.start(250);
@@ -756,7 +770,9 @@ async function renderSpecialMovie(kind,replay,onProgress){
     const blob=await finished;
     onProgress?.(100);
     if(!blob.size)throw new Error('生成したムービーが空でした');
-    return {blob,usedSource:(!!movieVideo&&!videoFailed)||replayImages.length>=2,width:w,height:h};
+    const format=await specialMovieDetectFormat(blob);
+    if(!format)throw new Error('生成したムービーの形式を確認できませんでした');
+    return {blob:new Blob([blob],{type:format==='mp4'?'video/mp4':'video/webm'}),format,usedSource:(!!movieVideo&&!videoFailed)||replayImages.length>=2,width:w,height:h};
   }finally{
     try{
       if(recorder.state!=='inactive')recorder.stop();
@@ -798,11 +814,12 @@ async function saveCurrentSpecialMovie(){
     specialMovieUrl=URL.createObjectURL(result.blob);
     specialMovieKey=key;
     setSpecialMovieButtons('↓ ムービーをもう一度保存',false);
-    setSpecialMovieStatus(result.usedSource
+    setSpecialMovieStatus((result.usedSource
       ? 'スローモーション入りムービーを作成しました（音声なし）'
-      : '元動画を使えないため写真演出ムービーを作成しました（音声なし）','success');
+      : '元動画を使えないため写真演出ムービーを作成しました（音声なし）')
+      +(result.format==='mp4'?'・MP4':'・WebM（このブラウザはH.264 MP4録画に非対応）'),'success');
     downloadSpecialMovie();
-    diag('movie-export-success',{kind:replay.kind,usedSource:result.usedSource,size:result.blob.size,width:result.width,height:result.height});
+    diag('movie-export-success',{kind:replay.kind,usedSource:result.usedSource,size:result.blob.size,format:result.format,width:result.width,height:result.height});
   }catch(err){
     if(generation!==specialMovieGenerationToken)return;
     console.error(err);

@@ -21,10 +21,10 @@
 <link rel="apple-touch-icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2">
 <link rel="icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2" type="image/png">
 <title>思い出ルーレットおみくじ</title>
-<link rel="stylesheet" href="./style.css?v=1.2.0-share-beta1">
-<link rel="stylesheet" href="./deluxe.css?v=1.2.0-share-beta1">
-<link rel="stylesheet" href="./features.css?v=1.2.0-share-beta1">
-<link rel="stylesheet" href="./share-studio.css?v=1.2.0-share-beta1">
+<link rel="stylesheet" href="./style.css?v=1.2.0-share-beta2">
+<link rel="stylesheet" href="./deluxe.css?v=1.2.0-share-beta2">
+<link rel="stylesheet" href="./features.css?v=1.2.0-share-beta2">
+<link rel="stylesheet" href="./share-studio.css?v=1.2.0-share-beta2">
 <style>
 body:not(.show-score-details) .scoreChip,
 body:not(.show-score-details) .scoreDetails,
@@ -40,7 +40,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <header class="hero" data-app-view="home">
   <div class="heroMark" aria-hidden="true"><img src="./icons/memory-roulette-omikuji.png?v=memorybrand2" alt=""></div>
   <div class="heroText">
-    <div class="heroTopline"><span class="eyebrow">MEMORY MOMENTS</span><span class="versionBadge" id="labSettingsTrigger" data-lab-trigger title="5回タップでラボ設定">v1.2.0 β1</span></div>
+    <div class="heroTopline"><span class="eyebrow">MEMORY MOMENTS</span><span class="versionBadge" id="labSettingsTrigger" data-lab-trigger title="5回タップでラボ設定">v1.2.0 β2</span></div>
     <h1><span class="titlePart">思い出ルーレット</span><span class="titlePart">おみくじ</span></h1>
     <p class="heroCatch">動画に隠れた、いろいろな一瞬を。</p>
     <p class="lead">写真には残さなかった一瞬まで、動画には残っています。自分では選ばなかった一枚に偶然出会い、おみくじと一緒に楽しむアプリです。</p>
@@ -158,22 +158,32 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <h2>思い出のルーレットを届ける</h2>
   <p class="note">写真・動画の生成はこの端末内で行います。LINEやSNSへの送信は自分で共有先を選ぶときだけです。</p>
   <p id="shareSourceState" class="note" aria-live="polite"></p>
-  <div class="shareActions">
-    <button id="shareVideoBuild" class="primary" type="button">🎬 抽選からSTOPまで動画にする</button>
-    <p class="note">直前に回して止めたルーレットを再現します。MP4に対応しない端末ではWebMになります（音声なし）。</p>
-    <button id="sharePlayableBuild" class="secondary" type="button">🎲 相手も遊べるルーレットを作る</button>
-    <p class="note">抽出画像と設定を1つの .mmrplay ファイルにまとめます。顔などの個人情報も入ります。</p>
-    <button id="sharePrivacyBegin" class="secondary" type="button">🐻 ひみつスタンプで隠して共有</button>
-    <p class="note">顔や背景を手で隠します。GIFや動画ではフレームごとに確認してください。</p>
+  <div class="shareActions" id="shareRouletteOptions">
+    <h3>ルーレットを共有する</h3>
+    <label class="shareFormatLabel" for="shareRouletteFormat">共有する内容</label>
+    <select id="shareRouletteFormat">
+      <option value="movie">🎬 抽選からSTOPまでの動画</option>
+      <option value="play">🎲 相手も遊べるルーレットファイル</option>
+      <option value="photo">📷 停止した写真</option>
+    </select>
+    <label class="shareMaskOption"><input type="checkbox" id="shareRouletteMask"> 🐻 ひみつスタンプで隠す（任意）</label>
+    <p class="note">スタンプを使わない場合は、加工前の写真を使います。共有のたびに選べます。</p>
+    <button id="shareRouletteBuild" class="primary" type="button">作成して保存・共有</button>
+    <p class="note">動画は音声なし。MP4非対応時はWebMになります。遊べるファイルには画像そのものが含まれます。</p>
   </div>
   <div id="shareStatus" class="note" role="status" aria-live="polite"></div>
-  <div id="shareOutput" hidden>
-    <strong id="shareOutputLabel"></strong>
-    <div class="shareOutputActions">
-      <button id="shareOutputSave" class="primary" type="button">端末に保存</button>
-      <button id="shareOutputSend" class="secondary" type="button">共有先を選ぶ</button>
+  <div id="shareOutput" class="shareOutputOverlay" role="dialog" aria-modal="true" aria-labelledby="shareOutputTitle" hidden>
+    <div class="shareOutputPanel">
+      <button id="shareOutputClose" class="shareOutputClose secondary" type="button" aria-label="閉じる">×</button>
+      <h3 id="shareOutputTitle">ファイルができました！</h3>
+      <p id="shareOutputLabel"></p>
+      <p class="note">このまま保存するか、家族や友人に送るか選べます。</p>
+      <div class="shareOutputActions">
+        <button id="shareOutputSave" class="primary" type="button">↓ 端末に保存</button>
+        <button id="shareOutputSend" class="secondary" type="button">共有先を選ぶ</button>
+      </div>
+      <p id="shareOutputHelp" class="note"></p>
     </div>
-    <p class="note">共有できない形式は、保存してからLINEのファイル添付で送れます。</p>
   </div>
   <div id="sharePrivacyEditor" hidden>
     <h3 id="sharePrivacyTitle">ひみつスタンプ</h3>
@@ -190,13 +200,9 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
       <button id="shareMaskCopy" class="secondary" type="button">位置を全コマへコピー</button>
       <button id="sharePrivacyClose" class="secondary" type="button">閉じる</button>
     </div>
-    <p class="note">動く被写体はスタンプからはみ出します。前後のコマを1枚ずつ確認してください。加工した画像だけを書き出します。</p>
-    <label class="shareConfirm"><input id="sharePrivacyReview" type="checkbox">共有する全コマを確認した（顔・名前・背景も確認）</label>
+    <p class="note">共有前に前後のコマを確認してください。動く顔や背景はスタンプからはみ出すことがあります。確認チェックは不要です。</p>
     <div class="shareActions">
-      <button id="sharePrivacyExportImage" type="button" class="primary">スタンプ画像を作る（現在のコマ）</button>
-      <button id="sharePrivacyExportGif" type="button" class="primary" hidden>加工済みGIFを作る</button>
-      <button id="sharePrivacyExportPlay" type="button" class="primary">加工済みの遊べるファイルを作る</button>
-      <button id="sharePrivacyExportVideo" type="button" class="secondary" hidden>加工済みの抽選動画を作る</button>
+      <button id="sharePrivacyExportSelected" type="button" class="primary">加工して保存・共有する</button>
     </div>
     <div id="sharePrivacyStatus" class="note" role="status" aria-live="polite"></div>
   </div>
@@ -321,7 +327,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 
   <button id="settingsVersionTrigger" class="settingsVersionTrigger" data-lab-trigger type="button" title="5回タップでLAB設定を表示">
     <span>アプリバージョン</span>
-    <strong>v1.2.0 β1</strong>
+    <strong>v1.2.0 β2</strong>
   </button>
   <div id="labSettingsHint" class="labSettingsHint settingsLabHint">LAB設定：上のバージョン表示を5回タップで表示</div>
 
@@ -483,13 +489,13 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <video id="video" playsinline muted preload="metadata" style="display:none"></video><canvas id="captureCanvas" style="display:none"></canvas><canvas id="smallCanvas" width="28" height="28" style="display:none"></canvas>
 </div>
 <div id="bigOverlay"><div id="bigText">大吉！</div></div>
-<script src="./navigation.js?v=1.2.0-share-beta1" defer></script>
-<script src="./app.js?v=1.2.0-share-beta1-audio1" defer></script>
-<script src="./deck.js?v=1.2.0-share-beta1" defer></script>
-<script src="./deluxe.js?v=1.2.0-share-beta1" defer></script>
-<script src="./features.js?v=1.2.0-share-beta1-parity1" defer></script>
-<script src="./share-studio.js?v=1.2.0-share-beta1" defer></script>
-<script src="./hidden-settings.js?v=1.2.0-share-beta1" defer></script>
+<script src="./navigation.js?v=1.2.0-share-beta2" defer></script>
+<script src="./app.js?v=1.2.0-share-beta2" defer></script>
+<script src="./deck.js?v=1.2.0-share-beta2" defer></script>
+<script src="./deluxe.js?v=1.2.0-share-beta2" defer></script>
+<script src="./features.js?v=1.2.0-share-beta2" defer></script>
+<script src="./share-studio.js?v=1.2.0-share-beta2" defer></script>
+<script src="./hidden-settings.js?v=1.2.0-share-beta2" defer></script>
 <script>
 (()=>{
   const scoreBox=document.getElementById('showScores');

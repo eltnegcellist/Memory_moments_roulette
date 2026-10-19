@@ -1762,6 +1762,12 @@ async function loadGifSource(sourceKey){
     if(token===gifLoadToken){gifLoading=false;syncGifSourceChooser();}
   }
 }
+window.__memoryShareGetGifSource=()=>{
+  if(!gifLoadedSourceKey||gifLoadedFrames.length<2)return null;
+  return {title:gifSelectedTitle?.textContent||'選択した動画',
+    frames:gifLoadedFrames.map(x=>({image:x.image,time:x.time})),
+    delay:Math.round(Number(gifSpeed?.value||.2)*100)};
+};
 window.__memoryGifOpen=async()=>{
   const token=++gifLoadToken;
   clearGifResult();
@@ -2378,6 +2384,7 @@ function appendSubBlocks(writer,data){
   }
   writer.push(0);
 }
+window.__memoryShareEncodeGif=(frames,delay)=>makeGif(frames,()=>{},delay,()=>false);
 async function makeGif(entries,onProgress,delay=50,isCancelled=()=>false){
   const first=await loadImage(entries[0].image);
   const maxW=360,maxH=480;
@@ -2569,6 +2576,15 @@ async function renderCollection(){
       e.preventDefault();
       e.stopPropagation();
       openDailyPhoto(x);
+    });
+    const shareButton=document.createElement('button');
+    shareButton.type='button';
+    shareButton.className='labPhotoSecretShare';
+    shareButton.textContent='ひみつスタンプ';
+    card.querySelector('.labPhotoActions').appendChild(shareButton);
+    shareButton.addEventListener('click',e=>{
+      e.preventDefault();e.stopPropagation();
+      window.__memoryShareOpenPhoto?.(x);
     });
     const deleteBtn=card.querySelector('.labDelete');
     setFavoriteDeleteState(card,deleteBtn,pendingFavoriteDeletes.has(x.id));

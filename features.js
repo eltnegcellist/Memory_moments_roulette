@@ -333,17 +333,21 @@ function resolvedDisplayFortune(item){
   if(item.special)return specialFortuneDisplay(item.special,item.fortune||'吉').fortune;
   return item.displayFortune||item.fortune||'吉';
 }
+// The same fanfare is used by the live result and the exported movie.
+function specialFanfareNotes(kind){
+  return kind==='reversal'
+    ? [[392,.12,0,.05,'triangle'],[659,.15,.10,.055,'sine'],
+       [988,.20,.23,.06,'sine'],[1319,.35,.40,.065,'sine'],
+       [1568,.42,.62,.06,'sine']]
+    : [[784,.13,0,.055,'sine'],[1047,.16,.10,.06,'sine'],
+       [1319,.20,.22,.065,'sine'],[1568,.34,.37,.07,'sine'],
+       [2093,.45,.58,.055,'sine']];
+}
 function playSpecialSound(kind){
   try{
     if(!primed||!ensureAudio())return;
-    if(kind==='reversal'){
-      tone(392,.12,0,.05,'triangle');tone(659,.15,.10,.055,'sine');
-      tone(988,.20,.23,.06,'sine');tone(1319,.35,.40,.065,'sine');
-      tone(1568,.42,.62,.06,'sine');
-    }else{
-      tone(784,.13,0,.055,'sine');tone(1047,.16,.10,.06,'sine');
-      tone(1319,.20,.22,.065,'sine');tone(1568,.34,.37,.07,'sine');
-      tone(2093,.45,.58,.055,'sine');
+    for(const [freq,duration,delay,volume,type] of specialFanfareNotes(kind)){
+      tone(freq,duration,delay,volume,type);
     }
   }catch(e){}
 }
@@ -509,46 +513,84 @@ function drawMovieMedia(ctx,source,w,h,zoom=1,dim=0){
   }
   ctx.restore();
 }
-function drawMovieText(ctx,w,h,kicker,title,sub,theme='gold',alpha=1){
+function drawMovieIntroBackdrop(ctx,source,w,h,kind){
+  // The on-screen intro hides the foreground video and shows only a dark,
+  // blurred, full-bleed backdrop behind the centered introduction.
+  const sz=movieSourceSize(source);
+  ctx.save();
+  ctx.fillStyle='#09080b';ctx.fillRect(0,0,w,h);
+  const cover=Math.max(w/sz.w,h/sz.h)*1.15;
+  const dw=sz.w*cover,dh=sz.h*cover;
+  ctx.filter='blur('+Math.round(w*.045)+'px) brightness(.36) saturate(1.25)';
+  ctx.drawImage(source,(w-dw)/2,(h-dh)/2,dw,dh);
+  ctx.filter='none';
+  ctx.fillStyle=kind==='reversal'?'rgba(8,5,12,.58)':'rgba(8,7,10,.24)';
+  ctx.fillRect(0,0,w,h);
+  ctx.restore();
+}
+function drawMovieText(ctx,w,h,kicker,title,sub,theme='gold',alpha=1,phase='intro'){
+  // The live overlay centers the introductory text, but places the result
+  // title high on the final photograph (mobile CSS: top 16%).
+  const final=phase==='final';
   ctx.save();
   ctx.globalAlpha=Math.max(0,Math.min(1,alpha));
-  ctx.textAlign='center';
-  ctx.textBaseline='middle';
-  ctx.shadowColor='rgba(0,0,0,.72)';
-  ctx.shadowBlur=Math.round(w*.022);
-  ctx.fillStyle='rgba(255,255,255,.94)';
-  ctx.font='800 '+Math.round(w*.037)+'px system-ui, sans-serif';
-  if(kicker)ctx.fillText(kicker,w/2,h*.30);
-  const titleSize=title&&title.length>=6?w*.092:w*.126;
-  ctx.font='1000 '+Math.round(titleSize)+'px system-ui, sans-serif';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.shadowColor='rgba(0,0,0,.78)';
+  ctx.shadowBlur=Math.round(w*.025);
+  ctx.fillStyle='rgba(255,255,255,.96)';
+  ctx.font='950 '+Math.round(w*(final?.037:.034))+'px system-ui, sans-serif';
+  if(kicker)ctx.fillText(kicker,w/2,h*(final?.222:.43),w*.93);
+  let titleSize=w*(title&&title.length>=6?.119:.150);
+  if(!final)titleSize*=.86;
+  const scale=final
+    ? (alpha<.28?.45+alpha/.28*.62:1)
+    : 1;
+  ctx.font='1000 '+Math.round(titleSize*scale)+'px system-ui, sans-serif';
   if(theme==='gold'){
     const g=ctx.createLinearGradient(w*.2,0,w*.8,0);
-    g.addColorStop(0,'#fff7b7');g.addColorStop(.5,'#ffffff');g.addColorStop(1,'#ffd34d');
+    g.addColorStop(0,'#fff7b7');g.addColorStop(.5,'#fffce9');g.addColorStop(1,'#ffd34d');
     ctx.fillStyle=g;
   }else if(theme==='rainbow'){
     const g=ctx.createLinearGradient(w*.18,0,w*.82,0);
-    g.addColorStop(0,'#ff8bd7');g.addColorStop(.27,'#9bdcff');g.addColorStop(.55,'#fff49c');g.addColorStop(.8,'#a9ffca');g.addColorStop(1,'#ddb0ff');
+    g.addColorStop(0,'#ff8bd7');g.addColorStop(.27,'#9bdcff');g.addColorStop(.55,'#fff49c');
+    g.addColorStop(.8,'#a9ffca');g.addColorStop(1,'#ddb0ff');
     ctx.fillStyle=g;
-  }else{
-    ctx.fillStyle='#fff';
-  }
-  if(title)ctx.fillText(title,w/2,h*.43);
-  ctx.fillStyle='rgba(255,255,255,.92)';
-  ctx.font='850 '+Math.round(w*.041)+'px system-ui, sans-serif';
-  if(sub)ctx.fillText(sub,w/2,h*.56);
+  }else ctx.fillStyle='#fff';
+  if(title)ctx.fillText(title,w/2,h*(final?.293:.505),w*.95);
+  ctx.fillStyle='rgba(255,255,255,.95)';
+  ctx.font='900 '+Math.round(w*(final?.041:.037))+'px system-ui, sans-serif';
+  if(sub)ctx.fillText(sub,w/2,h*(final?.354:.572),w*.96);
   ctx.restore();
 }
-function drawMovieReplayCaption(ctx,w,h,kicker,sub){
+function drawMovieReplayCaption(ctx,w,h,mode='forward',hasStoredFrames=true){
+  // Match the badge at the TOP and the explanation at the BOTTOM of the
+  // existing on-screen replay, instead of painting both at the bottom.
+  const label=mode==='reverse'?'↶ REVERSE 0.42× REPLAY':'0.42× SLOW REPLAY';
+  const badgeW=label.length>20?w*.68:w*.57;
+  const badgeH=w*.070,x=(w-badgeW)/2,y=h*.031;
   ctx.save();
-  const y=h*.86;
-  ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.shadowColor='rgba(0,0,0,.92)';ctx.shadowBlur=Math.round(w*.018);
-  ctx.fillStyle='rgba(255,255,255,.95)';
-  ctx.font='900 '+Math.round(w*.034)+'px system-ui, sans-serif';
-  ctx.fillText(kicker,w/2,y);
-  ctx.font='850 '+Math.round(w*.027)+'px system-ui, sans-serif';
-  ctx.fillStyle='rgba(255,255,255,.86)';
-  ctx.fillText(sub,w/2,y+Math.round(w*.055));
+  ctx.fillStyle='rgba(0,0,0,.55)';
+  ctx.strokeStyle='rgba(255,255,255,.43)';
+  ctx.lineWidth=2;
+  const radius=badgeH/2;
+  ctx.beginPath();
+  ctx.moveTo(x+radius,y);ctx.lineTo(x+badgeW-radius,y);
+  ctx.quadraticCurveTo(x+badgeW,y,x+badgeW,y+radius);
+  ctx.quadraticCurveTo(x+badgeW,y+badgeH,x+badgeW-radius,y+badgeH);
+  ctx.lineTo(x+radius,y+badgeH);
+  ctx.quadraticCurveTo(x,y+badgeH,x,y+radius);
+  ctx.quadraticCurveTo(x,y,x+radius,y);
+  ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#fff';
+  ctx.font='950 '+Math.round(w*.033)+'px system-ui, sans-serif';
+  ctx.fillText(label,w/2,y+badgeH/2,badgeW-18);
+  ctx.shadowColor='rgba(0,0,0,.86)';ctx.shadowBlur=Math.round(w*.020);
+  ctx.font='950 '+Math.round(w*.035)+'px system-ui, sans-serif';
+  ctx.fillText('特別な一瞬へ',w/2,h*.865,w*.93);
+  ctx.font='900 '+Math.round(w*.032)+'px system-ui, sans-serif';
+  const sub=mode==='reverse'?'逆再生で近づいています'
+    :hasStoredFrames?'保存した連続コマをスロー再生中':'0.42× SLOW REPLAY';
+  ctx.fillText(sub,w/2,h*.905,w*.94);
   ctx.restore();
 }
 function createMovieParticles(kind,count=90){
@@ -562,14 +604,18 @@ function createMovieParticles(kind,count=90){
 function drawMovieParticles(ctx,particles,w,h,t,intensity=1,fall=false){
   ctx.save();
   for(const p of particles){
-    const x=((p.x+Math.sin(t*.8+p.phase)*.025)%1)*w;
-    const yy=fall?((p.y+t*p.speed)%1):((p.y-Math.sin(t*.6+p.phase)*.018+1)%1);
-    const y=yy*h;
+    const delay=p.phase/6.283*1.2;
+    const duration=1.7+p.speed*7;
+    const elapsed=t-delay;
+    if(fall&&(elapsed<0||elapsed>duration))continue;
+    const x=(p.x+Math.sin(t*.8+p.phase)*.025)*w;
+    const y=fall?(-.08+elapsed/duration*1.20)*h
+      :(p.y-Math.sin(t*.6+p.phase)*.018)*h;
     const size=Math.max(2,p.size*Math.min(w,h)*(0.72+intensity*.55));
     ctx.save();
     ctx.translate(x,y);
     ctx.rotate(t*p.spin+p.phase);
-    ctx.globalAlpha=Math.min(1,.24+intensity*.62);
+    ctx.globalAlpha=fall?Math.min(.85,elapsed/.12):Math.min(1,.24+intensity*.62);
     ctx.fillStyle='hsla('+p.hue+',92%,66%,.92)';
     if(p.shape===0){
       ctx.fillRect(-size*.35,-size*1.2,size*.7,size*2.4);
@@ -585,86 +631,75 @@ function drawMovieParticles(ctx,particles,w,h,t,intensity=1,fall=false){
   ctx.restore();
 }
 function drawMovieAura(ctx,w,h,kind,progress,flash=0){
+  // Match the live full-screen repeating-conic burst and spinning halo.
+  // The old exporter drew four circles, which looked nothing like the app.
   ctx.save();
+  ctx.translate(w/2,h*.50);
   ctx.globalCompositeOperation='screen';
-  if(kind==='miracle'){
-    const r=ctx.createRadialGradient(w*.5,h*.42,0,w*.5,h*.42,Math.max(w,h)*.72);
-    r.addColorStop(0,'rgba(255,255,230,'+(0.22+progress*.32)+')');
-    r.addColorStop(.28,'rgba(255,214,68,'+(0.16+progress*.28)+')');
-    r.addColorStop(1,'rgba(138,70,255,0)');
-    ctx.fillStyle=r;ctx.fillRect(0,0,w,h);
-    ctx.strokeStyle='rgba(255,238,145,'+(0.08+progress*.3)+')';
-  }else{
-    const g=ctx.createLinearGradient(0,h*.15,w,h*.85);
-    g.addColorStop(0,'rgba(255,90,208,'+(progress*.28)+')');
-    g.addColorStop(.3,'rgba(74,205,255,'+(progress*.30)+')');
-    g.addColorStop(.62,'rgba(255,238,86,'+(progress*.25)+')');
-    g.addColorStop(1,'rgba(133,100,255,'+(progress*.3)+')');
-    ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
-    ctx.strokeStyle='rgba(225,210,255,'+(0.08+progress*.28)+')';
-  }
-  ctx.lineWidth=Math.max(2,w*.006);
-  for(let i=0;i<4;i++){
-    const rr=(.18+i*.13+progress*.08)*Math.max(w,h);
-    ctx.globalAlpha=.16+progress*.14;
-    ctx.beginPath();ctx.arc(w/2,h*.45,rr,0,Math.PI*2);ctx.stroke();
-  }
-  if(flash>0){
-    ctx.globalAlpha=Math.min(1,flash);
-    ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);
+  const length=Math.hypot(w,h);
+  const angleShift=(-10+progress*38)*Math.PI/180;
+  const opacity=Math.min(1,progress/.10)*(.95-progress*.68);
+  const count=kind==='reversal'?60:40;
+  for(let i=0;i<count;i++){
+    const a=(Math.PI*2*i/count)+angleShift;
+    const da=(kind==='reversal'?.028:.039);
+    ctx.beginPath();ctx.moveTo(0,0);
+    ctx.lineTo(Math.cos(a)*length,Math.sin(a)*length);
+    ctx.lineTo(Math.cos(a+da)*length,Math.sin(a+da)*length);
+    ctx.closePath();
+    let rgb='255,255,255';
+    if(kind==='reversal'){
+      const colors=['255,120,220','110,220,255','255,238,115'];
+      rgb=colors[i%colors.length];
+    }
+    ctx.fillStyle='rgba('+rgb+','+(opacity*(kind==='reversal'?.46:.36))+')';
+    ctx.fill();
   }
   ctx.restore();
+  if(flash>0){
+    ctx.save();ctx.fillStyle='rgba(255,255,255,'+Math.min(.88,flash*.88)+')';
+    ctx.fillRect(0,0,w,h);ctx.restore();
+  }
 }
 function drawSpecialMovieFrame(ctx,state){
   const {kind,t,timeline,still,video,videoReady,replayImages,particles,w,h}=state;
   const spec=specialSequenceSpec(kind,{targetTime:state.targetTime});
   const slowStart=timeline.intro;
   const slowEnd=timeline.intro+timeline.slow;
-  const finalStart=slowEnd;
   let source=still;
+  const hasReplayFrames=Array.isArray(replayImages)&&replayImages.length>=2;
   if(t>=slowStart&&t<slowEnd){
-    if(video&&videoReady()&&video.readyState>=2){
-      source=video;
-    }else if(Array.isArray(replayImages)&&replayImages.length){
+    // The live deck preview uses stored frames. The MP4 should show those
+    // same frames at the same interval rather than a different live-video cut.
+    if(hasReplayFrames){
       const p=(t-slowStart)/Math.max(.01,timeline.slow);
       const ix=Math.max(0,Math.min(replayImages.length-1,Math.floor(p*replayImages.length)));
       source=replayImages[ix]||still;
-    }
+    }else if(video&&videoReady()&&video.readyState>=2)source=video;
   }
 
   if(t<slowStart){
-    drawMovieMedia(ctx,still,w,h,1,kind==='reversal'?.58:.30);
-    drawMovieText(
-      ctx,w,h,
-      spec.intro.kicker,
-      spec.intro.title,
-      spec.intro.sub,
-      kind==='reversal'?'plain':'gold',
-      1
-    );
+    drawMovieIntroBackdrop(ctx,still,w,h,kind);
+    drawMovieText(ctx,w,h,spec.intro.kicker,spec.intro.title,spec.intro.sub,
+      kind==='reversal'?'plain':'gold',1,'intro');
     return;
   }
 
   if(t<slowEnd){
-    const p=(t-slowStart)/Math.max(.01,timeline.slow);
-    drawMovieMedia(ctx,source,w,h,1+.008*p,0);
-    drawMovieReplayCaption(ctx,w,h,spec.replay.kicker,spec.replay.sub);
+    drawMovieMedia(ctx,source,w,h,1,0);
+    drawMovieReplayCaption(ctx,w,h,
+      state.replayMode||'forward',hasReplayFrames);
     return;
   }
 
-  const p=Math.min(1,(t-finalStart)/timeline.final);
-  drawMovieMedia(ctx,still,w,h,1.025-p*.015,0);
-  const flash=Math.max(0,1-p/.13);
-  drawMovieAura(ctx,w,h,kind,p,flash*.86);
-  drawMovieParticles(ctx,particles,w,h,t,1,true);
-  drawMovieText(
-    ctx,w,h,
-    spec.final.kicker,
-    spec.final.title,
-    spec.final.sub,
-    kind==='reversal'?'rainbow':'gold',
-    Math.min(1,p*3.4)
-  );
+  const p=Math.min(1,(t-slowEnd)/timeline.final);
+  // The live image appears slightly zoomed, then settles at its original size.
+  const zoom=p<.12?.92+(p/.12)*.105:1.025-Math.min(1,(p-.12)/.88)*.025;
+  drawMovieMedia(ctx,still,w,h,zoom,0);
+  drawMovieAura(ctx,w,h,kind,p,Math.max(0,1-p/.16));
+  drawMovieParticles(ctx,particles,w,h,Math.max(0,t-slowEnd),1,true);
+  drawMovieText(ctx,w,h,spec.final.kicker,spec.final.title,spec.final.sub,
+    kind==='reversal'?'rainbow':'gold',Math.min(1,p*4.1),'final');
 }
 async function prepareSpecialMovieVideo(replay,slowDuration){
   // Reverse clips are rendered from stored frames in playback order.
@@ -730,22 +765,12 @@ function createSpecialMovieSoundtrack(){
       track,ready,
       start(timeline,kind){
         if(ctx.state!=='running')return;
-        const base=.10;
-        // A light three-note opening, a gentle shimmer through slow replay,
-        // and a celebratory fanfare precisely at the fortune reveal.
-        const intro=kind==='reversal'?[392,494,587]:[523,659,784];
-        intro.forEach((f,i)=>note(f,base+i*.13,.38,.065,'triangle'));
-        const replayStart=base+timeline.intro;
-        const replayEnd=replayStart+timeline.slow;
-        const notes=kind==='reversal'?[392,494,587,659]:[523,659,784,1047];
-        for(let at=replayStart;at<replayEnd-.12;at+=.75){
-          const ix=Math.floor((at-replayStart)/.75)%notes.length;
-          note(notes[ix],at,Math.min(.62,replayEnd-at),.035,'sine');
+        // The live sequence is silent during the intro and slow replay.
+        // Match the very same final reveal fanfare, with no unrelated BGM.
+        const reveal=timeline.intro+timeline.slow;
+        for(const [f,d,delay,volume,type] of specialFanfareNotes(kind)){
+          note(f,reveal+delay,d,volume,type);
         }
-        const finale=replayEnd;
-        const chord=kind==='reversal'?[523,659,784,1047,1319]:[659,784,1047,1319,1568];
-        chord.forEach((f,i)=>note(f,finale+i*.16,.70,.07,i%2?'triangle':'sine'));
-        note(kind==='reversal'?1047:1568,finale+1.15,1.5,.045,'sine');
       },
       cleanup(){
         try{track.stop();}catch(e){}
@@ -802,7 +827,9 @@ async function renderSpecialMovie(kind,replay,onProgress,soundtrack){
   const chunks=[];
   recorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
 
-  const source=await prepareSpecialMovieVideo({
+  // The app's deck replay shows the stored sequence; export those SAME
+  // frames rather than independently replaying the source at a different rate.
+  const source=replayImages.length>=2?null:await prepareSpecialMovieVideo({
     ...replay,replayMode:storedReplay?.mode||replay.replayMode
   },timeline.slow);
   if(!source&&replayImages.length<2){
@@ -853,6 +880,7 @@ async function renderSpecialMovie(kind,replay,onProgress,soundtrack){
           // Recover visually if Chrome leaves the source video frozen.
           videoReady:()=>!videoFailed&&(!replayImages.length||t-lastVideoProgressAt<.35),
           replayImages,
+          replayMode:storedReplay?.mode||replay.replayMode||'forward',
           particles,w,h
         });
         const percent=Math.min(99,Math.floor(t/timeline.total*100));
@@ -1304,7 +1332,13 @@ async function replayStoredDeckFrames(token){
   const candidateId=activeCreation?.deckCandidateIds?.[currentIndex];
   if(!candidateId||typeof window.__memoryDeckLoadReplay!=='function')return false;
   let stored=null;
-  try{stored=await window.__memoryDeckLoadReplay(candidateId);}catch(e){return false;}
+  try{
+    const sourceId=activeCreation?.deckSourceIds?.[currentIndex]||null;
+    const targetTime=Number(activeCreation?.times?.[currentIndex])||0;
+    stored=typeof window.__memoryDeckEnsureReplay==='function'
+      ? await window.__memoryDeckEnsureReplay(candidateId,sourceId,targetTime)
+      : await window.__memoryDeckLoadReplay(candidateId);
+  }catch(e){return false;}
   if(token!==miracleSequenceToken)return false;
   const seq=stored?.frames;
   if(!Array.isArray(seq)||seq.length<2)return false;

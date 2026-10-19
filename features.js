@@ -667,9 +667,13 @@ function drawSpecialMovieFrame(ctx,state){
   );
 }
 async function prepareSpecialMovieVideo(replay,slowDuration){
-  if(!replaySourceAvailable())return null;
-  const src=replaySourceUrl();
-  if(!src)return null;
+  // Reverse clips are rendered from stored frames in playback order.
+  if(replay?.replayMode==='reverse')return null;
+  const liveFile=replay?.sourceVideoId&&window.__memoryDeckReplayFile?.(replay.sourceVideoId);
+  if(!liveFile&&!replaySourceAvailable())return null;
+  const ownUrl=liveFile?URL.createObjectURL(liveFile):null;
+  const src=ownUrl||replaySourceUrl();
+  if(!src){if(ownUrl)URL.revokeObjectURL(ownUrl);return null;}
   const v=document.createElement('video');
   v.muted=true;v.playsInline=true;v.preload='auto';
   v.style.cssText='position:fixed;width:2px;height:2px;opacity:.001;left:-20px;top:-20px;pointer-events:none';
@@ -688,9 +692,10 @@ async function prepareSpecialMovieVideo(replay,slowDuration){
     v.currentTime=start;
     try{await waitForVideoEvent(v,'seeked',2200);}catch(e){}
     v.playbackRate=rate;
-    return {video:v,start,target,rate,cleanup:()=>{try{v.pause();}catch(e){}v.removeAttribute('src');v.load();v.remove();}};
+    return {video:v,start,target,rate,cleanup:()=>{try{v.pause();}catch(e){}v.removeAttribute('src');v.load();v.remove();if(ownUrl)URL.revokeObjectURL(ownUrl);}};
   }catch(err){
     try{v.removeAttribute('src');v.load();v.remove();}catch(e){}
+    if(ownUrl)URL.revokeObjectURL(ownUrl);
     diag('movie-source-fallback',{name:err?.name||'Error',message:String(err?.message||err)});
     return null;
   }
@@ -754,12 +759,18 @@ async function renderSpecialMovie(kind,replay,onProgress,soundtrack){
   if(!specialMovieSupported())throw new Error('このブラウザはムービー保存に対応していません');
   if(!replay?.frameSrc)throw new Error('リプレイする写真がありません');
 
-  const timeline=specialMovieTimeline(kind,replay);
   const still=await loadImage(replay.frameSrc);
   let storedReplay=null;
-  if(replay.replayCandidateId&&typeof window.__memoryDeckLoadReplay==='function'){
-    try{storedReplay=await window.__memoryDeckLoadReplay(replay.replayCandidateId);}catch(e){}
+  if(replay.replayCandidateId){
+    try{
+      storedReplay=typeof window.__memoryDeckEnsureReplay==='function'
+        ? await window.__memoryDeckEnsureReplay(replay.replayCandidateId,replay.sourceVideoId,replay.targetTime)
+        : await window.__memoryDeckLoadReplay?.(replay.replayCandidateId);
+    }catch(e){console.warn('slow replay source lookup failed',e);}
   }
+  const timeline=specialMovieTimeline(kind,{
+    ...replay,replaySpan:Number(storedReplay?.span)||replay.replaySpan
+  });
   const replayImages=Array.isArray(storedReplay?.frames)
     ? (await Promise.all(storedReplay.frames.map(src=>loadImage(src).catch(()=>null)))).filter(Boolean)
     : [];
@@ -791,12 +802,19 @@ async function renderSpecialMovie(kind,replay,onProgress,soundtrack){
   const chunks=[];
   recorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
 
-  const source=await prepareSpecialMovieVideo(replay,timeline.slow);
+  const source=await prepareSpecialMovieVideo({
+    ...replay,replayMode:storedReplay?.mode||replay.replayMode
+  },timeline.slow);
+  if(!source&&replayImages.length<2){
+    throw new Error('スローモーション用の連続コマを準備できませんでした。元動画の処理完了後にもう一度お試しください');
+  }
   const particles=createMovieParticles(kind,96);
   let movieVideo=source?.video||null;
   let videoFailed=!movieVideo;
   let videoStarted=false;
   let videoPaused=false;
+  let lastVideoTime=Number(movieVideo?.currentTime)||0;
+  let lastVideoProgressAt=timeline.intro;
 
   const finished=new Promise((resolve,reject)=>{
     recorder.onerror=e=>reject(e.error||new Error('動画の録画に失敗しました'));
@@ -823,9 +841,17 @@ async function renderSpecialMovie(kind,replay,onProgress,soundtrack){
           videoPaused=true;
           try{movieVideo.pause();}catch(e){}
         }
+        if(movieVideo&&t>=timeline.intro&&t<timeline.intro+timeline.slow){
+          const current=Number(movieVideo.currentTime)||0;
+          if(current>lastVideoTime+.015){
+            lastVideoTime=current;
+            lastVideoProgressAt=t;
+          }
+        }
         drawSpecialMovieFrame(ctx,{
           kind,t,timeline,still,video:movieVideo,
-          videoReady:()=>!videoFailed,
+          // Recover visually if Chrome leaves the source video frozen.
+          videoReady:()=>!videoFailed&&(!replayImages.length||t-lastVideoProgressAt<.35),
           replayImages,
           particles,w,h
         });
@@ -1453,7 +1479,11 @@ async function playMiracleSequence(kind,replayAgain=false){
   const frameSrc=currentMiracleReplay?.frameSrc||(playImageEl.currentSrc||playImageEl.src);
   const targetTime=currentMiracleReplay?.targetTime??Number(activeCreation?.times?.[currentIndex]);
   const replayFortune=currentMiracleReplay?.fortune||currentLab?.fortune||null;
-  currentMiracleReplay={kind,frameSrc,targetTime,index:currentIndex,fortune:replayFortune};
+  // Preserve the captured candidate ID, replay mode and source file mapping.
+  // Replacing this object used to turn exported slow replay into a static photo.
+  currentMiracleReplay={
+    ...currentMiracleReplay,kind,frameSrc,targetTime,index:currentIndex,fortune:replayFortune
+  };
   const token=++miracleSequenceToken;
   const spec=specialSequenceSpec(kind,currentMiracleReplay);
 
@@ -1528,7 +1558,13 @@ function clearLab(){
 function showMiracle(kind){
   const frameSrc=playImageEl.currentSrc||playImageEl.src;
   const targetTime=Number(activeCreation?.times?.[currentIndex]);
-  currentMiracleReplay={kind,frameSrc,targetTime,index:currentIndex,fortune:currentLab?.fortune||null};
+  currentMiracleReplay={
+    kind,frameSrc,targetTime,index:currentIndex,fortune:currentLab?.fortune||null,
+    replayCandidateId:activeCreation?.deckCandidateIds?.[currentIndex]||null,
+    replayMode:activeCreation?.deckReplayModes?.[currentIndex]||null,
+    replaySpan:activeCreation?.deckReplaySpans?.[currentIndex]||0,
+    sourceVideoId:activeCreation?.deckSourceIds?.[currentIndex]||null
+  };
   replaySpecialBtn.style.display='block';
 
   if(kind==='miracle'){
@@ -1914,7 +1950,8 @@ function showHistoryEntry(x){
     if(x.special){
       currentMiracleReplay={
         kind:x.special,frameSrc:x.image,targetTime:x.targetTime??x.time,index:x.index,fortune:x.fortune||null,
-        replayCandidateId:x.replayCandidateId||null,replayMode:x.replayMode||null,replaySpan:x.replaySpan||0
+        replayCandidateId:x.replayCandidateId||null,replayMode:x.replayMode||null,replaySpan:x.replaySpan||0,
+        sourceVideoId:x.sourceVideoId||null
       };
       replaySpecialBtn.style.display='block';
       movieResultBtn.style.display='block';
@@ -2017,7 +2054,8 @@ function showLabResult(){
       fortune,
       replayCandidateId:activeCreation?.deckCandidateIds?.[currentIndex]||null,
       replayMode:activeCreation?.deckReplayModes?.[currentIndex]||null,
-      replaySpan:activeCreation?.deckReplaySpans?.[currentIndex]||0
+      replaySpan:activeCreation?.deckReplaySpans?.[currentIndex]||0,
+      sourceVideoId:activeCreation?.deckSourceIds?.[currentIndex]||null
     };
     replaySpecialBtn.style.display='block';
   }

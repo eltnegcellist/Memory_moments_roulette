@@ -57,6 +57,8 @@ let selectionLoaded=false;
 let lastDeckSources=[];
 let backgroundQueue=Promise.resolve();
 const queuedSourceIds=new Set();
+// Keep user-picked source videos in this tab until the next roulette batch.
+const liveReplaySourceFiles=new Map();
 const opfsWriteJobs=new Map();
 const OPFS_PREFIX='memory-moments-source-';
 let analysisResumeQueue=Promise.resolve();
@@ -1239,6 +1241,36 @@ function enqueueBackgroundJobs(jobs){
   });
 }
 
+window.__memoryDeckReplayFile=sourceId=>liveReplaySourceFiles.get(sourceId)||null;
+window.__memoryDeckEnsureReplay=async(candidateId,sourceId,targetTime)=>{
+  const saved=await window.__memoryDeckLoadReplay(candidateId);
+  if(Array.isArray(saved?.frames)&&saved.frames.length>=2)return saved;
+  const file=liveReplaySourceFiles.get(sourceId);
+  if(!file||!candidateId)return saved;
+  const v=document.createElement('video');
+  v.muted=true;v.playsInline=true;v.preload='auto';
+  const url=URL.createObjectURL(file);
+  const canvas=document.createElement('canvas');
+  const ctx=canvas.getContext('2d');
+  if(!ctx){URL.revokeObjectURL(url);return saved;}
+  try{
+    v.src=url;v.load();
+    await waitForMediaEvent(v,'loadedmetadata',10000);
+    const replay=await captureReplayBurstBackground(v,canvas,ctx,targetTime);
+    if(!Array.isArray(replay.frames)||replay.frames.length<2)return saved;
+    // Do not delay export if persistence fails (for example because the user
+    // has reached the browser's storage quota).
+    await storeBackgroundReplay(sourceId,candidateId,replay).catch(err=>console.warn('replay cache save failed',err));
+    return replay;
+  }catch(err){
+    console.warn('on-demand slow replay capture failed',err);
+    return saved;
+  }finally{
+    try{v.pause();v.removeAttribute('src');v.load();}catch(e){}
+    URL.revokeObjectURL(url);
+  }
+};
+
 window.__memoryDeckLoadReplay=async candidateId=>{
   if(!candidateId)return null;
   const db=await openDB();
@@ -1378,13 +1410,18 @@ window.__memoryDeckHandleFiles=async(files,options={})=>{
   progressBar.style.width='3%';
   let added=0,duplicates=0,failed=0;
   const errors=[];
+  if(!options.gifOnly)liveReplaySourceFiles.clear();
   const batchSourceIds=[];
   const backgroundJobs=[];
   try{
     for(let i=0;i<files.length;i++){
       try{
         const r=await extractOne(files[i],i+1,files.length);
-        if(r.sourceId)batchSourceIds.push(r.sourceId);
+        if(r.sourceId){
+          batchSourceIds.push(r.sourceId);
+          // A fresh (or duplicate) video remains readable for smooth MP4 export.
+          liveReplaySourceFiles.set(r.sourceId,files[i]);
+        }
         if(r.backgroundJob)backgroundJobs.push(r.backgroundJob);
         if(r.duplicate)duplicates++;else added+=r.count;
       }catch(e){

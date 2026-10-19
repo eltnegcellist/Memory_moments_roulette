@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const VALID=new Set(['home','create','library','play','favorites','history','settings','gif']);
+const VALID=new Set(['home','create','library','play','favorites','history','settings','gif','share']);
 let currentView='home';
 let returnFromPlay='home';
 let scrollToken=0;
@@ -44,6 +44,7 @@ function applyView(view){
   currentView=target;
   if(target==='library')window.__memoryDeckRender?.();
   if(enteringGif)Promise.resolve(window.__memoryGifOpen?.()).catch(err=>console.error('GIF page init failed',err));
+  if(target==='share')window.__memoryShareOnOpen?.();
   forceTop();
 }
 function writeRoute(target,replace=false){

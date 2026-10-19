@@ -343,8 +343,8 @@ window.__memoryOnRoulettePrepared?.(x);
 playSection.scrollIntoView({behavior:'smooth'});
 startRun(false);
 }
-function showRandom(){ const arr=activeCreation.frames; if(!arr?.length) return; let n=currentIndex; while(arr.length>1 && n===currentIndex) n=Math.floor(Math.random()*arr.length); currentIndex=n; playImage.src=arr[n]; }
-function startRun(withSound=true){ running=true; window.__memoryOnRouletteStarted?.(); stage.classList.add('pulse'); fortuneBadge.style.display='none'; resultCard.style.display='none'; rouletteBadge.style.display='block'; rouletteBadge.textContent='タップでストップ'; tapHint.textContent='画像をタップすると止まります'; showRandom(); clearInterval(timer); timer=setInterval(showRandom,75); if(withSound) playSound('start'); }
+function showRandom(){ const arr=activeCreation.frames; if(!arr?.length) return; let n=currentIndex; while(arr.length>1 && n===currentIndex) n=Math.floor(Math.random()*arr.length); currentIndex=n; playImage.src=arr[n]; window.__memoryShareOnFrame?.(n); }
+function startRun(withSound=true){ running=true; window.__memoryShareOnStarted?.(activeCreation); window.__memoryOnRouletteStarted?.(); stage.classList.add('pulse'); fortuneBadge.style.display='none'; resultCard.style.display='none'; rouletteBadge.style.display='block'; rouletteBadge.textContent='タップでストップ'; tapHint.textContent='画像をタップすると止まります'; showRandom(); clearInterval(timer); timer=setInterval(showRandom,75); if(withSound) playSound('start'); }
 function stopRun(){
 running=false; clearInterval(timer); timer=null; stage.classList.remove('pulse');
 if(activeCreation?.deckMode&&typeof window.__memoryDeckResolveStop==='function'){
@@ -372,6 +372,7 @@ if(activeCreation?.deckMode){
   const sourceId=activeCreation.deckSourceIds?.[currentIndex];
   if(sourceId)window.__memoryDeckRecordDraw?.(sourceId);
 }
+window.__memoryShareOnStopped?.({index:currentIndex,fortune:activeCreation.mode==='omikuji'?resultText.textContent:null,mode:activeCreation.mode});
 window.__memoryOnRouletteStopped?.();
 }
 function celebrate(){ bigOverlay.classList.remove('show'); void bigOverlay.offsetWidth; bigOverlay.classList.add('show'); const pal=['#ffd700','#fff0a0','#fff','#ff5a61','#ff9d00']; for(let i=0;i<90;i++){ const e=document.createElement('div'); e.className='confetti'; e.style.left=Math.random()*100+'vw'; e.style.width=7+Math.random()*9+'px'; e.style.height=10+Math.random()*18+'px'; e.style.background=pal[Math.floor(Math.random()*pal.length)]; e.style.animationDuration=1.8+Math.random()*1.6+'s'; e.style.animationDelay=Math.random()*.3+'s'; document.body.appendChild(e); setTimeout(()=>e.remove(),3800); } if(navigator.vibrate) navigator.vibrate([100,60,140,70,260]); playSound('大吉'); setTimeout(()=>bigOverlay.classList.remove('show'),2500); }
@@ -401,6 +402,12 @@ function exitRoulette(){
   try{audioCtx?.suspend().catch(()=>{});}catch(e){}
 }
 window.__memoryExitRoulette=exitRoulette;
+window.__memoryShareGetActiveCreation=()=>activeCreation;
+window.__memoryShareGetCurrentIndex=()=>currentIndex;
+window.__memoryShareLoadCreation=x=>{
+  if(!x?.shareImported||x.id!==null||!Array.isArray(x.frames)||x.frames.length<2)return;
+  preparePlay(x);
+};
 $('backBtn').addEventListener('click',()=>{
   if(window.__memoryBackFromPlay)window.__memoryBackFromPlay();
   else{exitRoulette();window.__memoryNavigate?.('home');}

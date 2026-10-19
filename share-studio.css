@@ -1,0 +1,24 @@
+/* Local sharing and per-frame privacy editor. */
+#shareSection [hidden]{display:none!important}
+#shareSection h2{margin-top:8px}
+#shareSection .shareActions{display:flex;flex-direction:column;gap:10px;margin:14px 0}
+#shareSection .shareActions>button{width:100%;min-height:47px}
+#shareSection .shareActions>.note{margin:-8px 1px 6px;font-size:12px;line-height:1.6}
+#shareSection #shareStatus,#shareSection #sharePrivacyStatus{min-height:22px;white-space:normal;overflow-wrap:anywhere}
+#shareSection #shareOutput{border-radius:14px;border:1px solid rgba(80,65,50,.19);background:#fff7e9;padding:16px;margin:18px 0}
+#shareSection #shareOutputLabel{display:block;line-height:1.5;overflow-wrap:anywhere}
+#shareSection .shareOutputActions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+#shareSection .shareOutputActions button{flex:1;min-width:115px}
+#shareSection #sharePrivacyEditor{margin-top:20px;padding:12px;border:1px solid rgba(90,64,50,.25);border-radius:16px}
+#shareSection #sharePrivacyCanvas{display:block;max-width:100%;max-height:65vh;width:auto;height:auto;margin:12px auto;border-radius:10px;background:#ddd;touch-action:manipulation;cursor:crosshair;box-shadow:0 1px 8px rgba(0,0,0,.14)}
+#shareSection .shareFrameNav{display:flex;align-items:center;justify-content:space-between;gap:10px}
+#shareSection .shareMaskTools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;margin:12px 0}
+#shareSection .shareMaskTools label{display:flex;align-items:center;gap:5px}
+#shareSection .shareMaskTools select{min-width:72px;padding:7px}
+#shareSection .shareMaskTools input[type=range]{width:125px}
+#shareSection .shareConfirm{display:flex;align-items:flex-start;gap:10px;padding:13px 8px;background:#fff0dc;border-radius:10px;font-size:13px;line-height:1.6}
+#shareSection .shareConfirm input{flex-shrink:0;margin-top:4px}
+#shareSection input[type=file]{width:100%;max-width:100%;box-sizing:border-box}
+#shareSection button:disabled{opacity:.48;cursor:not-allowed}
+#shareSection hr{margin:26px 0;border:0;border-top:1px solid rgba(80,65,50,.2)}
+@media(max-width:420px){#shareSection .shareOutputActions button{min-width:105px;font-size:12px}#shareSection #sharePrivacyEditor{padding:9px}}

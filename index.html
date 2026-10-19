@@ -21,9 +21,10 @@
 <link rel="apple-touch-icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2">
 <link rel="icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2" type="image/png">
 <title>思い出ルーレットおみくじ</title>
-<link rel="stylesheet" href="./style.css?v=1.2.0-audioclean">
-<link rel="stylesheet" href="./deluxe.css?v=1.2.0">
-<link rel="stylesheet" href="./features.css?v=1.2.0">
+<link rel="stylesheet" href="./style.css?v=1.3.0">
+<link rel="stylesheet" href="./deluxe.css?v=1.3.0">
+<link rel="stylesheet" href="./features.css?v=1.3.0">
+<link rel="stylesheet" href="./share-studio.css?v=1.3.0">
 <style>
 body:not(.show-score-details) .scoreChip,
 body:not(.show-score-details) .scoreDetails,
@@ -39,7 +40,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <header class="hero" data-app-view="home">
   <div class="heroMark" aria-hidden="true"><img src="./icons/memory-roulette-omikuji.png?v=memorybrand2" alt=""></div>
   <div class="heroText">
-    <div class="heroTopline"><span class="eyebrow">MEMORY MOMENTS</span><span class="versionBadge" id="labSettingsTrigger" data-lab-trigger title="5回タップでラボ設定">v1.2.0</span></div>
+    <div class="heroTopline"><span class="eyebrow">MEMORY MOMENTS</span><span class="versionBadge" id="labSettingsTrigger" data-lab-trigger title="5回タップでラボ設定">v1.3.0</span></div>
     <h1><span class="titlePart">思い出ルーレット</span><span class="titlePart">おみくじ</span></h1>
     <p class="heroCatch">動画に隠れた、いろいろな一瞬を。</p>
     <p class="lead">写真には残さなかった一瞬まで、動画には残っています。自分では選ばなかった一枚に偶然出会い、おみくじと一緒に楽しむアプリです。</p>
@@ -63,6 +64,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
     <button type="button" data-route="history"><span aria-hidden="true">↺</span><strong>履歴</strong><small id="homeHistoryCount">作ったルーレット</small></button>
     <button type="button" data-route="gif" aria-label="動画からGIFを作る"><span aria-hidden="true">▣</span><strong>GIF作成</strong><small>動画から作る</small></button>
     <button type="button" data-route="settings"><span aria-hidden="true">⚙</span><strong>設定</strong><small>ルーレット・データ</small></button>
+    <button type="button" data-route="share"><span aria-hidden="true">⇧</span><strong>共有・受け取る</strong><small>LINEで送る・遊べるファイル</small></button>
   </nav>
 </section>
 <section class="conceptCard" data-app-view="home" aria-label="このアプリが目指すこと">
@@ -148,6 +150,60 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <div class="step">PLAY</div>
   <div class="playShell"><div id="stage"><img id="playImage" alt=""><div id="fortuneBadge"></div><div id="resultCard"><div id="resultHead">きょうの運勢</div><div id="resultText"></div><div id="message"></div></div><div id="rouletteBadge">タップでストップ</div></div></div>
   <div id="tapHint">画像をタップすると止まります</div>
+  <button id="shareOpenFromPlay" class="secondary" type="button" style="margin-top:12px;width:100%">このルーレットを保存・共有する</button>
+</section>
+<section id="shareSection" class="card appView" data-app-view="share">
+  <div class="viewTopbar"><button type="button" class="viewBack" data-nav-back>← ホーム</button><span>共有・受け取り</span></div>
+  <div class="step">SHARE</div>
+  <h2>思い出のルーレットを届ける</h2>
+  <p class="note">写真・動画の生成はこの端末内で行います。LINEやSNSへの送信は自分で共有先を選ぶときだけです。</p>
+  <p id="shareSourceState" class="note" aria-live="polite"></p>
+  <div class="shareActions">
+    <button id="shareVideoBuild" class="primary" type="button">🎬 抽選からSTOPまで動画にする</button>
+    <p class="note">直前に回して止めたルーレットを再現します。MP4に対応しない端末ではWebMになります（音声なし）。</p>
+    <button id="sharePlayableBuild" class="secondary" type="button">🎲 相手も遊べるルーレットを作る</button>
+    <p class="note">抽出画像と設定を1つの .mmrplay ファイルにまとめます。顔などの個人情報も入ります。</p>
+    <button id="sharePrivacyBegin" class="secondary" type="button">🐻 ひみつスタンプで隠して共有</button>
+    <p class="note">顔や背景を手で隠します。GIFや動画ではフレームごとに確認してください。</p>
+  </div>
+  <div id="shareStatus" class="note" role="status" aria-live="polite"></div>
+  <div id="shareOutput" hidden>
+    <strong id="shareOutputLabel"></strong>
+    <div class="shareOutputActions">
+      <button id="shareOutputSave" class="primary" type="button">端末に保存</button>
+      <button id="shareOutputSend" class="secondary" type="button">共有先を選ぶ</button>
+    </div>
+    <p class="note">共有できない形式は、保存してからLINEのファイル添付で送れます。</p>
+  </div>
+  <div id="sharePrivacyEditor" hidden>
+    <h3 id="sharePrivacyTitle">ひみつスタンプ</h3>
+    <p class="note">画像をタップすると不透明なスタンプを置きます。顔以外の名前・場所・背景にも注意してください。自動顔検出ではありません。</p>
+    <canvas id="sharePrivacyCanvas" aria-label="スタンプを配置する画像" role="img"></canvas>
+    <div class="shareFrameNav"><button id="shareMaskPrev" type="button" class="secondary">← 前</button><strong id="shareMaskIndex"></strong><button id="shareMaskNext" type="button" class="secondary">次 →</button></div>
+    <div class="shareMaskTools">
+      <label>種類 <select id="shareMaskType"><option>🐻</option><option>🐱</option><option>🌸</option><option>⭐</option><option>🔒</option></select></label>
+      <label>大きさ <input id="shareMaskSize" type="range" min="18" max="85" value="27"></label>
+      <span id="shareMaskCount" class="note">0個のスタンプ</span>
+    </div>
+    <div class="shareOutputActions">
+      <button id="shareMaskUndo" class="secondary" type="button">直前を取り消す</button>
+      <button id="shareMaskCopy" class="secondary" type="button">位置を全コマへコピー</button>
+      <button id="sharePrivacyClose" class="secondary" type="button">閉じる</button>
+    </div>
+    <p class="note">動く被写体はスタンプからはみ出します。前後のコマを1枚ずつ確認してください。加工した画像だけを書き出します。</p>
+    <label class="shareConfirm"><input id="sharePrivacyReview" type="checkbox">共有する全コマを確認した（顔・名前・背景も確認）</label>
+    <div class="shareActions">
+      <button id="sharePrivacyExportImage" type="button" class="primary">スタンプ画像を作る（現在のコマ）</button>
+      <button id="sharePrivacyExportGif" type="button" class="primary" hidden>加工済みGIFを作る</button>
+      <button id="sharePrivacyExportPlay" type="button" class="primary">加工済みの遊べるファイルを作る</button>
+      <button id="sharePrivacyExportVideo" type="button" class="secondary" hidden>加工済みの抽選動画を作る</button>
+    </div>
+    <div id="sharePrivacyStatus" class="note" role="status" aria-live="polite"></div>
+  </div>
+  <hr>
+  <h3>受け取ったルーレットを遊ぶ</h3>
+  <p class="note">LINEなどで受け取った .mmrplay ファイルを選ぶと、一時的に読み込んで遊べます。デッキや履歴には自動保存しません。</p>
+  <input type="file" id="shareImportFile" accept=".mmrplay,application/json">
 </section>
 <section id="labHistorySection" class="card labHistoryCard appView" data-app-view="play">
   <div class="step">HISTORY</div>
@@ -216,6 +272,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
     <div class="labGifActions">
       <button id="labMakeGif" class="primary" type="button" disabled>選んだ動画からGIFを作る</button>
     </div>
+    <button id="sharePrivacyGif" class="secondary" type="button" style="margin-top:12px">🐻 ひみつスタンプでGIFを作る</button>
     <div id="labGifResult" style="display:none">
       <img id="labGifPreview" alt="GIFに使う全コマの切り替えプレビュー">
       <a id="labGifDownload" class="labDownload" download="memory-roulette-frames.gif">GIFを保存して見る</a>
@@ -264,7 +321,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 
   <button id="settingsVersionTrigger" class="settingsVersionTrigger" data-lab-trigger type="button" title="5回タップでLAB設定を表示">
     <span>アプリバージョン</span>
-    <strong>v1.2.0</strong>
+    <strong>v1.3.0</strong>
   </button>
   <div id="labSettingsHint" class="labSettingsHint settingsLabHint">LAB設定：上のバージョン表示を5回タップで表示</div>
 
@@ -426,12 +483,13 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <video id="video" playsinline muted preload="metadata" style="display:none"></video><canvas id="captureCanvas" style="display:none"></canvas><canvas id="smallCanvas" width="28" height="28" style="display:none"></canvas>
 </div>
 <div id="bigOverlay"><div id="bigText">大吉！</div></div>
-<script src="./navigation.js?v=1.2.0" defer></script>
-<script src="./app.js?v=1.2.0-audioclean" defer></script>
-<script src="./deck.js?v=1.2.0-motionfix" defer></script>
-<script src="./deluxe.js?v=1.2.0" defer></script>
-<script src="./features.js?v=1.2.0-motionfix" defer></script>
-<script src="./hidden-settings.js?v=1.2.0" defer></script>
+<script src="./navigation.js?v=1.3.0" defer></script>
+<script src="./app.js?v=1.3.0" defer></script>
+<script src="./deck.js?v=1.3.0" defer></script>
+<script src="./deluxe.js?v=1.3.0" defer></script>
+<script src="./features.js?v=1.3.0" defer></script>
+<script src="./share-studio.js?v=1.3.0" defer></script>
+<script src="./hidden-settings.js?v=1.3.0" defer></script>
 <script>
 (()=>{
   const scoreBox=document.getElementById('showScores');

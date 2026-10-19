@@ -163,7 +163,13 @@ const target=manualTarget||autoTargetCount(video.duration,filtered.length,sorted
 selectedFrames=chooseDiverse(filtered.length>=target?filtered:sorted,target);
 if(modeName()==='omikuji'){ progressText.textContent='候補の特徴を整理し、運勢サンプルを準備しています...'; progressBar.style.width='78%'; selectedFortunes=await assignFortunes(selectedFrames); } else { selectedFortunes=[]; selectedAppealDetails=[]; }
 progressBar.style.width='100%'; progressText.textContent=`${manualTarget?'':'おまかせで'}${selectedFrames.length}枚を選びました`;
-renderGrid(); updatePreviewMeta(); previewSection.classList.toggle('has-content',selectedFrames.length>0); previewSection.style.display=selectedFrames.length?'block':'none'; if(selectedFrames.length)previewSection.scrollIntoView({behavior:'smooth'});
+renderGrid(); updatePreviewMeta(); previewSection.style.display='none';
+if(selectedFrames.length){
+  // Legacy extraction path must behave like the deck path: go straight to play.
+  currentCreation=makeCreation();
+  persistCreation(currentCreation).catch(e=>console.error('roulette history save failed',e));
+  preparePlay(currentCreation);
+}
 }catch(e){ console.error(e); progressText.textContent='動画を処理できませんでした'; alert('動画を処理できませんでした: '+e.message); }
 }
 function renderGrid(){

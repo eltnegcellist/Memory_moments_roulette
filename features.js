@@ -401,10 +401,15 @@ function specialSequenceSpec(kind,replay=null){
       : {duration:t.final,kicker:'特別な一瞬を引きました',title:'特大吉！',sub:'✨ SPECIAL FORTUNE ✨'}
   };
 }
-function specialMovieMimeType(){
+function specialMovieMimeType(withAudio=false){
   if(typeof MediaRecorder==='undefined'||typeof MediaRecorder.isTypeSupported!=='function')return '';
-  // Use H.264 inside MP4, not an MP4 container with VP9/Opus.
-  const types=[
+  const types=withAudio?[
+    'video/mp4;codecs=avc1.42E01F,mp4a.40.2',
+    'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+    'video/mp4;codecs=avc1,mp4a.40.2',
+    'video/webm;codecs=vp9,opus',
+    'video/webm;codecs=vp8,opus'
+  ]:[
     'video/mp4;codecs=avc1.42E01F',
     'video/mp4;codecs=avc1.42E01E',
     'video/mp4;codecs=avc1',
@@ -690,7 +695,62 @@ async function prepareSpecialMovieVideo(replay,slowDuration){
     return null;
   }
 }
-async function renderSpecialMovie(kind,replay,onProgress){
+function createSpecialMovieSoundtrack(){
+  // Compose an original, royalty-free jingle in memory, and record it only into
+  // the exported movie. This works even when the original video is unavailable.
+  const Ctx=window.AudioContext||window.webkitAudioContext;
+  if(!Ctx)return null;
+  try{
+    const ctx=new Ctx();
+    const destination=ctx.createMediaStreamDestination();
+    const track=destination.stream.getAudioTracks()[0];
+    if(!track){ctx.close().catch(()=>{});return null;}
+    // Called synchronously from the export button's user activation.
+    const ready=ctx.resume().catch(()=>{});
+    function note(frequency,offset,duration,volume=.07,type='sine'){
+      const at=ctx.currentTime+offset;
+      const osc=ctx.createOscillator();
+      const gain=ctx.createGain();
+      osc.type=type;
+      osc.frequency.setValueAtTime(frequency,at);
+      gain.gain.setValueAtTime(.0001,at);
+      gain.gain.exponentialRampToValueAtTime(volume,at+.025);
+      gain.gain.exponentialRampToValueAtTime(.0001,at+duration);
+      osc.connect(gain).connect(destination);
+      osc.start(at);
+      osc.stop(at+duration+.025);
+      osc.onended=()=>{try{osc.disconnect();gain.disconnect();}catch(e){}};
+    }
+    return {
+      track,ready,
+      start(timeline,kind){
+        if(ctx.state!=='running')return;
+        const base=.10;
+        // A light three-note opening, a gentle shimmer through slow replay,
+        // and a celebratory fanfare precisely at the fortune reveal.
+        const intro=kind==='reversal'?[392,494,587]:[523,659,784];
+        intro.forEach((f,i)=>note(f,base+i*.13,.38,.065,'triangle'));
+        const replayStart=base+timeline.intro;
+        const replayEnd=replayStart+timeline.slow;
+        const notes=kind==='reversal'?[392,494,587,659]:[523,659,784,1047];
+        for(let at=replayStart;at<replayEnd-.12;at+=.75){
+          const ix=Math.floor((at-replayStart)/.75)%notes.length;
+          note(notes[ix],at,Math.min(.62,replayEnd-at),.035,'sine');
+        }
+        const finale=replayEnd;
+        const chord=kind==='reversal'?[523,659,784,1047,1319]:[659,784,1047,1319,1568];
+        chord.forEach((f,i)=>note(f,finale+i*.16,.70,.07,i%2?'triangle':'sine'));
+        note(kind==='reversal'?1047:1568,finale+1.15,1.5,.045,'sine');
+      },
+      cleanup(){
+        try{track.stop();}catch(e){}
+        try{ctx.close().catch(()=>{});}catch(e){}
+      }
+    };
+  }catch(e){console.warn('movie soundtrack unavailable',e);return null;}
+}
+
+async function renderSpecialMovie(kind,replay,onProgress,soundtrack){
   if(!specialMovieSupported())throw new Error('このブラウザはムービー保存に対応していません');
   if(!replay?.frameSrc)throw new Error('リプレイする写真がありません');
 
@@ -712,10 +772,22 @@ async function renderSpecialMovie(kind,replay,onProgress){
   if(!ctx)throw new Error('Canvasを準備できませんでした');
 
   const stream=canvas.captureStream(30);
-  const mime=specialMovieMimeType();
+  let mime=soundtrack?.track?specialMovieMimeType(true):'';
+  let hasAudio=!!mime&&!!soundtrack?.track;
+  if(!mime)mime=specialMovieMimeType();
   if(!mime)throw new Error('このブラウザはムービーの録画形式に対応していません');
-  const options={videoBitsPerSecond:4800000,mimeType:mime};
-  const recorder=new MediaRecorder(stream,options);
+  if(hasAudio)stream.addTrack(soundtrack.track);
+  let recorder;
+  try{
+    recorder=new MediaRecorder(stream,{videoBitsPerSecond:4800000,audioBitsPerSecond:128000,mimeType:mime});
+  }catch(err){
+    if(!hasAudio)throw err;
+    // Keep the movie export functional if the browser rejects a mixed stream.
+    stream.removeTrack(soundtrack.track);
+    hasAudio=false;
+    mime=specialMovieMimeType();
+    recorder=new MediaRecorder(stream,{videoBitsPerSecond:4800000,mimeType:mime});
+  }
   const chunks=[];
   recorder.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
 
@@ -731,7 +803,9 @@ async function renderSpecialMovie(kind,replay,onProgress){
     recorder.onstop=()=>resolve(new Blob(chunks,{type:recorder.mimeType||mime}));
   });
 
+  await soundtrack?.ready;
   recorder.start(250);
+  if(hasAudio)soundtrack.start(timeline,kind);
   const begin=performance.now();
   let lastProgress=-1;
   try{
@@ -772,7 +846,7 @@ async function renderSpecialMovie(kind,replay,onProgress){
     if(!blob.size)throw new Error('生成したムービーが空でした');
     const format=await specialMovieDetectFormat(blob);
     if(!format)throw new Error('生成したムービーの形式を確認できませんでした');
-    return {blob:new Blob([blob],{type:format==='mp4'?'video/mp4':'video/webm'}),format,usedSource:(!!movieVideo&&!videoFailed)||replayImages.length>=2,width:w,height:h};
+    return {blob:new Blob([blob],{type:format==='mp4'?'video/mp4':'video/webm'}),format,withSound:hasAudio,usedSource:(!!movieVideo&&!videoFailed)||replayImages.length>=2,width:w,height:h};
   }finally{
     try{
       if(recorder.state!=='inactive')recorder.stop();
@@ -790,7 +864,7 @@ async function saveCurrentSpecialMovie(){
 
   if(specialMovieBlob&&specialMovieKey===key){
     downloadSpecialMovie();
-    setSpecialMovieStatus('完成済みムービーを保存しました','success');
+    setSpecialMovieStatus('');
     return;
   }
   if(specialMovieGenerating)return;
@@ -800,6 +874,8 @@ async function saveCurrentSpecialMovie(){
     return;
   }
 
+  // Unlock Web Audio while we still have the user's direct click.
+  const soundtrack=createSpecialMovieSoundtrack();
   specialMovieGenerating=true;
   const generation=++specialMovieGenerationToken;
   setSpecialMovieButtons('🎬 生成中…',true);
@@ -807,19 +883,17 @@ async function saveCurrentSpecialMovie(){
   try{
     const result=await renderSpecialMovie(replay.kind,replay,p=>{
       if(generation===specialMovieGenerationToken)setSpecialMovieStatus('ムービー生成中… '+p+'%');
-    });
+    },soundtrack);
     if(generation!==specialMovieGenerationToken)return;
     if(specialMovieUrl)URL.revokeObjectURL(specialMovieUrl);
     specialMovieBlob=result.blob;
     specialMovieUrl=URL.createObjectURL(result.blob);
     specialMovieKey=key;
     setSpecialMovieButtons('↓ ムービーをもう一度保存',false);
-    setSpecialMovieStatus((result.usedSource
-      ? 'スローモーション入りムービーを作成しました（音声なし）'
-      : '元動画を使えないため写真演出ムービーを作成しました（音声なし）')
-      +(result.format==='mp4'?'・MP4':'・WebM（このブラウザはH.264 MP4録画に非対応）'),'success');
+    // Do not cover the resulting photo with technical success messages.
+    setSpecialMovieStatus('');
     downloadSpecialMovie();
-    diag('movie-export-success',{kind:replay.kind,usedSource:result.usedSource,size:result.blob.size,format:result.format,width:result.width,height:result.height});
+    diag('movie-export-success',{kind:replay.kind,usedSource:result.usedSource,size:result.blob.size,format:result.format,withSound:result.withSound,width:result.width,height:result.height});
   }catch(err){
     if(generation!==specialMovieGenerationToken)return;
     console.error(err);
@@ -827,6 +901,7 @@ async function saveCurrentSpecialMovie(){
     setSpecialMovieStatus(err?.message||'ムービーを作成できませんでした','error');
     diag('movie-export-error',{kind:replay.kind,name:err?.name||'Error',message:String(err?.message||err)});
   }finally{
+    soundtrack?.cleanup();
     if(generation===specialMovieGenerationToken)specialMovieGenerating=false;
   }
 }

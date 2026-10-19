@@ -933,3 +933,6 @@ body[data-app-view] .howtoBanner{will-change:auto}
   font-size:10px;
   line-height:1.55;
 }
+
+/* The old confirmation preview is obsolete. Navigation styles must never revive it. */
+#previewSection{display:none!important}

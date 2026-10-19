@@ -26,20 +26,42 @@ function downloadFile(file){
 function ready(blob,name,label){
  if(blob.size>MAX_BYTES)throw new Error('共有データが大きすぎます（48MB上限）。動画数を減らしてください。');
  outputFile=new File([blob],name,{type:blob.type||'application/octet-stream'});
- output.hidden=false;
  byId('shareOutputLabel').textContent=label+'（'+Math.max(1,Math.ceil(blob.size/1024))+'KB）';
- byId('shareOutputSend').disabled=!(navigator.canShare?.({files:[outputFile]}));
- byId('shareOutputSend').title=byId('shareOutputSend').disabled?'この形式を共有できない場合は保存してLINEからファイル添付してください':'';
- message('準備できました。保存するか、共有先を選んでください。');
+ const supported=!!(navigator.share&&navigator.canShare?.({files:[outputFile]}));
+ byId('shareOutputSend').disabled=false;
+ byId('shareOutputSend').textContent=supported?'共有先を選ぶ':'送るために端末へ保存';
+ byId('shareOutputHelp').textContent=supported
+  ?'送信する前に共有内容と送信相手を確認してください。'
+  :'この形式は直接共有できません。端末に保存してから、LINEの「ファイル」添付で送ってください。';
+ output.hidden=false;
+ message('ファイルができました。保存か送信を選んでください。');
+ byId('shareOutputSave').focus();
 }
-function clearOutput(){
- outputFile=null;output.hidden=true;byId('shareOutputSend').disabled=true;
-}
-byId('shareOutputSave').addEventListener('click',()=>{if(outputFile)downloadFile(outputFile);});
-byId('shareOutputSend').addEventListener('click',()=>{
- if(!outputFile||!navigator.canShare?.({files:[outputFile]}))return;
- navigator.share({files:[outputFile],title:'思い出ルーレットおみくじ',text:'自分の動画から作った思い出ルーレット '+BASE})
-  .catch(err=>{if(err?.name!=='AbortError')message('共有できませんでした。保存してLINE等から添付してください。');});
+function closeOutput(){output.hidden=true;}
+function clearOutput(){outputFile=null;closeOutput();}
+byId('shareOutputClose').addEventListener('click',closeOutput);
+output.addEventListener('click',e=>{if(e.target===output)closeOutput();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!output.hidden)closeOutput();});
+byId('shareOutputSave').addEventListener('click',()=>{
+ if(!outputFile)return;
+ downloadFile(outputFile);closeOutput();
+ message('端末へ保存しました。LINEなどで送る場合は「ファイル」として添付してください。');
+});
+byId('shareOutputSend').addEventListener('click',async()=>{
+ if(!outputFile)return;
+ if(!navigator.share||!navigator.canShare?.({files:[outputFile]})){
+   downloadFile(outputFile);closeOutput();
+   message('ファイルを端末に保存しました。LINEの「ファイル」添付から送ってください。');
+   return;
+ }
+ try{
+   await navigator.share({files:[outputFile],title:'思い出ルーレットおみくじ',text:'自分の動画から作った思い出ルーレット '+BASE});
+   closeOutput();
+ }catch(err){
+   if(err?.name!=='AbortError'){
+     byId('shareOutputHelp').textContent='直接共有できませんでした。端末に保存し、LINEからファイル添付してください。';
+   }
+ }
 });
 function snapshot(){
  const c=getCreation();
@@ -70,12 +92,6 @@ async function runBusy(button,work){
  catch(err){console.error('share studio:',err);message(err?.message||'処理できませんでした。');editorMessage(err?.message||'処理できませんでした。');}
  finally{busy=false;button.disabled=false;}
 }
-byId('sharePlayableBuild').addEventListener('click',e=>runBusy(e.currentTarget,async()=>{
- const c=snapshot();
- const blob=packRoulette(c,c.frames);
- ready(blob,safeName(c.title)+'.mmrplay','遊べるルーレットファイル');
- message('写真を含むファイルです。送る相手を確認してください。');
-}));
 function loadImage(src){
  return new Promise((resolve,reject)=>{
   const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(new Error('画像を読めませんでした。'));im.src=src;
@@ -134,22 +150,41 @@ function movieMime(){
  }
  return null;
 }
+function chooseMovieSequence(c){
+ // Prefer actually captured roulette frames; use a generated spin for a
+ // saved roulette that was not just stopped on this page.
+ if(recorded?.source===c&&Array.isArray(recorded.indices)&&recorded.indices.length)return recorded;
+ const count=c.frames.length;
+ let previous=-1;
+ const indices=[];
+ for(let i=0,n=Math.max(26,Math.min(64,count*4));i<n;i++){
+   let ix=Math.floor(Math.random()*count);
+   if(count>1&&ix===previous)ix=(ix+1+Math.floor(Math.random()*(count-1)))%count;
+   indices.push(ix);previous=ix;
+ }
+ const current=window.__memoryShareGetCurrentIndex?.();
+ const stopIndex=Number.isInteger(current)&&current>=0&&current<count?current:indices[indices.length-1];
+ return {source:c,indices,stopIndex,mode:c.mode,
+   fortune:c.mode==='omikuji'?(c.fortunes?.[stopIndex]||'今日の運勢'):null,generated:true};
+}
 async function makeNormalMovie(frameImages){
- if(!recorded||recorded.source!==getCreation())throw new Error('このルーレットを1回START・STOPしてから動画化してください。');
+ const creation=snapshot();
+ if(creation.frames.length<2)throw new Error('動画には2枚以上のコマが必要です。');
+ const playback=chooseMovieSequence(creation);
  if(!HTMLCanvasElement.prototype.captureStream)throw new Error('動画生成に対応していないブラウザです。');
  const format=movieMime();
  if(!format)throw new Error('このブラウザはMP4・WebMの録画に対応していません。');
- const photos=frameImages||recorded.source.frames;
- const finalPhoto=await loadImage(photos[recorded.stopIndex]);
+ const photos=frameImages||playback.source.frames;
+ const finalPhoto=await loadImage(photos[playback.stopIndex]);
  const isLandscape=finalPhoto.naturalWidth>finalPhoto.naturalHeight*1.12;
  const w=isLandscape?960:540, h=isLandscape?540:960;
  // Convert sources to small temporary canvases one at a time instead of
  // retaining dozens of full-resolution decoded photos in memory.
- const indices=recorded.indices.slice(-64);
- const used=[...new Set(indices.concat(recorded.stopIndex))];
+ const indices=playback.indices.slice(-64);
+ const used=[...new Set(indices.concat(playback.stopIndex))];
  const cache=new Map();
  for(const ix of used){
-  const photo=ix===recorded.stopIndex?finalPhoto:await loadImage(photos[ix]);
+  const photo=ix===playback.stopIndex?finalPhoto:await loadImage(photos[ix]);
   const thumb=document.createElement('canvas');
   thumb.width=Math.round(w*.6);thumb.height=Math.round(h*.6);
   drawPhoto(thumb.getContext('2d',{alpha:false}),photo,thumb.width,thumb.height);
@@ -167,7 +202,7 @@ async function makeNormalMovie(frameImages){
  const spinSeconds=Math.max(1.2,Math.min(5.4,indices.length*.075));
  const total=spinSeconds+1.8;
  const paint=(index,stopped)=>{
-  const img=cache.get(index)||cache.get(recorded.stopIndex);
+  const img=cache.get(index)||cache.get(playback.stopIndex);
   ctx.fillStyle='#17141d';ctx.fillRect(0,0,w,h);
   drawPhoto(ctx,img,w,h);
   ctx.fillStyle='rgba(26,18,29,.78)';
@@ -177,19 +212,19 @@ async function makeNormalMovie(frameImages){
   ctx.fillStyle=stopped?'rgba(255,245,222,.95)':'rgba(0,0,0,.65)';
   ctx.fillRect(0,h-170,w,170);
   ctx.fillStyle=stopped?'#8d324c':'#fff';ctx.font='bold '+(w>h?39:49)+'px sans-serif';
-  ctx.fillText(stopped?(recorded.mode==='omikuji'?(recorded.fortune||'結果発表'):'この瞬間！'):'ルーレット抽選中…',w/2,h-87);
+  ctx.fillText(stopped?(playback.mode==='omikuji'?(playback.fortune||'結果発表'):'この瞬間！'):'ルーレット抽選中…',w/2,h-87);
   ctx.fillStyle='#494047';ctx.font='19px sans-serif';
   if(stopped)ctx.fillText('自分では選ばなかった一枚に出会う',w/2,h-42);
  };
- paint(indices[0]??recorded.stopIndex,false);
+ paint(indices[0]??playback.stopIndex,false);
  rec.start(250);
  const begun=performance.now();
  try{
   await new Promise(resolve=>{
    const tick=now=>{
     const t=(now-begun)/1000;
-    if(t>=total){paint(recorded.stopIndex,true);resolve();return;}
-    const ix=t<spinSeconds?indices[Math.min(indices.length-1,Math.floor(t/spinSeconds*indices.length))]:recorded.stopIndex;
+    if(t>=total){paint(playback.stopIndex,true);resolve();return;}
+    const ix=t<spinSeconds?indices[Math.min(indices.length-1,Math.floor(t/spinSeconds*indices.length))]:playback.stopIndex;
     paint(ix,t>=spinSeconds);
     requestAnimationFrame(tick);
    };
@@ -204,11 +239,6 @@ async function makeNormalMovie(frameImages){
   stream.getTracks().forEach(t=>t.stop());
  }
 }
-byId('shareVideoBuild').addEventListener('click',e=>runBusy(e.currentTarget,async()=>{
- message('抽選を動画にしています。画面を開いたままにしてください…');
- const {blob,ext,type}=await makeNormalMovie();
- ready(blob,'memory-roulette-'+Date.now()+ext,type==='video/mp4'?'ルーレット動画（MP4）':'ルーレット動画（WebM：相手の端末で再生できない場合があります）');
-}));
 window.__memoryShareOnStarted=c=>{
  recording={source:c,indices:[],started:performance.now()};
  recorded=null;clearOutput();
@@ -226,16 +256,70 @@ window.__memoryShareOnStopped=data=>{
  recording=null;
 };
 function setPreviewMeta(){
- const c=getCreation();
- byId('shareSourceState').textContent=c?.frames?.length
-  ? '現在のルーレット：'+(c.title||'')+'（'+c.frames.length+'コマ）'
-  : '先に「新しい動画」「過去の動画」からルーレットを作成してください。受け取りはいつでも利用できます。';
- byId('shareVideoBuild').disabled=!(recorded&&recorded.source===c);
- byId('sharePlayableBuild').disabled=!(c?.frames?.length);
- byId('sharePrivacyBegin').disabled=!(c?.frames?.length);
+ const c=getCreation(), count=c?.frames?.length||0;
+ byId('shareSourceState').textContent=count
+  ? '現在のルーレット：'+(c.title||'')+'（'+count+'コマ）'
+  : 'まず「新しい動画」「過去の動画」からルーレットを作成してください。受け取りはいつでも利用できます。';
+ byId('shareRouletteBuild').disabled=count<1;
+ const format=byId('shareRouletteFormat').value;
+ byId('shareRouletteBuild').textContent=format==='movie'?'動画を作成して保存・共有':
+   format==='play'?'遊べるファイルを作成して保存・共有':'写真を作成して保存・共有';
 }
-window.__memoryShareOnOpen=()=>{setPreviewMeta();message('画像や動画は端末内で生成します。共有先への送信は利用者が選んだ場合のみです。');};
+window.__memoryShareOnOpen=()=>{
+ setPreviewMeta();
+ // Do not carry over masking or a previous export to an unrelated share.
+ byId('shareRouletteMask').checked=false;
+ editor.hidden=true;editorSource=null;marks=[];clearOutput();
+ message('端末内でファイルを作成します。共有先への送信は自分で選んだ場合のみです。');
+};
 byId('shareOpenFromPlay').addEventListener('click',()=>window.__memoryNavigate?.('share'));
+byId('shareRouletteFormat').addEventListener('change',()=>{
+ clearOutput();editor.hidden=true;editorSource=null;marks=[];setPreviewMeta();
+});
+byId('shareRouletteMask').addEventListener('change',()=>{
+ clearOutput();editor.hidden=true;editorSource=null;marks=[];
+});
+function outputFormatLabel(format){
+ return format==='movie'?'抽選動画':format==='photo'?'停止写真':'遊べるルーレット';
+}
+async function makePhotoBlob(frame){
+ const image=await loadImage(frame);
+ const canvas=document.createElement('canvas');
+ canvas.width=image.naturalWidth||image.width;
+ canvas.height=image.naturalHeight||image.height;
+ canvas.getContext('2d',{alpha:false}).drawImage(image,0,0,canvas.width,canvas.height);
+ return new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('写真を作成できませんでした。')),'image/jpeg',.9));
+}
+async function buildRouletteFile(c,format,maskedFramesList=null){
+ // For an unmasked share, ALWAYS use the original candidate images from c.frames.
+ // Stamps are never applied to the deck or written back to storage.
+ const frames=maskedFramesList||c.frames;
+ if(format==='play'){
+   ready(packRoulette(c,frames),'memory-roulette-'+Date.now()+'.mmrplay',maskedFramesList?'スタンプ付きの遊べるルーレット':'遊べるルーレット');
+ }else if(format==='movie'){
+   message('抽選動画を作成しています。画面を閉じずにお待ちください。');
+   const {blob,ext,type}=await makeNormalMovie(maskedFramesList);
+   ready(blob,'memory-roulette-'+Date.now()+ext,
+    (maskedFramesList?'スタンプ付きの':'')+'抽選動画（'+(type==='video/mp4'?'MP4':'WebM')+'）');
+ }else if(format==='photo'){
+   const current=window.__memoryShareGetCurrentIndex?.();
+   const index=Number.isInteger(current)&&current>=0&&current<frames.length?current:0;
+   const blob=await makePhotoBlob(frames[index]);
+   ready(blob,'memory-moment-'+Date.now()+'.jpg',maskedFramesList?'スタンプ付きの写真':'停止写真');
+ }else throw new Error('共有形式を選んでください。');
+}
+byId('shareRouletteBuild').addEventListener('click',e=>runBusy(e.currentTarget,async()=>{
+ const c=snapshot(),format=byId('shareRouletteFormat').value;
+ if((format==='play'||format==='movie')&&c.frames.length<2)throw new Error('2コマ以上のルーレットが必要です。');
+ if(byId('shareRouletteMask').checked){
+   // Opening a new privacy session resets every previous mask, even if the
+   // user exported a different masked format before.
+   openEditor({...sourceForCurrent(),selectedFormat:format});
+   return;
+ }
+ editor.hidden=true;editorSource=null;marks=[];
+ await buildRouletteFile(c,format);
+}));
 function validatePlayFile(payload){
  if(!payload||payload.format!=='memory-moments-playable'||payload.version!==1)throw new Error('対応していないルーレットファイルです。');
  const raw=payload.frames;
@@ -277,25 +361,21 @@ function sourceForGif(){
 window.__memoryShareOpenPhoto=item=>{
  if(!item?.image)return;
  window.__memoryNavigate?.('share');
- openEditor({kind:'photo',title:'お気に入り',frames:[item.image]});
+ openEditor({kind:'photo',title:'お気に入り',frames:[item.image],selectedFormat:'photo'});
 };
-byId('sharePrivacyBegin').addEventListener('click',()=>{
- try{openEditor(sourceForCurrent());}catch(err){message(err.message);}
-});
 byId('sharePrivacyGif').addEventListener('click',()=>{
- try{const src=sourceForGif();window.__memoryNavigate?.('share');openEditor(src);}catch(err){message(err.message);}
+ try{const src=sourceForGif();window.__memoryNavigate?.('share');openEditor({...src,selectedFormat:'gif'});}catch(err){message(err.message);}
 });
 function openEditor(src){
  editorSource=src;marks=src.frames.map(()=>[]);editIndex=src.kind==='roulette'?Math.max(0,Math.min(src.frames.length-1,window.__memoryShareGetCurrentIndex?.()||0)):0;chosen='🐻';maskSize=.27;
  editor.hidden=false;clearOutput();
  byId('sharePrivacyTitle').textContent='ひみつスタンプ：'+src.title;
- byId('sharePrivacyReview').checked=false;
  const hasMore=src.frames.length>1;
  byId('shareMaskPrev').disabled=!hasMore;byId('shareMaskNext').disabled=!hasMore;
- byId('sharePrivacyExportImage').hidden=src.kind!=='photo'&&src.kind!=='roulette';
- byId('sharePrivacyExportGif').hidden=src.kind!=='gif';
- byId('sharePrivacyExportPlay').hidden=src.kind!=='roulette';
- byId('sharePrivacyExportVideo').hidden=src.kind!=='roulette'||!recorded||recorded.source!==src.creation;
+ const format=src.selectedFormat||'photo';
+ byId('sharePrivacyExportSelected').textContent='スタンプ付き'+
+   (format==='movie'?'動画':format==='play'?'遊べるルーレット':format==='gif'?'GIF':'写真')+
+   'を作成して保存・共有';
  editorMessage('スタンプで顔を隠せます。顔以外の背景や服装も確認してください。');
  renderEditor();
  editor.scrollIntoView({behavior:'smooth',block:'start'});
@@ -319,48 +399,45 @@ canvas.addEventListener('click',e=>{
  const x=Math.max(0,Math.min(1,(e.clientX-box.left)/box.width));
  const y=Math.max(0,Math.min(1,(e.clientY-box.top)/box.height));
  marks[editIndex].push({x,y,size:maskSize,char:chosen});
- byId('sharePrivacyReview').checked=false;renderEditor().catch(console.error);
+ renderEditor().catch(console.error);
 });
 byId('shareMaskPrev').addEventListener('click',()=>{editIndex=(editIndex-1+marks.length)%marks.length;renderEditor().catch(console.error);});
 byId('shareMaskNext').addEventListener('click',()=>{editIndex=(editIndex+1)%marks.length;renderEditor().catch(console.error);});
-byId('shareMaskUndo').addEventListener('click',()=>{marks[editIndex]?.pop();byId('sharePrivacyReview').checked=false;renderEditor().catch(console.error);});
+byId('shareMaskUndo').addEventListener('click',()=>{marks[editIndex]?.pop();renderEditor().catch(console.error);});
 byId('shareMaskCopy').addEventListener('click',()=>{
  if(!marks[editIndex]?.length)return;
  if(!confirm('このスタンプ位置をすべてのコマにコピーします。人物が動くと顔が露出することがあります。全コマを必ず確認してください。'))return;
  marks=marks.map(()=>marks[editIndex].map(m=>({...m})));
- byId('sharePrivacyReview').checked=false;renderEditor().catch(console.error);
+ renderEditor().catch(console.error);
 });
 byId('shareMaskSize').addEventListener('input',e=>{maskSize=Number(e.target.value)/100;});
 byId('shareMaskType').addEventListener('change',e=>{chosen=e.target.value;});
 byId('sharePrivacyClose').addEventListener('click',()=>{editor.hidden=true;editorSource=null;});
 function exportChecked(){
- if(!editorSource||!byId('sharePrivacyReview').checked)throw new Error('全コマを確認し、チェックを入れてください。');
+ if(!editorSource)throw new Error('編集する画像を選んでください。');
  if(!marks.some(arr=>arr.length))throw new Error('まずスタンプを置いてください。');
+ const untouched=marks.filter(arr=>!arr.length).length;
+ if(editorSource.frames.length>1&&untouched){
+   editorMessage('スタンプ未設定のコマが'+untouched+'枚あります。隠したい部分がないか確認してください。');
+ }
 }
-byId('sharePrivacyExportImage').addEventListener('click',e=>runBusy(e.currentTarget,async()=>{
+byId('sharePrivacyExportSelected').addEventListener('click',e=>runBusy(e.currentTarget,async()=>{
  exportChecked();
- const blob=await renderMasked(editIndex);
- ready(blob,'secret-moment-'+Date.now()+'.jpg','スタンプ加工済み写真（現在表示中の1コマ）');
-}));
-byId('sharePrivacyExportPlay').addEventListener('click',e=>runBusy(e.currentTarget,async()=>{
- exportChecked();
+ const format=editorSource.selectedFormat;
+ if(format==='photo'){
+   const blob=await renderMasked(editIndex);
+   ready(blob,'secret-moment-'+Date.now()+'.jpg','スタンプ付きの写真（現在のコマ）');
+   return;
+ }
  const frames=await maskedFrames();
- const blob=packRoulette(editorSource.creation,frames);
- ready(blob,'secret-roulette-'+Date.now()+'.mmrplay','スタンプ加工済みの遊べるルーレット');
-}));
-byId('sharePrivacyExportGif').addEventListener('click',e=>runBusy(e.currentTarget,async()=>{
- exportChecked();
- if(typeof window.__memoryShareEncodeGif!=='function')throw new Error('GIF書き出し機能が利用できません。');
- const frames=await maskedFrames();
- const items=frames.map((image,i)=>({image,time:Number(editorSource.times?.[i])||i}));
- const blob=await window.__memoryShareEncodeGif(items,editorSource.delay||20);
- ready(blob,'secret-roulette-'+Date.now()+'.gif','ひみつスタンプGIF');
-}));
-byId('sharePrivacyExportVideo').addEventListener('click',e=>runBusy(e.currentTarget,async()=>{
- exportChecked();
- const frames=await maskedFrames();
- const {blob,ext,type}=await makeNormalMovie(frames);
- ready(blob,'secret-roulette-'+Date.now()+ext,type==='video/mp4'?'ひみつスタンプ動画（MP4）':'ひみつスタンプ動画（WebM）');
+ if(format==='gif'){
+   if(typeof window.__memoryShareEncodeGif!=='function')throw new Error('GIF書き出し機能が利用できません。');
+   const items=frames.map((image,i)=>({image,time:Number(editorSource.times?.[i])||i}));
+   const blob=await window.__memoryShareEncodeGif(items,editorSource.delay||20);
+   ready(blob,'secret-roulette-'+Date.now()+'.gif','スタンプ付きGIF');
+   return;
+ }
+ await buildRouletteFile(editorSource.creation,format,frames);
 }));
 if(location.hash==='#share')window.__memoryShareOnOpen?.();
 })();

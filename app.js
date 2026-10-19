@@ -302,7 +302,12 @@ activeTones.add(osc);
 osc.addEventListener('ended',()=>{activeTones.delete(osc);osc.disconnect();gain.disconnect();},{once:true});
 osc.start(now); osc.stop(now+dur+.03);
 }
-function unlockAudio(){ primed=true; ensureAudio(); playSound('start'); }
+// Prime audio while the video picker is opened by a genuine user gesture.
+// Extraction finishes asynchronously, so unlocking only at the first STOP is too late:
+// the very first deluxe drum roll would otherwise be silent.
+function primeRouletteAudio(){ primed=true; ensureAudio(); }
+fileInput.addEventListener('click',primeRouletteAudio);
+function unlockAudio(){ primeRouletteAudio(); playSound('start'); }
 function playSound(name){
 if(!primed||!ensureAudio()) return;
 const seq={start:[[523,.14,0],[659,.16,.10],[784,.22,.22]],'吉':[[523,.20,0],[659,.24,.13],[784,.34,.30],[1047,.48,.48]],'小吉':[[587,.20,0],[698,.24,.13],[784,.34,.30],[988,.48,.48]],'中吉':[[659,.20,0],[784,.24,.13],[988,.34,.30],[1175,.50,.48]],'末吉':[[494,.20,0],[587,.24,.13],[698,.34,.30],[784,.48,.48]],'凶':[[466,.28,0],[392,.32,.20],[330,.50,.46]],'大凶':[[392,.32,0],[330,.38,.24],[262,.62,.54]],'大吉':[[523,.16,0],[659,.16,.11],[784,.18,.22],[1047,.24,.34],[1319,.38,.52],[1568,.65,.78]],'大大吉':[[659,.14,0],[784,.14,.09],[1047,.16,.18],[1319,.18,.28],[1568,.22,.40],[2093,.42,.58],[2637,.58,.78]]}[name]||[[523,.2,0]];

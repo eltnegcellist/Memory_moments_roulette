@@ -21,7 +21,7 @@
 <link rel="apple-touch-icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2">
 <link rel="icon" href="./icons/memory-roulette-omikuji.png?v=memorybrand2" type="image/png">
 <title>思い出ルーレットおみくじ</title>
-<link rel="stylesheet" href="./style.css?v=1.2.0">
+<link rel="stylesheet" href="./style.css?v=1.2.0-audioclean">
 <link rel="stylesheet" href="./deluxe.css?v=1.2.0">
 <link rel="stylesheet" href="./features.css?v=1.2.0">
 <style>
@@ -128,7 +128,8 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <div id="deckNotice" class="note deckNotice"></div>
 
 </section>
-<section id="previewSection" class="card appView" data-app-view="create" style="display:none">
+<!-- Legacy DOM hooks kept for older extraction fallback; never shown in the current flow. -->
+<section id="previewSection" class="card" style="display:none" aria-hidden="true">
   <div class="step">PREVIEW</div><h2 id="previewTitle">自動で作成したおみくじ</h2>
   <div id="analysisStatus" class="note analysisStatus" style="display:none"></div><div id="grid" class="grid"></div>
   <div class="row" style="margin-top:13px"><button id="playBtn" class="primary">この内容で遊ぶ</button><button id="reextractBtn" class="secondary">もう一度抽出する</button></div>
@@ -426,10 +427,10 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 </div>
 <div id="bigOverlay"><div id="bigText">大吉！</div></div>
 <script src="./navigation.js?v=1.2.0" defer></script>
-<script src="./app.js?v=1.2.0" defer></script>
+<script src="./app.js?v=1.2.0-audioclean" defer></script>
 <script src="./deck.js?v=1.2.0" defer></script>
 <script src="./deluxe.js?v=1.2.0" defer></script>
-<script src="./features.js?v=1.2.0-mp4" defer></script>
+<script src="./features.js?v=1.2.0-audioclean" defer></script>
 <script src="./hidden-settings.js?v=1.2.0" defer></script>
 <script>
 (()=>{

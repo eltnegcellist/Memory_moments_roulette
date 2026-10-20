@@ -336,15 +336,22 @@ function validatePlayFile(payload){
   fortunes:[],times:raw.map((_,i)=>Number.isFinite(payload.times?.[i])?Number(payload.times[i]):i)
  };
 }
+const receiveMessage=text=>{byId('receiveStatus').textContent=text||'';};
 byId('shareImportFile').addEventListener('change',async e=>{
  const file=e.target.files?.[0];e.target.value='';
  if(!file)return;
- if(file.size>MAX_BYTES){message('48MB以下のルーレットファイルを選んでください。');return;}
+ if(file.size>MAX_BYTES){receiveMessage('48MB以下のルーレットファイルを選んでください。');return;}
+ receiveMessage('受け取ったルーレットを読み込んでいます…');
  try{
    const data=JSON.parse(await file.text());
    const c=validatePlayFile(data);
-   clearOutput();window.__memoryShareLoadCreation?.(c);
- }catch(err){console.error('roulette import:',err);message('読み込めませんでした：'+(err?.message||err));}
+   clearOutput();
+   receiveMessage('');
+   window.__memoryShareLoadCreation?.(c);
+ }catch(err){
+   console.error('roulette import:',err);
+   receiveMessage('読み込めませんでした：'+(err?.message||err));
+ }
 });
 function sourceForCurrent(){
  const c=snapshot();

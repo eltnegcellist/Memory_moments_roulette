@@ -1,8 +1,9 @@
 (()=>{
 'use strict';
-const VALID=new Set(['home','create','library','play','favorites','history','settings','gif','share']);
+const VALID=new Set(['home','create','library','play','favorites','history','settings','gif','share','receive']);
 let currentView='home';
 let returnFromPlay='home';
+let returnFromShare='home';
 let scrollToken=0;
 
 function routeFromHash(){
@@ -60,7 +61,15 @@ function writeRoute(target,replace=false){
 function navigate(view,options={}){
   const target=VALID.has(view)?view:'home';
   if(target==='play'&&currentView!=='play'){
-    returnFromPlay=currentView==='create'?'home':currentView;
+    // Imported roulettes return to the dedicated receive view.
+    if(!(currentView==='share'&&returnFromShare==='play')){
+      returnFromPlay=currentView==='create'?'home':currentView;
+    }
+  }
+  if(target==='share'&&currentView!=='share'){
+    // The share button in the player should return to that exact player,
+    // not always to the home page.
+    returnFromShare=currentView==='play'?'play':currentView==='create'?'home':currentView;
   }
   // Paint the destination first. History updates must never be able to leave a blank page.
   applyView(target);
@@ -68,8 +77,15 @@ function navigate(view,options={}){
 }
 window.__memoryNavigate=navigate;
 window.__memoryBackFromPlay=()=>navigate(returnFromPlay||'home');
+window.__memoryBackFromShare=()=>navigate(returnFromShare||'home');
 
 document.addEventListener('click',e=>{
+  const shareBack=e.target.closest?.('#shareBackBtn');
+  if(shareBack){
+    e.preventDefault();
+    window.__memoryBackFromShare();
+    return;
+  }
   const newBtn=e.target.closest?.('#homeNewVideoBtn,#createPickBtn');
   if(newBtn){
     e.preventDefault();

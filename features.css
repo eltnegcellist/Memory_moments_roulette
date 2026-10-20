@@ -667,3 +667,13 @@ body.labPhotoViewerOpen{overflow:hidden}
 .labGifEditor .labGifSpeed{margin-top:12px}
 #labGifStatus{margin:12px 0;font-size:12px}
 @media(max-width:420px){.labGifPhotoLibrary .deckVideoGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+
+/* Rare-result replay: prioritize the memory itself over diagnostic captions.
+   Keep fortune titles and celebratory art, but hide replay speed/explanations. */
+#labMiracleOverlay #labMiracleReplayLabel,
+#labMiracleOverlay .labMiracleKicker,
+#labMiracleOverlay.replay-mode .labMiracleCenter,
+#labMiracleOverlay:not(.final-photo) .labMiracleSub{
+  display:none!important;
+}

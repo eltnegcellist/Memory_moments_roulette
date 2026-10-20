@@ -878,11 +878,21 @@ async function renderSpecialMovie(kind,replay,onProgress,soundtrack){
     try{movieVideo?.pause();}catch(e){}
     recorder.stop();
     const blob=await finished;
-    onProgress?.(100);
     if(!blob.size)throw new Error('生成したムービーが空でした');
     const format=await specialMovieDetectFormat(blob);
     if(!format)throw new Error('生成したムービーの形式を確認できませんでした');
-    return {blob:new Blob([blob],{type:format==='mp4'?'video/mp4':'video/webm'}),format,withSound:hasAudio,usedSource:(!!movieVideo&&!videoFailed)||replayImages.length>=2,width:w,height:h};
+    let movie=new Blob([blob],{type:format==='mp4'?'video/mp4':'video/webm'});
+    if(format==='mp4'){
+      // Android MediaRecorder can encode ~12s of media while writing a 0s
+      // mvhd and a ~3s tkhd header. Phone galleries then show "3 seconds".
+      if(typeof window.__memoryFixMp4Duration!=='function')
+        throw new Error('動画の再生時間を確定できませんでした。ページを再読み込みしてください');
+      const fixed=await window.__memoryFixMp4Duration(movie,timeline.total);
+      movie=fixed.blob;
+      diag('movie-duration-normalized',{actualSeconds:fixed.seconds,previousHeaderSeconds:fixed.previousHeaderSeconds});
+    }
+    onProgress?.(100);
+    return {blob:movie,format,withSound:hasAudio,usedSource:(!!movieVideo&&!videoFailed)||replayImages.length>=2,width:w,height:h};
   }finally{
     try{
       if(recorder.state!=='inactive')recorder.stop();

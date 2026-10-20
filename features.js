@@ -396,13 +396,13 @@ function specialSequenceSpec(kind,replay=null){
     introDuration:t.intro,
     intro:kind==='reversal'
       ? {kicker:'大凶……',title:'……あれ？',sub:'まだ終わっていません'}
-      : {kicker:'特別な一瞬を、もう一度',title:'特大吉',sub:'スローリプレイで振り返ります'},
+      : {kicker:'',title:'特大吉',sub:''},
     replay:kind==='reversal'
-      ? {kicker:'大逆転の一瞬へ',title:'',sub:'0.42× SLOW REPLAY'}
-      : {kicker:'特大吉の一瞬へ',title:'',sub:'0.42× SLOW REPLAY'},
+      ? {kicker:'',title:'',sub:''}
+      : {kicker:'',title:'',sub:''},
     final:kind==='reversal'
-      ? {duration:t.final,kicker:'大凶かと思ったら…',title:'大逆転大吉！',sub:'🌈 SPECIAL FORTUNE 🌈'}
-      : {duration:t.final,kicker:'特別な一瞬を引きました',title:'特大吉！',sub:'✨ SPECIAL FORTUNE ✨'}
+      ? {duration:t.final,kicker:'',title:'大逆転大吉！',sub:'🌈 SPECIAL FORTUNE 🌈'}
+      : {duration:t.final,kicker:'',title:'特大吉！',sub:'✨ SPECIAL FORTUNE ✨'}
   };
 }
 function specialMovieMimeType(withAudio=false){
@@ -562,37 +562,6 @@ function drawMovieText(ctx,w,h,kicker,title,sub,theme='gold',alpha=1,phase='intr
   if(sub)ctx.fillText(sub,w/2,h*(final?.354:.572),w*.96);
   ctx.restore();
 }
-function drawMovieReplayCaption(ctx,w,h,mode='forward',hasStoredFrames=true){
-  // Match the badge at the TOP and the explanation at the BOTTOM of the
-  // existing on-screen replay, instead of painting both at the bottom.
-  const label=mode==='reverse'?'↶ REVERSE 0.42× REPLAY':'0.42× SLOW REPLAY';
-  const badgeW=label.length>20?w*.68:w*.57;
-  const badgeH=w*.070,x=(w-badgeW)/2,y=h*.031;
-  ctx.save();
-  ctx.fillStyle='rgba(0,0,0,.55)';
-  ctx.strokeStyle='rgba(255,255,255,.43)';
-  ctx.lineWidth=2;
-  const radius=badgeH/2;
-  ctx.beginPath();
-  ctx.moveTo(x+radius,y);ctx.lineTo(x+badgeW-radius,y);
-  ctx.quadraticCurveTo(x+badgeW,y,x+badgeW,y+radius);
-  ctx.quadraticCurveTo(x+badgeW,y+badgeH,x+badgeW-radius,y+badgeH);
-  ctx.lineTo(x+radius,y+badgeH);
-  ctx.quadraticCurveTo(x,y+badgeH,x,y+radius);
-  ctx.quadraticCurveTo(x,y,x+radius,y);
-  ctx.closePath();ctx.fill();ctx.stroke();
-  ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#fff';
-  ctx.font='950 '+Math.round(w*.033)+'px system-ui, sans-serif';
-  ctx.fillText(label,w/2,y+badgeH/2,badgeW-18);
-  ctx.shadowColor='rgba(0,0,0,.86)';ctx.shadowBlur=Math.round(w*.020);
-  ctx.font='950 '+Math.round(w*.035)+'px system-ui, sans-serif';
-  ctx.fillText('特別な一瞬へ',w/2,h*.865,w*.93);
-  ctx.font='900 '+Math.round(w*.032)+'px system-ui, sans-serif';
-  const sub=mode==='reverse'?'逆再生で近づいています'
-    :hasStoredFrames?'保存した連続コマをスロー再生中':'0.42× SLOW REPLAY';
-  ctx.fillText(sub,w/2,h*.905,w*.94);
-  ctx.restore();
-}
 function createMovieParticles(kind,count=90){
   return Array.from({length:count},(_,i)=>({
     x:Math.random(),y:Math.random(),size:.003+Math.random()*.009,
@@ -687,8 +656,7 @@ function drawSpecialMovieFrame(ctx,state){
 
   if(t<slowEnd){
     drawMovieMedia(ctx,source,w,h,1,0);
-    drawMovieReplayCaption(ctx,w,h,
-      state.replayMode||'forward',hasReplayFrames);
+    // Leave the slow-replay scene unobstructed by technical labels.
     return;
   }
 
@@ -765,8 +733,22 @@ function createSpecialMovieSoundtrack(){
       track,ready,
       start(timeline,kind){
         if(ctx.state!=='running')return;
+        // Keep the audio encoder active for the full movie, including the
+        // silent introduction and finale tail. Some Android muxers otherwise
+        // write a shorter AAC track than the H.264 video track.
+        const carrier=ctx.createOscillator();
+        const carrierGain=ctx.createGain();
+        carrier.type='sine';
+        carrier.frequency.value=220;
+        carrierGain.gain.value=.000005; // practically inaudible, not a soundtrack
+        carrier.connect(carrierGain).connect(destination);
+        carrier.start(ctx.currentTime);
+        carrier.stop(ctx.currentTime+timeline.total+.12);
+        carrier.onended=()=>{
+          try{carrier.disconnect();carrierGain.disconnect();}catch(e){}
+        };
         // The live sequence is silent during the intro and slow replay.
-        // Match the very same final reveal fanfare, with no unrelated BGM.
+        // Use the same reveal fanfare as the app, with no added background music.
         const reveal=timeline.intro+timeline.slow;
         for(const [f,d,delay,volume,type] of specialFanfareNotes(kind)){
           note(f,reveal+delay,d,volume,type);

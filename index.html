@@ -23,7 +23,7 @@
 <title>思い出ルーレットおみくじ</title>
 <link rel="stylesheet" href="./style.css?v=1.2.0-share-beta3">
 <link rel="stylesheet" href="./deluxe.css?v=1.2.0-share-beta3">
-<link rel="stylesheet" href="./features.css?v=1.2.0-share-beta3-clean1">
+<link rel="stylesheet" href="./features.css?v=1.2.0-share-beta3-favshare1">
 <link rel="stylesheet" href="./share-studio.css?v=1.2.0-share-beta3">
 <style>
 body:not(.show-score-details) .scoreChip,
@@ -154,13 +154,13 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <button id="shareOpenFromPlay" class="primary" type="button" style="margin-top:12px;width:100%">⇧ このルーレットを共有する</button>
 </section>
 <section id="shareSection" class="card appView" data-app-view="share">
-  <div class="viewTopbar"><button id="shareBackBtn" type="button" class="viewBack">← 戻る</button><span>ルーレットを共有</span></div>
+  <div class="viewTopbar"><button id="shareBackBtn" type="button" class="viewBack">← 戻る</button><span>共有する</span></div>
   <nav class="shareModeTabs" aria-label="ルーレットを共有・受信する">
     <button type="button" class="shareModeTab selected" data-route="share" aria-current="page">⇧ 共有する</button>
     <button type="button" class="shareModeTab" data-route="receive">🎲 受け取って遊ぶ</button>
   </nav>
   <div class="step">SHARE</div>
-  <h2>思い出のルーレットを届ける</h2>
+  <h2 id="sharePageHeading">思い出のルーレットを届ける</h2>
   <p class="note">写真・動画の生成はこの端末内で行います。LINEやSNSへの送信は自分で共有先を選ぶときだけです。</p>
   <p id="shareSourceState" class="note" aria-live="polite"></p>
   <div class="shareActions" id="shareRouletteOptions">
@@ -175,6 +175,12 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
     <p class="note">スタンプを使わない場合は、加工前の写真を使います。共有のたびに選べます。</p>
     <button id="shareRouletteBuild" class="primary" type="button">作成して保存・共有</button>
     <p class="note">動画は音声なし。MP4非対応時はWebMになります。遊べるファイルには画像そのものが含まれます。</p>
+  </div>
+  <div class="shareActions" id="shareFavoriteOptions" hidden>
+    <h3>お気に入りの写真を共有する</h3>
+    <p class="note">選んだお気に入り写真を保存・共有できます。ひみつスタンプを使わない場合は、元の写真をそのまま使います。</p>
+    <label class="shareMaskOption"><input type="checkbox" id="shareFavoriteMask"> 🐻 ひみつスタンプで隠す（任意）</label>
+    <button id="shareFavoriteBuild" class="primary" type="button">写真を作成して保存・共有</button>
   </div>
   <div id="shareStatus" class="note" role="status" aria-live="polite"></div>
   <div id="shareOutput" class="shareOutputOverlay" role="dialog" aria-modal="true" aria-labelledby="shareOutputTitle" hidden>
@@ -509,8 +515,8 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <script src="./deck.js?v=1.2.0-share-beta3" defer></script>
 <script src="./deluxe.js?v=1.2.0-share-beta3" defer></script>
 <script src="./mp4-duration-fix.js?v=1" defer></script>
-<script src="./features.js?v=1.2.0-share-beta3-duration1" defer></script>
-<script src="./share-studio.js?v=1.2.0-share-beta3" defer></script>
+<script src="./features.js?v=1.2.0-share-beta3-favshare1" defer></script>
+<script src="./share-studio.js?v=1.2.0-share-beta3-favshare1" defer></script>
 <script src="./hidden-settings.js?v=1.2.0-share-beta3" defer></script>
 <script>
 (()=>{

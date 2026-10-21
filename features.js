@@ -2605,8 +2605,8 @@ async function renderCollection(){
     });
     const shareButton=document.createElement('button');
     shareButton.type='button';
-    shareButton.className='labPhotoSecretShare';
-    shareButton.textContent='ひみつスタンプ';
+    shareButton.className='labPhotoShare';
+    shareButton.textContent='共有する';
     card.querySelector('.labPhotoActions').appendChild(shareButton);
     shareButton.addEventListener('click',e=>{
       e.preventDefault();e.stopPropagation();

@@ -531,6 +531,13 @@ body.labGifViewerOpen{overflow:hidden}
 .labPhotoMeta .labPhotoActions .labPhotoOpen{
   border:1px solid #75536b;background:#75536b;color:#fff;min-width:50px
 }
+/* Favorites share is a separate, clearly labelled full-width action. */
+.labPhotoMeta .labPhotoActions .labPhotoShare{
+  grid-column:1 / -1;width:100%;margin:0;padding:9px 8px;
+  border:1px solid #75536b;background:#fffaf6;color:#75536b;
+  border-radius:10px;font-size:12px;font-weight:800;box-shadow:none;
+  touch-action:manipulation
+}
 body.labPhotoViewerOpen{overflow:hidden}
 #labPhotoViewer{
   position:fixed;inset:0;z-index:45000;display:none;

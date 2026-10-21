@@ -8,7 +8,7 @@ const panel=byId('shareSection'), output=byId('shareOutput'), status=byId('share
 if(!panel)return;
 const editor=byId('sharePrivacyEditor'), canvas=byId('sharePrivacyCanvas');
 const pctx=canvas.getContext('2d');
-let latest=null, recorded=null, recording=null, editorSource=null;
+let latest=null, recorded=null, recording=null, editorSource=null, favoritePhoto=null;
 let editIndex=0, marks=[], chosen='🐻', maskSize=.27, outputFile=null, busy=false;
 const message=(s)=>{status.textContent=s||'';};
 const editorMessage=(s)=>{byId('sharePrivacyStatus').textContent=s||'';};
@@ -266,9 +266,14 @@ function setPreviewMeta(){
    format==='play'?'遊べるファイルを作成して保存・共有':'写真を作成して保存・共有';
 }
 window.__memoryShareOnOpen=()=>{
+ favoritePhoto=null;
+ byId('shareRouletteOptions').hidden=false;
+ byId('shareFavoriteOptions').hidden=true;
+ byId('sharePageHeading').textContent='思い出のルーレットを届ける';
  setPreviewMeta();
  // Do not carry over masking or a previous export to an unrelated share.
  byId('shareRouletteMask').checked=false;
+ byId('shareFavoriteMask').checked=false;
  editor.hidden=true;editorSource=null;marks=[];clearOutput();
  message('端末内でファイルを作成します。共有先への送信は自分で選んだ場合のみです。');
 };
@@ -368,8 +373,28 @@ function sourceForGif(){
 window.__memoryShareOpenPhoto=item=>{
  if(!item?.image)return;
  window.__memoryNavigate?.('share');
- openEditor({kind:'photo',title:'お気に入り',frames:[item.image],selectedFormat:'photo'});
+ // Enter the standard sharing screen first. Stamps are optional, never forced.
+ favoritePhoto={image:item.image};
+ byId('shareRouletteOptions').hidden=true;
+ byId('shareFavoriteOptions').hidden=false;
+ byId('sharePageHeading').textContent='お気に入りの写真を共有する';
+ byId('shareSourceState').textContent='お気に入りから選んだ写真を共有します。';
+ byId('shareFavoriteMask').checked=false;
+ editor.hidden=true;editorSource=null;marks=[];clearOutput();
+ message('スタンプなしで共有できます。必要なときだけ「ひみつスタンプ」を選んでください。');
 };
+byId('shareFavoriteMask').addEventListener('change',()=>{
+ clearOutput();editor.hidden=true;editorSource=null;marks=[];
+});
+byId('shareFavoriteBuild').addEventListener('click',e=>runBusy(e.currentTarget,async()=>{
+ if(!favoritePhoto?.image)throw new Error('お気に入り写真を選び直してください。');
+ if(byId('shareFavoriteMask').checked){
+  openEditor({kind:'photo',title:'お気に入り',frames:[favoritePhoto.image],selectedFormat:'photo'});
+  return;
+ }
+ const blob=await makePhotoBlob(favoritePhoto.image);
+ ready(blob,'memory-moment-'+Date.now()+'.jpg','お気に入りの写真');
+}));
 byId('sharePrivacyGif').addEventListener('click',()=>{
  try{const src=sourceForGif();window.__memoryNavigate?.('share');openEditor({...src,selectedFormat:'gif'});}catch(err){message(err.message);}
 });

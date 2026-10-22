@@ -233,7 +233,16 @@ async function makeNormalMovie(frameImages){
   rec.stop();
   const blob=await done;
   if(!blob.size)throw new Error('動画データが空です。');
-  return {blob,ext:format.ext,type:format.type};
+  // Android fragmented MP4 headers can report 0s / ~3s even if frames last
+  // longer. Patch mvhd/tkhd/mdhd using the actual sample timeline; do not
+  // transcode or reorder the recorded frames.
+  let movie=blob;
+  if(format.type==='video/mp4'){
+   if(typeof window.__memoryFixMp4Duration!=='function')
+    throw new Error('動画の再生時間を確定できませんでした。ページを再読み込みしてください');
+   movie=(await window.__memoryFixMp4Duration(blob,total)).blob;
+  }
+  return {blob:movie,ext:format.ext,type:format.type};
  }finally{
   if(rec.state!=='inactive')try{rec.stop();}catch(e){}
   stream.getTracks().forEach(t=>t.stop());

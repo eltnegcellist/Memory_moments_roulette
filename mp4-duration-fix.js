@@ -25,7 +25,7 @@ function header(v,b,kind){
   const wide=version(v,b)===1;
   if(kind==='tkhd'){
     const id=v.getUint32(b.data+(wide?20:12));
-    const pos=b.data+(wide?32:20);
+    const pos=b.data+(wide?28:20); // v1 tkhd duration begins at +28 (not reserved fields at +32)
     return {id,pos,wide,duration:wide?u64(v,pos):v.getUint32(pos)};
   }
   const scale=v.getUint32(b.data+(wide?20:12)),pos=b.data+(wide?24:16);

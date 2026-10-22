@@ -94,7 +94,7 @@ byId('shareOutputSend').addEventListener('click',async()=>{
 });
 function snapshot(){
  const c=getCreation();
- if(!c||!Array.isArray(c.frames)||!c.frames.length)throw new Error('共有するルーレットを履歴から選んでください。');
+ if(!c||!Array.isArray(c.frames)||!c.frames.length)throw new Error('共有するルーレットを選んでください。');
  return c;
 }
 function packRoulette(c,frames){
@@ -182,7 +182,8 @@ function movieMime(){
 function chooseMovieSequence(c){
  // Prefer actually captured roulette frames; use a generated spin for a
  // saved roulette that was not just stopped on this page.
- if(recorded?.source===c&&Array.isArray(recorded.indices)&&recorded.indices.length&&recorded.stopIndex===shareStopIndex(c))return recorded;
+ if(recorded?.source===c&&Array.isArray(recorded.indices)&&recorded.indices.length&&recorded.stopIndex===shareStopIndex(c))
+  return {...recorded,fortune:shareStopFortune(c,recorded.stopIndex)||recorded.fortune};
  const count=c.frames.length;
  let previous=-1;
  const indices=[];
@@ -300,6 +301,7 @@ function stopLabel(c,index){
  return (index+1)+' / '+count+'コマ'+time;
 }
 function selectStop(index,draw=null){
+ if(busy)return;
  const c=getCreation();
  if(!c?.frames?.length||!Number.isInteger(index)||index<0||index>=c.frames.length)return;
  selectedStopIndex=index;
@@ -669,6 +671,8 @@ byId('sharePrivacyClose').addEventListener('click',()=>{editor.hidden=true;edito
 function exportChecked(){
  if(!editorSource)throw new Error('編集する画像を選んでください。');
  if(!marks.some(arr=>arr.length))throw new Error('まずスタンプを置いてください。');
+ if(editorSource.kind==='roulette'&&editorSource.selectedFormat==='photo'&&!(marks[editorSource.stopIndex]?.length))
+  throw new Error('共有する停止コマにスタンプを置いてください。');
  const untouched=marks.filter(arr=>!arr.length).length;
  if(editorSource.frames.length>1&&untouched){
    editorMessage('スタンプ未設定のコマが'+untouched+'枚あります。隠したい部分がないか確認してください。');

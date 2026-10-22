@@ -15,6 +15,8 @@ let selectedStopIndex=null, selectedDraw=null, frameGridPage=0;
 const FRAME_PAGE_SIZE=30;
 const savedGallery=byId('shareSavedGallery');
 const pickerStatus=byId('sharePickerStatus');
+const message=(s)=>{status.textContent=s||'';};
+const editorMessage=(s)=>{byId('sharePrivacyStatus').textContent=s||'';};
 const stopPicker=byId('shareStopPicker');
 const getCreation=()=>savedSelection||(shareFromPlayer?window.__memoryShareGetActiveCreation?.():null);
 function shareStopIndex(c){

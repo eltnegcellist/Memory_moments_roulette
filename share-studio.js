@@ -17,16 +17,11 @@ const stickerColors={'🐻':'#e8b886','🐱':'#f6c89e','🌸':'#ffe0e9','⭐':'#
 function safeName(name){
  return String(name||'memory-roulette').replace(/[^\w\u3040-\u30ff\u3400-\u9fff-]/g,'_').slice(0,45)||'memory-roulette';
 }
-function downloadFile(file){
- const url=URL.createObjectURL(file);
- const a=document.createElement('a');a.href=url;a.download=file.name;
- document.body.appendChild(a);a.click();a.remove();
- setTimeout(()=>URL.revokeObjectURL(url),30000);
-}
 function ready(blob,name,label){
  if(blob.size>MAX_BYTES)throw new Error('共有データが大きすぎます（48MB上限）。動画数を減らしてください。');
  outputFile=new File([blob],name,{type:blob.type||'application/octet-stream'});
  byId('shareOutputLabel').textContent=label+'（'+Math.max(1,Math.ceil(blob.size/1024))+'KB）';
+ byId('shareOutputSave').textContent=typeof window.showSaveFilePicker==='function'?'保存先を選んで保存':'↓ 端末に保存';
  const supported=!!(navigator.share&&navigator.canShare?.({files:[outputFile]}));
  byId('shareOutputSend').disabled=false;
  byId('shareOutputSend').textContent=supported?'共有先を選ぶ':'送るために端末へ保存';
@@ -42,16 +37,23 @@ function clearOutput(){outputFile=null;closeOutput();}
 byId('shareOutputClose').addEventListener('click',closeOutput);
 output.addEventListener('click',e=>{if(e.target===output)closeOutput();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!output.hidden)closeOutput();});
-byId('shareOutputSave').addEventListener('click',()=>{
+byId('shareOutputSave').addEventListener('click',async()=>{
  if(!outputFile)return;
- downloadFile(outputFile);closeOutput();
- message('端末へ保存しました。LINEなどで送る場合は「ファイル」として添付してください。');
+ const file=outputFile;
+ try{
+  const saved=await window.__memorySaveMediaFile(file,file.name);
+  if(saved.mode==='cancelled')return;
+  closeOutput();
+  message(saved.mode==='picker'?'選択したフォルダへ保存しました。':(saved.warning||'ダウンロードを開始しました。'));
+ }catch(err){message(err?.message||'端末へ保存できませんでした。');}
 });
 byId('shareOutputSend').addEventListener('click',async()=>{
  if(!outputFile)return;
  if(!navigator.share||!navigator.canShare?.({files:[outputFile]})){
-   downloadFile(outputFile);closeOutput();
-   message('ファイルを端末に保存しました。LINEの「ファイル」添付から送ってください。');
+   const saved=await window.__memorySaveMediaFile(outputFile,outputFile.name);
+   if(saved.mode==='cancelled')return;
+   closeOutput();
+   message(saved.mode==='picker'?'選択したフォルダへ保存しました。LINEからファイルを添付してください。':(saved.warning||'ダウンロードを開始しました。LINEからファイルを添付してください。'));
    return;
  }
  try{

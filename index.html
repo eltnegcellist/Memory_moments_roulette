@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="./style.css?v=1.2.0-share-beta3-shortcuts3">
 <link rel="stylesheet" href="./deluxe.css?v=1.2.0-share-beta3">
 <link rel="stylesheet" href="./features.css?v=1.2.0-share-beta3-favshare1">
-<link rel="stylesheet" href="./share-studio.css?v=1.2.0-separate-share-receive1">
+<link rel="stylesheet" href="./share-studio.css?v=1.2.1-share-gallery-stop1">
 <style>
 body:not(.show-score-details) .scoreChip,
 body:not(.show-score-details) .scoreDetails,
@@ -64,7 +64,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
     <button type="button" data-route="history"><span aria-hidden="true">↺</span><strong>履歴</strong><small id="homeHistoryCount">作ったルーレット</small></button>
     <button type="button" data-route="gif" aria-label="動画からGIFを作る"><span aria-hidden="true">▣</span><strong>GIF作成</strong><small>動画から作る</small></button>
     <button type="button" data-route="settings"><span aria-hidden="true">⚙</span><strong>設定</strong><small>ルーレット・データ</small></button>
-    <button type="button" data-route="share"><span aria-hidden="true">⇧</span><strong>共有する</strong><small>ルーレットを送る</small></button>
+    <button type="button" data-route="share-picker"><span aria-hidden="true">⇧</span><strong>共有する</strong><small>ルーレットを送る</small></button>
     <button type="button" data-route="receive"><span aria-hidden="true">🎲</span><strong>受け取って遊ぶ</strong><small>もらったファイルを開く</small></button>
   </nav>
 </section>
@@ -153,12 +153,49 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <div id="tapHint">画像をタップすると止まります</div>
   <button id="shareOpenFromPlay" class="primary" type="button" style="margin-top:12px;width:100%">⇧ このルーレットを共有する</button>
 </section>
+<section id="sharePickerSection" class="card appView" data-app-view="share-picker">
+  <div class="viewTopbar"><button type="button" class="viewBack" data-nav-back>← ホーム</button><span>共有するルーレットを探す</span></div>
+  <div class="step">SELECT ROULETTE</div>
+  <h2>過去のルーレットから選ぶ</h2>
+  <p class="note viewIntro">保存したルーレットのコマを見ながら選べます。次の画面で「どのコマで止まるか」を選んでから、動画や写真を共有できます。</p>
+  <p id="sharePickerStatus" class="note" role="status" aria-live="polite">履歴を読み込んでいます…</p>
+  <div id="shareSavedGallery" class="shareSavedGallery"></div>
+</section>
 <section id="shareSection" class="card appView" data-app-view="share">
   <div class="viewTopbar"><button id="shareBackBtn" type="button" class="viewBack">← 戻る</button><span>共有する</span></div>
   <div class="step">SHARE</div>
   <h2 id="sharePageHeading">思い出のルーレットを届ける</h2>
   <p class="note">写真・動画の生成はこの端末内で行います。LINEやSNSへの送信は自分で共有先を選ぶときだけです。</p>
   <p id="shareSourceState" class="note" aria-live="polite"></p>
+  <div id="shareStopPicker" class="shareStopPicker" hidden>
+    <h3>共有する停止コマ</h3>
+    <p class="note">動画・写真では、選んだコマで停止します。実際に引いた結果を選ぶか、別のコマを指定できます。</p>
+    <div class="shareSelectedFrame">
+      <img id="shareSelectedFrameImage" alt="選択した停止コマのプレビュー">
+      <div class="shareSelectedFrameInfo">
+        <strong id="shareSelectedFrameLabel"></strong>
+        <span id="shareSelectedFrameFortune"></span>
+      </div>
+      <div class="shareFrameStep">
+        <button id="shareStopPrev" type="button" class="secondary">← 前のコマ</button>
+        <button id="shareStopNext" type="button" class="secondary">次のコマ →</button>
+      </div>
+    </div>
+    <div id="sharePastDrawSection" class="sharePastDrawSection" hidden>
+      <h4>過去に止まった結果から選ぶ</h4>
+      <div id="sharePastDrawGallery" class="sharePastDrawGallery"></div>
+    </div>
+    <details id="shareAllFramesDetails" class="shareAllFramesDetails">
+      <summary>すべてのコマから選ぶ</summary>
+      <div class="shareFramePager">
+        <button type="button" id="shareFramePagePrev" class="secondary">← 前のページ</button>
+        <span id="shareFramePageLabel"></span>
+        <button type="button" id="shareFramePageNext" class="secondary">次のページ →</button>
+      </div>
+      <div id="shareStopFrameGrid" class="shareStopFrameGrid"></div>
+    </details>
+    <p id="shareStopNote" class="note" aria-live="polite"></p>
+  </div>
   <div class="shareActions" id="shareRouletteOptions">
     <h3>ルーレットを共有する</h3>
     <label class="shareFormatLabel" for="shareRouletteFormat">共有する内容</label>
@@ -502,14 +539,14 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 <video id="video" playsinline muted preload="metadata" style="display:none"></video><canvas id="captureCanvas" style="display:none"></canvas><canvas id="smallCanvas" width="28" height="28" style="display:none"></canvas>
 </div>
 <div id="bigOverlay"><div id="bigText">大吉！</div></div>
-<script src="./navigation.js?v=1.2.0-share-beta3" defer></script>
+<script src="./navigation.js?v=1.2.1-share-gallery-stop1" defer></script>
 <script src="./app.js?v=1.2.0-share-beta3" defer></script>
 <script src="./deck.js?v=1.2.0-share-beta3" defer></script>
 <script src="./deluxe.js?v=1.2.0-share-beta3" defer></script>
 <script src="./mp4-duration-fix.js?v=1.2.0-share-mp4dur-fix1" defer></script>
 <script src="./media-save.js?v=1.2.1-gallery-save1" defer></script>
 <script src="./features.js?v=1.2.1-gallery-save1" defer></script>
-<script src="./share-studio.js?v=1.2.1-gallery-save1" defer></script>
+<script src="./share-studio.js?v=1.2.1-share-gallery-stop1" defer></script>
 <script src="./hidden-settings.js?v=1.2.0-share-beta3" defer></script>
 <script>
 (()=>{

@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const VALID=new Set(['home','create','library','play','favorites','history','settings','gif','share','receive']);
+const VALID=new Set(['home','create','library','play','favorites','history','settings','gif','share','share-picker','receive']);
 let currentView='home';
 let returnFromPlay='home';
 let returnFromShare='home';
@@ -45,6 +45,7 @@ function applyView(view){
   currentView=target;
   if(target==='library')window.__memoryDeckRender?.();
   if(enteringGif)Promise.resolve(window.__memoryGifOpen?.()).catch(err=>console.error('GIF page init failed',err));
+  if(target==='share-picker')window.__memoryShareOnPickerOpen?.();
   if(target==='share')window.__memoryShareOnOpen?.();
   forceTop();
 }

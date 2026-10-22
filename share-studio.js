@@ -11,31 +11,36 @@ const pctx=canvas.getContext('2d');
 let latest=null, recorded=null, recording=null, editorSource=null, favoritePhoto=null;
 let editIndex=0, marks=[], chosen='🐻', maskSize=.27, outputFile=null, busy=false;
 let savedSelection=null, shareFromPlayer=false, shareSelectToken=0;
-const historyPicker=document.createElement('div');
-historyPicker.id='shareSavedPicker';
-historyPicker.hidden=true;
-historyPicker.style.cssText='margin:14px 0;padding:14px;border:1px solid #eadfd8;border-radius:14px;background:#fff7ef';
-historyPicker.innerHTML='<label for="shareSavedPickerSelect">共有する過去のルーレット</label>'+
-  '<select id="shareSavedPickerSelect" style="display:block;width:100%;margin-top:8px;min-height:48px">'+
-  '<option value="">履歴を確認しています…</option></select>'+
-  '<p id="shareSavedPickerHint" class="note" role="status" aria-live="polite"></p>';
-byId('shareSourceState').after(historyPicker);
-// Home shortcut and player button have different source semantics.
-document.addEventListener('click',e=>{
- if(e.target.closest?.('[data-route="share"]'))shareFromPlayer=false;
-},true);
+let selectedStopIndex=null, selectedDraw=null, frameGridPage=0;
+const FRAME_PAGE_SIZE=30;
+const savedGallery=byId('shareSavedGallery');
+const pickerStatus=byId('sharePickerStatus');
 const message=(s)=>{status.textContent=s||'';};
 const editorMessage=(s)=>{byId('sharePrivacyStatus').textContent=s||'';};
+const stopPicker=byId('shareStopPicker');
 const getCreation=()=>savedSelection||(shareFromPlayer?window.__memoryShareGetActiveCreation?.():null);
 function shareStopIndex(c){
  const count=c?.frames?.length||0;
+ if(Number.isInteger(selectedStopIndex)&&selectedStopIndex>=0&&selectedStopIndex<count)return selectedStopIndex;
  if(shareFromPlayer&&c===window.__memoryShareGetActiveCreation?.()){
-  const current=window.__memoryShareGetCurrentIndex?.();
-  if(Number.isInteger(current)&&current>=0&&current<count)return current;
+  const index=window.__memoryShareGetCurrentIndex?.();
+  if(Number.isInteger(index)&&index>=0&&index<count)return index;
  }
  const draws=Array.isArray(c?.drawHistory)?c.drawHistory:[];
- const index=draws.length?draws[draws.length-1]?.index:null;
- return Number.isInteger(index)&&index>=0&&index<count?index:0;
+ for(let i=draws.length-1;i>=0;i--){
+  const index=draws[i]?.index;
+  if(Number.isInteger(index)&&index>=0&&index<count)return index;
+ }
+ return 0;
+}
+function shareStopFortune(c,index){
+ if(selectedDraw?.index===index&&selectedDraw?.fortune)return selectedDraw.fortune;
+ if(shareFromPlayer&&recorded?.source===c&&recorded.stopIndex===index&&recorded.fortune)return recorded.fortune;
+ const draws=Array.isArray(c?.drawHistory)?c.drawHistory:[];
+ for(let i=draws.length-1;i>=0;i--){
+  if(draws[i]?.index===index&&draws[i]?.fortune)return draws[i].fortune;
+ }
+ return c?.fortunes?.[index]||null;
 }
 const stickerColors={'🐻':'#e8b886','🐱':'#f6c89e','🌸':'#ffe0e9','⭐':'#fff4a7','🔒':'#c6daee'};
 function safeName(name){
@@ -91,7 +96,7 @@ byId('shareOutputSend').addEventListener('click',async()=>{
 });
 function snapshot(){
  const c=getCreation();
- if(!c||!Array.isArray(c.frames)||!c.frames.length)throw new Error('共有するルーレットを履歴から選んでください。');
+ if(!c||!Array.isArray(c.frames)||!c.frames.length)throw new Error('共有するルーレットを選んでください。');
  return c;
 }
 function packRoulette(c,frames){
@@ -179,7 +184,8 @@ function movieMime(){
 function chooseMovieSequence(c){
  // Prefer actually captured roulette frames; use a generated spin for a
  // saved roulette that was not just stopped on this page.
- if(recorded?.source===c&&Array.isArray(recorded.indices)&&recorded.indices.length)return recorded;
+ if(recorded?.source===c&&Array.isArray(recorded.indices)&&recorded.indices.length&&recorded.stopIndex===shareStopIndex(c))
+  return {...recorded,fortune:shareStopFortune(c,recorded.stopIndex)||recorded.fortune};
  const count=c.frames.length;
  let previous=-1;
  const indices=[];
@@ -190,7 +196,7 @@ function chooseMovieSequence(c){
  }
  const stopIndex=shareStopIndex(c);
  return {source:c,indices,stopIndex,mode:c.mode,
-   fortune:c.mode==='omikuji'?(c.fortunes?.[stopIndex]||'今日の運勢'):null,generated:true};
+   fortune:c.mode==='omikuji'?(shareStopFortune(c,stopIndex)||'今日の運勢'):null,generated:true};
 }
 async function makeNormalMovie(frameImages){
  const creation=snapshot();
@@ -290,83 +296,215 @@ window.__memoryShareOnStopped=data=>{
  recording=null;
 };
 
+function stopLabel(c,index){
+ const count=c.frames.length;
+ const raw=Number(c.times?.[index]);
+ const time=Number.isFinite(raw)&&raw>=0?' ・ 元動画 '+raw.toFixed(1)+'秒':'';
+ return (index+1)+' / '+count+'コマ'+time;
+}
+function selectStop(index,draw=null){
+ if(busy)return;
+ const c=getCreation();
+ if(!c?.frames?.length||!Number.isInteger(index)||index<0||index>=c.frames.length)return;
+ selectedStopIndex=index;
+ selectedDraw=draw;
+ frameGridPage=Math.floor(index/FRAME_PAGE_SIZE);
+ editor.hidden=true;editorSource=null;marks=[];clearOutput();
+ renderStopPicker();
+}
+function renderFramePage(){
+ const c=getCreation(), grid=byId('shareStopFrameGrid');
+ grid.replaceChildren();
+ if(!c?.frames?.length)return;
+ const pages=Math.ceil(c.frames.length/FRAME_PAGE_SIZE);
+ frameGridPage=Math.max(0,Math.min(pages-1,frameGridPage));
+ byId('shareFramePageLabel').textContent=(frameGridPage+1)+' / '+pages+'ページ';
+ byId('shareFramePagePrev').disabled=frameGridPage===0;
+ byId('shareFramePageNext').disabled=frameGridPage===pages-1;
+ const start=frameGridPage*FRAME_PAGE_SIZE,end=Math.min(c.frames.length,start+FRAME_PAGE_SIZE);
+ for(let i=start;i<end;i++){
+  const btn=document.createElement('button');
+  btn.type='button';btn.className='shareFrameThumb';
+  const selected=i===shareStopIndex(c);
+  btn.classList.toggle('is-selected',selected);
+  btn.setAttribute('aria-pressed',String(selected));
+  btn.setAttribute('aria-label',(i+1)+'コマ目を停止位置にする');
+  const img=document.createElement('img');
+  img.src=c.frames[i];img.loading='lazy';img.alt='';
+  const label=document.createElement('span');label.textContent=(i+1)+'コマ目';
+  btn.append(img,label);
+  btn.addEventListener('click',()=>selectStop(i));
+  grid.appendChild(btn);
+ }
+}
+function renderPastDraws(c){
+ const section=byId('sharePastDrawSection'),grid=byId('sharePastDrawGallery');
+ grid.replaceChildren();
+ const draws=(Array.isArray(c.drawHistory)?c.drawHistory:[])
+   .filter(entry=>Number.isInteger(entry?.index)&&entry.index>=0&&entry.index<c.frames.length)
+   .slice(-40).reverse();
+ section.hidden=!draws.length;
+ for(const draw of draws){
+  const b=document.createElement('button');b.type='button';b.className='shareDrawCard';
+  const active=draw===selectedDraw;
+  b.classList.toggle('is-selected',active);
+  b.setAttribute('aria-pressed',String(active));
+  const image=document.createElement('img');image.src=c.frames[draw.index];image.loading='lazy';image.alt='';
+  const info=document.createElement('span');
+  const title=document.createElement('strong');
+  title.textContent=(draw.index+1)+'コマ目'+(draw.fortune?' ・ '+draw.fortune:'');
+  const subtitle=document.createElement('small');
+  subtitle.textContent=draw.drawnAt?new Date(draw.drawnAt).toLocaleString('ja-JP'):'過去の停止結果';
+  info.append(title,subtitle);b.append(image,info);
+  b.addEventListener('click',()=>selectStop(draw.index,draw));
+  grid.appendChild(b);
+ }
+}
+function renderStopPicker(){
+ const c=getCreation();
+ const format=byId('shareRouletteFormat').value;
+ stopPicker.hidden=!c?.frames?.length||!!favoritePhoto||format==='play';
+ if(stopPicker.hidden)return;
+ const index=shareStopIndex(c);
+ byId('shareSelectedFrameImage').src=c.frames[index];
+ byId('shareSelectedFrameLabel').textContent=stopLabel(c,index);
+ const fortune=shareStopFortune(c,index);
+ byId('shareSelectedFrameFortune').textContent=fortune?'停止結果：'+fortune:'このコマで停止します';
+ byId('shareStopPrev').disabled=c.frames.length<2;
+ byId('shareStopNext').disabled=c.frames.length<2;
+ byId('shareStopNote').textContent=shareFromPlayer
+  ?'現在遊んでいるルーレットです。初期選択はこの画面を開いたときのコマです。'
+  :'履歴から選んだルーレットです。過去の結果と全コマから停止位置を選べます。';
+ renderPastDraws(c);
+ if(byId('shareAllFramesDetails').open)renderFramePage();
+}
+byId('shareStopPrev').addEventListener('click',()=>{
+ const c=getCreation();if(c?.frames?.length)selectStop((shareStopIndex(c)-1+c.frames.length)%c.frames.length);
+});
+byId('shareStopNext').addEventListener('click',()=>{
+ const c=getCreation();if(c?.frames?.length)selectStop((shareStopIndex(c)+1)%c.frames.length);
+});
+byId('shareFramePagePrev').addEventListener('click',()=>{frameGridPage--;renderFramePage();});
+byId('shareFramePageNext').addEventListener('click',()=>{frameGridPage++;renderFramePage();});
+byId('shareAllFramesDetails').addEventListener('toggle',()=>{
+ if(byId('shareAllFramesDetails').open)renderFramePage();
+ else byId('shareStopFrameGrid').replaceChildren();
+});
 function setPreviewMeta(){
  const c=getCreation(),count=c?.frames?.length||0;
  byId('shareSourceState').textContent=count
   ? (shareFromPlayer?'現在のルーレット：':'選んだルーレット：')+(c.title||'')+'（'+count+'コマ）'
-  : shareFromPlayer?'再生中のルーレットがありません。'
-   :'まず共有したいルーレットを上の履歴から選んでください。';
+  : '共有するルーレットがありません。ホームの「共有する」から履歴を選択してください。';
  byId('shareRouletteBuild').disabled=count<1;
  const format=byId('shareRouletteFormat').value;
  byId('shareRouletteBuild').textContent=format==='movie'?'動画を作成して保存・共有':
    format==='play'?'遊べるファイルを作成して保存・共有':'写真を作成して保存・共有';
+ renderStopPicker();
+}
+async function savedCardPreviews(x){
+ const count=Number(x.frameCount)||x.frames?.length||x.deckCandidateIds?.length||0;
+ if(!count)return [];
+ const positions=[0,Math.floor((count-1)/2),count-1];
+ const indices=[...new Set(positions)].filter(i=>i>=0&&i<count);
+ if(Array.isArray(x.frames)&&x.frames.length)return indices.map(i=>x.frames[i]).filter(Boolean);
+ if(Array.isArray(x.deckCandidateIds)&&x.deckCandidateIds.length){
+  const records=await getDeckFrameRecords(indices.map(i=>x.deckCandidateIds[i]));
+  return records.map(x=>x?.imageData).filter(Boolean);
+ }
+ const image=await creationPreview(x);
+ return image?[image]:[];
 }
 async function showSavedHistory(){
- const token=shareSelectToken, select=byId('shareSavedPickerSelect'), hint=byId('shareSavedPickerHint');
- select.replaceChildren(new Option('履歴を読み込んでいます…',''));select.disabled=true;
- hint.textContent='この端末に保存したルーレットを確認しています。';
+ const token=shareSelectToken;
+ savedGallery.replaceChildren();
+ pickerStatus.textContent='保存済みのルーレットを探しています…';
  try{
   try{await window.__memoryHistoryMigrationPromise;}catch(e){console.warn('share migration',e);}
-  const all=await dbAll();
+  const all=(await dbAll()).filter(x=>x?.id);
   if(token!==shareSelectToken)return;
-  select.replaceChildren(new Option('共有するルーレットを選んでください',''));
-  for(const x of all.filter(x=>x?.id)){
-   const count=Number(x.frameCount)||x.frames?.length||x.deckCandidateIds?.length||0;
-   const date=new Date(x.updatedAt||x.createdAt||Date.now()).toLocaleDateString('ja-JP');
-   select.add(new Option((x.title||'ルーレット')+' ・ '+date+' ・ '+count+'コマ',x.id));
+  if(!all.length){
+   pickerStatus.textContent='共有できるルーレットがありません。ホームから動画を選び、ルーレットを作ってください。';
+   return;
   }
-  select.disabled=!all.length;
-  hint.textContent=all.length?'保存済みのルーレットを選ぶと、共有ファイルを作成できます。'
-   :'この端末にはまだ作ったルーレットがありません。ホームから作成してください。';
+  pickerStatus.textContent=all.length+'件のルーレット。写真を確認して選んでください。';
+  for(const x of all){
+   const count=Number(x.frameCount)||x.frames?.length||x.deckCandidateIds?.length||0;
+   const card=document.createElement('button');card.type='button';card.className='shareSavedCard';
+   const preview=document.createElement('span');preview.className='shareSavedPreviews';
+   for(let i=0;i<3;i++){
+    const image=document.createElement('img');image.alt='';image.loading='lazy';
+    image.src='./icons/memory-roulette-omikuji.png?v=memorybrand2';
+    preview.appendChild(image);
+   }
+   const caption=document.createElement('span');caption.className='shareSavedCaption';
+   const title=document.createElement('strong');title.textContent=x.title||'ルーレット';
+   const date=new Date(x.updatedAt||x.createdAt||Date.now()).toLocaleString('ja-JP');
+   const meta=document.createElement('small');
+   meta.textContent=(x.mode==='omikuji'?'おみくじ':'通常ルーレット')+' ・ '+date+' ・ '+count+'コマ';
+   caption.append(title,meta);
+   const hint=document.createElement('span');hint.className='shareSavedArrow';hint.textContent='選ぶ ›';
+   card.append(preview,caption,hint);
+   savedGallery.appendChild(card);
+   card.addEventListener('click',async()=>{
+    const ownToken=++shareSelectToken;
+    card.disabled=true;pickerStatus.textContent='選んだルーレットを読み込んでいます…';
+    try{
+     const c=await dbGet(x.id);
+     if(ownToken!==shareSelectToken)return;
+     if(!c?.frames?.length)throw new Error('元画像が見つかりません。');
+     savedSelection=c;shareFromPlayer=false;
+     selectedStopIndex=null;selectedDraw=null;frameGridPage=0;
+     window.__memoryNavigate?.('share');
+    }catch(err){
+     if(ownToken!==shareSelectToken)return;
+     console.error('share history hydrate failed',err);
+     pickerStatus.textContent='読み込めませんでした：'+(err?.message||err);
+     card.disabled=false;
+    }
+   });
+   // Keep the list interactive while each card loads its own preview.
+   savedCardPreviews(x).then(sources=>{
+    if(token!==shareSelectToken)return;
+    const images=preview.querySelectorAll('img');
+    sources.forEach((src,i)=>{if(images[i]&&src)images[i].src=src;});
+   }).catch(err=>console.warn('share card preview unavailable',err));
+  }
  }catch(err){
   if(token!==shareSelectToken)return;
   console.error('share history list failed',err);
-  select.replaceChildren(new Option('履歴を読み込めませんでした',''));
-  hint.textContent='履歴を読み込めませんでした。ホームの「履歴」を確認してください。';
+  pickerStatus.textContent='履歴を読み込めませんでした。ホームの「履歴」も確認してください。';
  }
 }
-byId('shareSavedPickerSelect').addEventListener('change',async e=>{
- const id=e.currentTarget.value,token=++shareSelectToken,hint=byId('shareSavedPickerHint');
- savedSelection=null;clearOutput();editor.hidden=true;editorSource=null;marks=[];
- setPreviewMeta();
- if(!id){hint.textContent='共有するルーレットを選択してください。';return;}
- hint.textContent='選んだルーレットを読み込んでいます…';
- try{
-  const c=await dbGet(id); // dbGet hydrates images referenced by saved deck frames.
-  if(token!==shareSelectToken)return;
-  if(!c?.frames?.length){
-   hint.textContent='元の画像がなくなっているため共有できません。別の履歴を選んでください。';
-   return;
-  }
-  savedSelection=c;
-  hint.textContent='読み込みました。下で共有形式を選んでください。';
- }catch(err){
-  if(token!==shareSelectToken)return;
-  console.error('share history hydrate failed',err);
-  hint.textContent='読み込みに失敗しました。別の履歴を選んでください。';
- }
- setPreviewMeta();
-});
+window.__memoryShareOnPickerOpen=()=>{
+ ++shareSelectToken;
+ shareFromPlayer=false;savedSelection=null;
+ selectedStopIndex=null;selectedDraw=null;favoritePhoto=null;
+ showSavedHistory();
+};
 window.__memoryShareOnOpen=()=>{
- ++shareSelectToken;savedSelection=null;
- historyPicker.hidden=shareFromPlayer;
+ ++shareSelectToken;
+ if(shareFromPlayer)savedSelection=null;
  favoritePhoto=null;
  byId('shareRouletteOptions').hidden=false;
  byId('shareFavoriteOptions').hidden=true;
- byId('sharePageHeading').textContent='思い出のルーレットを届ける';
- setPreviewMeta();
+ byId('sharePageHeading').textContent=shareFromPlayer?'このルーレットを共有する':'選んだルーレットを共有する';
  byId('shareRouletteMask').checked=false;
  byId('shareFavoriteMask').checked=false;
  editor.hidden=true;editorSource=null;marks=[];clearOutput();
- if(!shareFromPlayer)showSavedHistory();
+ byId('shareAllFramesDetails').open=false;
+ frameGridPage=Math.floor(shareStopIndex(getCreation()||{frames:[]})/FRAME_PAGE_SIZE);
+ setPreviewMeta();
  message('端末内でファイルを作成します。共有先への送信は自分で選んだ場合のみです。');
 };
 byId('shareOpenFromPlay').addEventListener('click',()=>{
- shareFromPlayer=true;
+ shareFromPlayer=true;savedSelection=null;favoritePhoto=null;
+ selectedStopIndex=window.__memoryShareGetCurrentIndex?.()??null;
+ selectedDraw=null;frameGridPage=0;
  window.__memoryNavigate?.('share');
 });
 byId('shareRouletteFormat').addEventListener('change',()=>{
  clearOutput();editor.hidden=true;editorSource=null;marks=[];setPreviewMeta();
+ if(byId('shareRouletteFormat').value==='play')message('遊べるファイルでは停止位置を固定せず、受け取った人がルーレットを回します。');
 });
 byId('shareRouletteMask').addEventListener('change',()=>{
  clearOutput();editor.hidden=true;editorSource=null;marks=[];
@@ -461,7 +599,7 @@ window.__memoryShareOpenPhoto=item=>{
  // Enter the standard sharing screen first. Stamps are optional, never forced.
  favoritePhoto={image:item.image};
  ++shareSelectToken;
- historyPicker.hidden=true;
+ stopPicker.hidden=true;
  byId('shareRouletteOptions').hidden=true;
  byId('shareFavoriteOptions').hidden=false;
  byId('sharePageHeading').textContent='お気に入りの写真を共有する';
@@ -535,6 +673,8 @@ byId('sharePrivacyClose').addEventListener('click',()=>{editor.hidden=true;edito
 function exportChecked(){
  if(!editorSource)throw new Error('編集する画像を選んでください。');
  if(!marks.some(arr=>arr.length))throw new Error('まずスタンプを置いてください。');
+ if(editorSource.kind==='roulette'&&editorSource.selectedFormat==='photo'&&!(marks[editorSource.stopIndex]?.length))
+  throw new Error('共有する停止コマにスタンプを置いてください。');
  const untouched=marks.filter(arr=>!arr.length).length;
  if(editorSource.frames.length>1&&untouched){
    editorMessage('スタンプ未設定のコマが'+untouched+'枚あります。隠したい部分がないか確認してください。');
@@ -544,8 +684,9 @@ byId('sharePrivacyExportSelected').addEventListener('click',e=>runBusy(e.current
  exportChecked();
  const format=editorSource.selectedFormat;
  if(format==='photo'){
-   const blob=await renderMasked(editIndex);
-   ready(blob,'secret-moment-'+Date.now()+'.jpg','スタンプ付きの写真（現在のコマ）');
+   const index=editorSource.kind==='roulette'?editorSource.stopIndex:editIndex;
+   const blob=await renderMasked(index);
+   ready(blob,'secret-moment-'+Date.now()+'.jpg','スタンプ付きの写真（選択した停止コマ）');
    return;
  }
  const frames=await maskedFrames();
@@ -559,4 +700,5 @@ byId('sharePrivacyExportSelected').addEventListener('click',e=>runBusy(e.current
  await buildRouletteFile(editorSource.creation,format,frames);
 }));
 if(location.hash==='#share')window.__memoryShareOnOpen?.();
+if(location.hash==='#share-picker')window.__memoryShareOnPickerOpen?.();
 })();

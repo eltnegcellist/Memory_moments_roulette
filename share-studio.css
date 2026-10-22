@@ -52,3 +52,65 @@
 }
 #receiveSection #shareImportFile:focus-visible + #receiveStatus{outline:2px solid #a45171;outline-offset:2px}
 #receiveSection #receiveStatus{min-height:18px;white-space:normal;overflow-wrap:anywhere}
+
+
+/* Visual roulette chooser: history is a separate step from export. */
+#sharePickerSection [hidden]{display:none!important}
+#sharePickerSection .shareSavedGallery{display:grid;grid-template-columns:1fr;gap:12px;margin:18px 0}
+#sharePickerSection .shareSavedCard{
+ display:flex;flex-direction:column;align-items:stretch;gap:9px;width:100%;min-width:0;
+ padding:11px;background:#fffaf6;border:1.5px solid #e7cfc3;border-radius:16px;
+ color:#372a30;text-align:left;cursor:pointer;box-shadow:0 3px 14px rgba(84,51,52,.06)
+}
+#sharePickerSection .shareSavedCard:focus-visible,#shareSection .shareFrameThumb:focus-visible,
+#shareSection .shareDrawCard:focus-visible{outline:3px solid #a83b67;outline-offset:2px}
+#sharePickerSection .shareSavedCard:disabled{opacity:.6;cursor:wait}
+#sharePickerSection .shareSavedPreviews{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;width:100%;overflow:hidden}
+#sharePickerSection .shareSavedPreviews img{
+ display:block;width:100%;height:94px;object-fit:cover;border-radius:10px;background:#ebe0dd
+}
+#sharePickerSection .shareSavedCaption{display:flex;flex-direction:column;gap:4px;min-width:0}
+#sharePickerSection .shareSavedCaption strong{font-size:16px;overflow-wrap:anywhere}
+#sharePickerSection .shareSavedCaption small{font-size:12px;color:#765d65;line-height:1.45}
+#sharePickerSection .shareSavedArrow{align-self:flex-end;font-size:13px;font-weight:700;color:#96405e}
+#shareSection .shareStopPicker{margin:14px 0;padding:14px;border:1px solid #e6c4b5;border-radius:15px;background:#fff8f1}
+#shareSection .shareStopPicker h3{margin:0 0 6px;font-size:17px}
+#shareSection .shareStopPicker h4{margin:15px 0 9px;font-size:14px}
+#shareSection .shareSelectedFrame{display:flex;flex-direction:column;align-items:center;gap:8px;padding:11px;border-radius:13px;background:white}
+#shareSection .shareSelectedFrame>img{display:block;width:100%;max-height:300px;object-fit:contain;border-radius:11px;background:#f2e5e3}
+#shareSection .shareSelectedFrameInfo{display:flex;flex-direction:column;gap:3px;text-align:center;line-height:1.4}
+#shareSection .shareSelectedFrameInfo strong{font-size:15px}
+#shareSection .shareSelectedFrameInfo span{font-size:13px;color:#795060}
+#shareSection .shareFrameStep{display:flex;width:100%;gap:8px}
+#shareSection .shareFrameStep button{flex:1;min-height:44px;min-width:0}
+#shareSection .sharePastDrawGallery{display:flex;gap:9px;overflow-x:auto;padding:3px 2px 9px;scroll-snap-type:x proximity}
+#shareSection .shareDrawCard{
+ display:flex;flex-direction:column;flex:0 0 122px;scroll-snap-align:start;gap:5px;
+ min-width:0;padding:6px;background:#fff;border:2px solid #edd9d0;
+ border-radius:12px;color:#4d303d;text-align:left;cursor:pointer
+}
+#shareSection .shareDrawCard img{width:100%;height:104px;object-fit:cover;border-radius:8px;background:#f3e1dd}
+#shareSection .shareDrawCard>span{display:flex;flex-direction:column;gap:3px}
+#shareSection .shareDrawCard strong{font-size:12px;line-height:1.3;overflow-wrap:anywhere}
+#shareSection .shareDrawCard small{font-size:10px;line-height:1.3;color:#745b64}
+#shareSection .is-selected{border-color:#b53f6e!important;box-shadow:0 0 0 1px #b53f6e}
+#shareSection .shareAllFramesDetails{margin-top:13px}
+#shareSection .shareAllFramesDetails summary{padding:10px 0;cursor:pointer;font-weight:700;color:#843d59}
+#shareSection .shareFramePager{display:flex;gap:7px;align-items:center;justify-content:space-between;margin:10px 0}
+#shareSection .shareFramePager button{min-width:0;padding:8px 9px;font-size:12px}
+#shareSection .shareFramePager span{font-size:12px;white-space:nowrap}
+#shareSection .shareStopFrameGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+#shareSection .shareFrameThumb{
+ display:flex;min-width:0;flex-direction:column;gap:3px;align-items:center;padding:4px;
+ background:#fff;border:2px solid #ead7cf;border-radius:10px;color:#49343c;cursor:pointer
+}
+#shareSection .shareFrameThumb img{display:block;width:100%;height:73px;object-fit:cover;border-radius:6px;background:#f3e6e2}
+#shareSection .shareFrameThumb span{font-size:11px}
+@media(min-width:640px){
+ #sharePickerSection .shareSavedGallery{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #shareSection .shareStopFrameGrid{grid-template-columns:repeat(6,minmax(0,1fr))}
+}
+@media(max-width:360px){
+ #sharePickerSection .shareSavedPreviews img{height:75px}
+ #shareSection .shareStopFrameGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}

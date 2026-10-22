@@ -152,6 +152,7 @@ const REVERSAL_MESSAGES=[
 let currentLab=null;
 let history=[];
 let gifUrl=null;
+let gifBlob=null;
 let gifFileName='memory-roulette-frames.gif';
 let gifGeneration=0;
 let gifGenerating=false;
@@ -475,17 +476,13 @@ function resetSpecialMovieExport(){
   setSpecialMovieStatus('');
   setSpecialMovieButtons('🎬 ムービー保存',false);
 }
-function downloadSpecialMovie(){
-  if(!specialMovieBlob)return false;
-  if(!specialMovieUrl)specialMovieUrl=URL.createObjectURL(specialMovieBlob);
-  const a=document.createElement('a');
-  a.href=specialMovieUrl;
-  a.download=specialMovieFilename(currentMiracleReplay?.kind||'miracle',specialMovieBlob);
-  a.style.display='none';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  return true;
+function downloadSpecialMovie(target){
+  if(!specialMovieBlob)return Promise.resolve({mode:'cancelled'});
+  return window.__memoryWriteMediaSave(
+    specialMovieBlob,
+    specialMovieFilename(currentMiracleReplay?.kind||'miracle',specialMovieBlob),
+    target
+  );
 }
 function movieSourceSize(source){
   const w=source?.videoWidth||source?.naturalWidth||source?.width||1;
@@ -909,8 +906,17 @@ async function saveCurrentSpecialMovie(){
   miracleAutoCloseTimer=null;
 
   if(specialMovieBlob&&specialMovieKey===key){
-    downloadSpecialMovie();
-    setSpecialMovieStatus('');
+    setSpecialMovieButtons('保存先を選択中…',true);
+    try{
+      const saved=await downloadSpecialMovie();
+      if(saved.mode==='picker')setSpecialMovieStatus('指定したフォルダへ保存しました。');
+      else if(saved.mode==='download')setSpecialMovieStatus(saved.warning||'ダウンロードを開始しました。');
+      else setSpecialMovieStatus('');
+    }catch(err){
+      setSpecialMovieStatus(err?.message||'保存できませんでした','error');
+    }finally{
+      setSpecialMovieButtons('↓ ムービーをもう一度保存',false);
+    }
     return;
   }
   if(specialMovieGenerating)return;
@@ -920,13 +926,26 @@ async function saveCurrentSpecialMovie(){
     return;
   }
 
-  // Unlock Web Audio while we still have the user's direct click.
+  // Unlock Web Audio and open the save picker during the same user gesture.
+  // Waiting until rendering finishes would lose user activation on Android.
   const soundtrack=createSpecialMovieSoundtrack();
+  const expectedMime=specialMovieMimeType(!!soundtrack?.track)||specialMovieMimeType(false);
+  const expectedType=expectedMime.startsWith('video/mp4')?'video/mp4':'video/webm';
+  const suggestedName=specialMovieFilename(replay.kind,{type:expectedType});
   specialMovieGenerating=true;
   const generation=++specialMovieGenerationToken;
-  setSpecialMovieButtons('🎬 生成中…',true);
-  setSpecialMovieStatus('ムービーを準備しています…');
+  setSpecialMovieButtons('保存先を選択中…',true);
+  setSpecialMovieStatus('動画フォルダ（Movies）への保存をおすすめします。');
   try{
+    const destination=await window.__memoryPrepareMediaSave(suggestedName);
+    if(destination.mode==='cancelled'){
+      setSpecialMovieButtons('🎬 ムービー保存',false);
+      setSpecialMovieStatus('');
+      return;
+    }
+    if(generation!==specialMovieGenerationToken)return;
+    setSpecialMovieButtons('🎬 生成中…',true);
+    setSpecialMovieStatus('ムービーを準備しています…');
     const result=await renderSpecialMovie(replay.kind,replay,p=>{
       if(generation===specialMovieGenerationToken)setSpecialMovieStatus('ムービー生成中… '+p+'%');
     },soundtrack);
@@ -936,9 +955,11 @@ async function saveCurrentSpecialMovie(){
     specialMovieUrl=URL.createObjectURL(result.blob);
     specialMovieKey=key;
     setSpecialMovieButtons('↓ ムービーをもう一度保存',false);
-    // Do not cover the resulting photo with technical success messages.
-    setSpecialMovieStatus('');
-    downloadSpecialMovie();
+    const saved=await downloadSpecialMovie(destination);
+    if(generation!==specialMovieGenerationToken)return;
+    if(saved.mode==='picker')setSpecialMovieStatus('指定したフォルダへ保存しました。');
+    else if(saved.mode==='download')setSpecialMovieStatus(saved.warning||'ダウンロードを開始しました。');
+    else setSpecialMovieStatus('');
     diag('movie-export-success',{kind:replay.kind,usedSource:result.usedSource,size:result.blob.size,format:result.format,withSound:result.withSound,width:result.width,height:result.height});
   }catch(err){
     if(generation!==specialMovieGenerationToken)return;
@@ -2032,6 +2053,7 @@ function clearGifResult(){
     URL.revokeObjectURL(gifUrl);
     gifUrl=null;
   }
+  gifBlob=null;
   gifResult.style.display='none';
   gifPreview.removeAttribute('src');
   gifDownload.removeAttribute('href');
@@ -2200,22 +2222,19 @@ clearHistoryBtn.addEventListener('click',()=>{
   // Draw history is independent from the GIF of all extracted frames.
 });
 
-gifDownload.addEventListener('click',e=>{
+gifDownload.addEventListener('click',async e=>{
   e.preventDefault();
   e.stopPropagation();
-  if(!gifUrl)return;
-
-  const a=document.createElement('a');
-  a.href=gifUrl;
-  a.download=gifFileName;
-  a.style.display='none';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-
-  gifStatus.style.display='block';
-  gifStatus.textContent='GIFを保存しました。全画面で表示します。';
-  openGifViewer();
+  if(!gifBlob)return;
+  try{
+    const saved=await window.__memorySaveMediaFile(gifBlob,gifFileName);
+    if(saved.mode==='cancelled')return;
+    gifStatus.style.display='block';
+    gifStatus.textContent=saved.mode==='picker'?'GIFを指定したフォルダに保存しました。':(saved.warning||'GIFのダウンロードを開始しました。');
+    openGifViewer();
+  }catch(err){
+    gifStatus.textContent=err?.message||'GIFを保存できませんでした。';
+  }
 });
 
 makeGifBtn.addEventListener('click',async()=>{
@@ -2244,6 +2263,7 @@ makeGifBtn.addEventListener('click',async()=>{
       if(generation===gifGeneration)gifStatus.textContent='「'+group.label+'」のGIFを作っています… '+done+'/'+total;
     },centiseconds,()=>generation!==gifGeneration);
     if(generation!==gifGeneration)return;
+    gifBlob=blob;
     gifUrl=URL.createObjectURL(blob);
     startGifPreview(frames,seconds);
     gifDownload.href=gifUrl;
@@ -2535,6 +2555,13 @@ function setFavoriteDeleteState(card,button,pending){
 }
 async function downloadDailyPhoto(item){
   if(!item?.image)return false;
+  const declaredType=typeof item.image==='string'&&item.image.startsWith('data:')
+    ? (item.image.slice(5,item.image.indexOf(',')).split(';')[0]||'image/jpeg')
+    : 'image/jpeg';
+  const hintedExt=declaredType.includes('png')?'png':declaredType.includes('webp')?'webp':'jpg';
+  const stem='memory-moment-'+new Date(item.createdAt||Date.now()).toISOString().replace(/[:.]/g,'-');
+  // Open the picker before awaiting image decoding or fetching.
+  const destinationPromise=window.__memoryPrepareMediaSave(stem+'.'+hintedExt);
   try{
     let blob;
     if(typeof item.image==='string'&&item.image.startsWith('data:')){
@@ -2552,16 +2579,9 @@ async function downloadDailyPhoto(item){
     }
     const type=blob.type||'image/jpeg';
     const ext=type.includes('png')?'png':type.includes('webp')?'webp':'jpg';
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url;
-    a.download='memory-moment-'+new Date(item.createdAt||Date.now()).toISOString().replace(/[:.]/g,'-')+'.'+ext;
-    a.style.display='none';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url),1800);
-    return true;
+    const destination=await destinationPromise;
+    const saved=await window.__memoryWriteMediaSave(blob,stem+'.'+ext,destination);
+    return saved.mode==='cancelled'?null:true;
   }catch(err){
     diag('daily-photo-download-error',{name:err?.name||'Error',message:String(err?.message||err)});
     return false;
@@ -2594,7 +2614,7 @@ async function renderCollection(){
       const old=btn.textContent;
       btn.textContent='保存中…';
       const ok=await downloadDailyPhoto(x);
-      btn.textContent=ok?'✓ 保存しました':'保存できませんでした';
+      btn.textContent=ok===null?'キャンセルしました':ok?'✓ 保存しました':'保存できませんでした';
       if(ok)showDownloadNotice(x);
       setTimeout(()=>{btn.textContent=old;btn.disabled=false;},1300);
     });

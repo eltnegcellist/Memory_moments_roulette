@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="./style.css?v=1.2.0-share-beta3">
 <link rel="stylesheet" href="./deluxe.css?v=1.2.0-share-beta3">
 <link rel="stylesheet" href="./features.css?v=1.2.0-share-beta3-favshare1">
-<link rel="stylesheet" href="./share-studio.css?v=1.2.0-share-beta3">
+<link rel="stylesheet" href="./share-studio.css?v=1.2.0-separate-share-receive1">
 <style>
 body:not(.show-score-details) .scoreChip,
 body:not(.show-score-details) .scoreDetails,
@@ -155,10 +155,6 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 </section>
 <section id="shareSection" class="card appView" data-app-view="share">
   <div class="viewTopbar"><button id="shareBackBtn" type="button" class="viewBack">← 戻る</button><span>共有する</span></div>
-  <nav class="shareModeTabs" aria-label="ルーレットを共有・受信する">
-    <button type="button" class="shareModeTab selected" data-route="share" aria-current="page">⇧ 共有する</button>
-    <button type="button" class="shareModeTab" data-route="receive">🎲 受け取って遊ぶ</button>
-  </nav>
   <div class="step">SHARE</div>
   <h2 id="sharePageHeading">思い出のルーレットを届ける</h2>
   <p class="note">写真・動画の生成はこの端末内で行います。LINEやSNSへの送信は自分で共有先を選ぶときだけです。</p>
@@ -220,10 +216,6 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 </section>
 <section id="receiveSection" class="card appView" data-app-view="receive">
   <div class="viewTopbar"><button type="button" class="viewBack" data-nav-back>← ホーム</button><span>受け取って遊ぶ</span></div>
-  <nav class="shareModeTabs" aria-label="ルーレットを共有・受信する">
-    <button type="button" class="shareModeTab" data-route="share">⇧ 共有する</button>
-    <button type="button" class="shareModeTab selected" data-route="receive" aria-current="page">🎲 受け取って遊ぶ</button>
-  </nav>
   <div class="step">RECEIVE</div>
   <h2>受け取ったルーレットで遊ぶ</h2>
   <p class="note">LINEなどで受け取った .mmrplay ファイルを開くと、送られてきた画像を使って自分でルーレットを回せます。</p>

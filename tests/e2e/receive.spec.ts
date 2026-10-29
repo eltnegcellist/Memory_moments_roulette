@@ -22,6 +22,9 @@ async function dbCounts(page: Page) {
   return result;
  });
 }
+async function creationRecords(page: Page) {
+ return page.evaluate(async()=>{const db=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('babyExpressionRouletteDB',3);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});const records=await new Promise<any[]>((resolve,reject)=>{const r=db.transaction('creations').objectStore('creations').getAll();r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});db.close();return records});
+}
 async function synthetic(page: Page) {
  return page.evaluate(() => ['#e83131','#1650dd'].map((color,i)=>{ const c=document.createElement('canvas');c.width=120;c.height=80;const ctx=c.getContext('2d')!;ctx.fillStyle=color;ctx.fillRect(0,0,120,80);ctx.fillStyle='white';ctx.font='40px sans-serif';ctx.fillText(String(i+1),45,55);return c.toDataURL('image/png'); }));
 }
@@ -205,4 +208,27 @@ test('N09 library selection → play → share → play → library',async({page
  expect(await page.evaluate(()=>(window as any).__memoryShareGetCurrentIndex())).toBe(index);
  const after=await rgb((await page.locator('#playImage').getAttribute('src'))!);after.forEach((v,i)=>expect(Math.abs(v-before[i])).toBeLessThan(40));
  await page.locator('#backBtn').click();await routes(page,'library');
+});
+test('N11 favorite sharing produces selected JPEG and returns to favorites',async({page})=>{
+ await page.goto('/#home'); const frames=await synthetic(page);
+ await page.evaluate(async image=>{const db=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('babyExpressionRouletteLabDB',1);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});await new Promise<void>((resolve,reject)=>{const t=db.transaction('dailyPhotos','readwrite');t.objectStore('dailyPhotos').put({id:'favorite-a',image,createdAt:1700000000000,fortune:'吉'});t.oncomplete=()=>resolve();t.onerror=()=>reject(t.error)});db.close()},frames[1]);
+ await page.reload();await page.locator('[data-route="favorites"]').click();await routes(page,'favorites');
+ await page.locator('.labPhotoCard').getByRole('button',{name:'共有する'}).click();await routes(page,'share');
+ await expect(page.locator('#shareFavoriteOptions')).toBeVisible();await expect(page.locator('#shareRouletteOptions')).not.toBeVisible();
+ await page.locator('#shareFavoriteBuild').click();await expect(page.locator('#shareOutput')).toBeVisible();
+ const pending=page.waitForEvent('download');await page.locator('#shareOutputSave').click();const file=await pending;
+ expect(file.suggestedFilename()).toMatch(/\.jpg$/);const bytes=await readFile((await file.path())!);expect(bytes.subarray(0,3)).toEqual(Buffer.from([255,216,255]));
+ const rgb=await page.evaluate(async data=>{const img=new Image();img.src=`data:image/jpeg;base64,${data}`;await img.decode();const c=document.createElement('canvas');c.width=img.width;c.height=img.height;const x=c.getContext('2d')!;x.drawImage(img,0,0);return Array.from(x.getImageData(5,5,1,1).data)},bytes.toString('base64'));
+ expect(rgb[2]).toBeGreaterThan(150);expect(rgb[2]).toBeGreaterThan(rgb[0]);
+ await page.locator('#shareBackBtn').click();await routes(page,'favorites');await expect(page.locator('.labPhotoCard')).toHaveCount(1);
+});
+test('S09 unsupported and oversized received files leave data untouched',async({page})=>{
+ await page.goto('/#home');const frames=await synthetic(page);
+ await page.evaluate(async frames=>{await (window as any).__memoryHistoryMigrationPromise;const db=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('babyExpressionRouletteDB',3);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});await new Promise<void>((resolve,reject)=>{const tx=db.transaction('creations','readwrite');tx.objectStore('creations').put({id:'canary',title:'Canary',createdAt:1700000000000,mode:'roulette',frames,times:[0,1]});tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)});db.close()},frames);
+ const before=await dbCounts(page);const records=await creationRecords(page);
+ await page.locator('[data-route="receive"]').click();
+ await page.locator('#shareImportFile').setInputFiles({name:'unsupported.mmrplay',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({format:'unknown',version:1,frames:[]}))});
+ await expect(page.locator('#receiveStatus')).toContainText('対応していない');await routes(page,'receive');
+ await page.evaluate(()=>{const input=document.querySelector('#shareImportFile') as HTMLInputElement;const dt=new DataTransfer();dt.items.add(new File([new Uint8Array(48*1024*1024+1)],'large.mmrplay',{type:'application/json'}));input.files=dt.files;input.dispatchEvent(new Event('change',{bubbles:true}));});
+ await expect(page.locator('#receiveStatus')).toContainText('48MB以下');await routes(page,'receive');expect(await dbCounts(page)).toEqual(before);expect(await creationRecords(page)).toEqual(records);
 });

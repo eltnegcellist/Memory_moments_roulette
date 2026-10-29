@@ -24,25 +24,28 @@ PASSは指定されたケースの全受入条件を満たす場合に限る。�
 | N02 | PASS | 合成8画像の旧履歴からGIF内編集を確認 |
 | N03 | NOT_RUN | ヘッダー、8コマ、0.2秒、先頭の画素差を確認。全コマ順未検証 |
 | N04 | PASS | 編集を閉じて選択元に戻ることを確認 |
-| N05–N09 | NOT_RUN | B切替、共有選択、履歴・ライブラリ復帰未検証 |
+| N05–N07 | NOT_RUN | B切替と複数履歴の混同を未検証。A選択と共有後の戻り先は確認 |
+| N08 | PASS | 停止した合成画像を保持し、履歴へ戻る（Chromium） |
+| N09 | NOT_RUN | ライブラリ復帰未検証 |
 | N10 | NOT_RUN | 経路とDB件数を確認、内容全体の不変未検証 |
 | N11 | NOT_RUN | お気に入り写真未検証 |
 | N12 | NOT_RUN | 一部画素を検証、画像全体の同一性未検証 |
 | N13 | NOT_RUN | GIFから通常共有への移行未検証 |
 | N14 | NOT_RUN | JSONとJPEGの一部を検査。動画未検証 |
 | N15 | NOT_RUN | 履歴の戻る・進む未検証 |
-| N16 | NOT_RUN | 実動画取り込み未検証 |
+| N16 | NOT_RUN | 合成動画のGIF取り込みを確認。通常取り込み未検証 |
 | N17 | PASS | 空DBでGIF更新とplay直接アクセスの安全なhome遷移を確認 |
 | N18 | NOT_RUN | 一部の空状態画面のみ |
 | S01 | NOT_RUN | 2コマ目のJPEG画素のみ。動画と過去結果未検証 |
 | S02 | NOT_RUN | 検索・並び替え未検証 |
 | S03 | NOT_RUN | GIF5速度の出力遅延を確認、プレビュー実時間は未測定 |
-| S04–S08 | NOT_RUN | 未実装 |
+| S04 | NOT_RUN | GIF取り込み後の履歴件数不変、素材増加を確認。選択状態と全データ内容は未検証 |
+| S05–S08 | NOT_RUN | 未実装 |
 | S09 | NOT_RUN | 破損JSONのみ、無効形式・48MB超未検証 |
 | S10–S20 | NOT_RUN | 未実装 |
 
 発見した確定不具合: 今回実行した限定範囲ではなし。初期テストで停止コマを1と誤認した失敗は、明示選択後に3回成功し、アプリ不具合として数えない。初回のDB件数差も非同期初期化前後を比較していたテストの問題であり、初期化待ち後の再実行では不変。
 
-CI実行、PWA/SW、実動画取り込み、Galaxy S25、Android共有シート、LINE互換性は未検証。未テストの大部分があるため、重大不具合がないとは結論できない。
+CI初回は15件中14件成功、1件失敗。自動回転中のコマを固定と仮定したテスト側の競合を修正し再検証中。PWA/SW、通常動画取り込み、Galaxy S25、Android共有シート、LINE互換性は未検証。未テストの大部分があるため、重大不具合がないとは結論できない。
 
 再現: `npm ci`、`npx playwright install chromium`、`npx playwright test --project=desktop-chromium tests/e2e/receive.spec.ts tests/e2e/gif.spec.ts`。探索は `npx playwright test --project=desktop-chromium tests/e2e/explore.spec.ts`。

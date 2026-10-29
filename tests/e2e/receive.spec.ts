@@ -38,11 +38,12 @@ test('N10 receive → play → share → play → receive keeps data temporary @
  await page.goto('/#home');
  const before=await dbCounts(page);
  const frames=await importSynthetic(page);
- await expect(page.locator('#playImage')).toHaveAttribute('src',frames[0]);
+ await page.locator('#stage').click();
+ const stopped=await page.locator('#playImage').getAttribute('src'); expect(frames).toContain(stopped);
  await page.locator('#shareOpenFromPlay').click(); await routes(page,'share');
- await expect(page.locator('#shareSelectedFrameImage')).toHaveAttribute('src',frames[0]);
+ await expect(page.locator('#shareSelectedFrameImage')).toHaveAttribute('src',stopped!);
  await page.locator('#shareBackBtn').click(); await routes(page,'play');
- await expect(page.locator('#playImage')).toHaveAttribute('src',frames[0]);
+ await expect(page.locator('#playImage')).toHaveAttribute('src',stopped!);
  await page.locator('#backBtn').click(); await routes(page,'receive');
  expect(await dbCounts(page)).toEqual(before);
 });
@@ -108,4 +109,38 @@ test('N06/N07 history selection returns to picker with selected image',async({pa
  await expect(page.locator('#shareSelectedFrameImage')).toHaveAttribute('src',frames[0]);
  await page.locator('#shareBackBtn').click(); await routes(page,'share-picker');
  await expect(page.locator('.shareSavedCard').filter({hasText:'Synthetic A'})).toBeVisible();
+});
+test('N16/S04 real synthetic video through GIF import UI keeps roulette history',async({page})=>{
+ test.setTimeout(120000);
+ await page.goto('/#home'); const before=await dbCounts(page);
+ await page.locator('[data-route="gif"]').click(); await routes(page,'gif');
+ await page.locator('#labGifFileInput').setInputFiles('tests/fixtures/synthetic-a.webm');
+ await expect(page.locator('#labGifEditor')).toBeVisible({timeout:90000});
+ await expect(page.locator('#labGifSelectedTitle')).toContainText('8コマ');
+ const previewPixel=await page.locator('#labGifSelectedFrames img').first().evaluate(async (img:HTMLImageElement)=>{await img.decode();const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;const x=c.getContext('2d')!;x.drawImage(img,0,0);return Array.from(x.getImageData(5,5,1,1).data);});
+ expect(previewPixel[0]).toBeLessThan(80); expect(previewPixel[1]).toBeLessThan(90); expect(previewPixel[2]).toBeGreaterThan(40);
+ await expect(page.locator('#labMakeGif')).toBeEnabled(); await routes(page,'gif');
+ const after=await dbCounts(page);
+ expect(after.babyExpressionRouletteDB.creations).toBe(before.babyExpressionRouletteDB.creations);
+ expect(after.babyExpressionRouletteDB.deckSources).toBe(before.babyExpressionRouletteDB.deckSources+1);
+ expect(after.babyExpressionRouletteDB.deckFrames).toBeGreaterThan(before.babyExpressionRouletteDB.deckFrames);
+});
+test('N08 history → play → share → play → history preserves selected creation',async({page})=>{
+ await page.goto('/#home'); const frames=await synthetic(page);
+ await page.evaluate(async frames=>{
+  await (window as any).__memoryHistoryMigrationPromise;
+  const db=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('babyExpressionRouletteDB',3);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});
+  await new Promise<void>((resolve,reject)=>{const tx=db.transaction('creations','readwrite');tx.objectStore('creations').put({id:'a',title:'Synthetic A',createdAt:1700000000000,mode:'roulette',frames,times:[0,1]});tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);});db.close();
+ },frames);
+ await page.reload(); await page.locator('[data-route="history"]').click(); await routes(page,'history');
+ await page.locator('.saved').filter({hasText:'Synthetic A'}).getByRole('button',{name:'遊ぶ'}).click();
+ await routes(page,'play'); await page.locator('#stage').click();
+ const stopped=await page.locator('#playImage').getAttribute('src'); expect(frames).toContain(stopped);
+ await page.locator('#shareOpenFromPlay').click(); await routes(page,'share');
+ await expect(page.locator('#shareSourceState')).toContainText('Synthetic A');
+ await expect(page.locator('#shareSelectedFrameImage')).toHaveAttribute('src',stopped!);
+ await page.locator('#shareBackBtn').click(); await routes(page,'play');
+ await expect(page.locator('#playImage')).toHaveAttribute('src',stopped!);
+ await page.locator('#backBtn').click(); await routes(page,'history');
+ await expect(page.locator('.saved').filter({hasText:'Synthetic A'})).toBeVisible();
 });

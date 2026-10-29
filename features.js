@@ -2047,6 +2047,7 @@ function startGifPreview(frames,seconds){
   },Math.round(seconds*1000));
 }
 function clearGifResult(){
+  window.__memoryShareGifClose?.(); // Discard masks if the GIF source, speed or view changes.
   stopGifPreview();
   closeGifViewer();
   if(gifUrl){

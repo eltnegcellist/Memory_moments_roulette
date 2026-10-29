@@ -119,3 +119,12 @@ test('S19 two imported synthetic videos remain separate in generated GIF',async(
  const frames=decompressFrames(parseGIF(Uint8Array.from(bytes)),true);expect(frames).toHaveLength(12);
  const first=Array.from(frames[0].patch.slice((5*frames[0].dims.width+5)*4,(5*frames[0].dims.width+5)*4+3));expect(first[0]).toBeGreaterThan(140);expect(first[2]).toBeGreaterThan(140);expect(first[1]).toBeLessThan(90);
 });
+test('S12 delayed first source cannot overwrite the last selection',async({page})=>{
+ await page.goto('/#home');
+ await page.evaluate(async()=>{await (window as any).__memoryHistoryMigrationPromise;const db=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('babyExpressionRouletteDB',3);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});await new Promise<void>((resolve,reject)=>{const tx=db.transaction('creations','readwrite');for(const name of ['A','B']){const c=document.createElement('canvas');c.width=c.height=50;const x=c.getContext('2d')!;x.fillStyle=name==='A'?'red':'blue';x.fillRect(0,0,50,50);const img=c.toDataURL();tx.objectStore('creations').put({id:name,title:'Synthetic '+name,createdAt:1700000000000,mode:'roulette',frames:[img,img],times:[0,1]})}tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)});db.close()});
+ await page.locator('[data-route="gif"]').click();await page.locator('#labGifChoosePast').click();await expect(page.getByRole('button',{name:/Synthetic A.*2コマ/})).toBeVisible();
+ await page.evaluate(()=>{const original=(window as any).__memoryGifLoadSource;(window as any).__memoryGifLoadSource=async (id:string)=>{if(id.includes('legacy-gif:A:'))await new Promise(resolve=>setTimeout(resolve,700));return original(id)}});
+ await page.getByRole('button',{name:/Synthetic A.*2コマ/}).click();await page.getByRole('button',{name:/Synthetic B.*2コマ/}).click();
+ await expect(page.locator('#labGifSelectedTitle')).toContainText('Synthetic B');await page.waitForTimeout(900);await expect(page.locator('#labGifSelectedTitle')).toContainText('Synthetic B');
+ const src=await page.locator('#labGifSelectedFrames img').first().getAttribute('src');const rgb=await page.evaluate(async src=>{const i=new Image();i.src=src!;await i.decode();const c=document.createElement('canvas');c.width=c.height=50;const x=c.getContext('2d')!;x.drawImage(i,0,0);return Array.from(x.getImageData(5,5,1,1).data)},src);expect(rgb[2]).toBeGreaterThan(200);expect(rgb[0]).toBeLessThan(30);
+});

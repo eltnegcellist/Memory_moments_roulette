@@ -275,3 +275,24 @@ test('S13 share and receive refresh remain safe with ephemeral data',async({page
  await page.reload();await routes(page,'share');await expect(page.locator('#shareSourceState')).toContainText('ありません');await expect(page.locator('#shareRouletteBuild')).toBeDisabled();
  await page.goto('/#receive');await page.reload();await routes(page,'receive');await expect(page.locator('#receiveStatus')).toBeEmpty();expect(errors).toEqual([]);
 });
+test('S10 leaving a spinning received roulette stops timers without recording draws',async({page})=>{
+ await page.goto('/#home');const before=await dbCounts(page);await importSynthetic(page);
+ await page.locator('#shareOpenFromPlay').click();await routes(page,'share');
+ await page.locator('#shareBackBtn').click();await routes(page,'play');
+ const source=await page.locator('#playImage').getAttribute('src');await page.waitForTimeout(500);
+ await expect(page.locator('#playImage')).toHaveAttribute('src',source!);
+ await expect(page.locator('#rouletteBadge')).toContainText('再開');
+ await page.locator('#backBtn').click();await routes(page,'receive');expect(await dbCounts(page)).toEqual(before);
+});
+test('S17 create from synthetic video, favorite and share',async({page})=>{
+ test.setTimeout(90000);await page.goto('/#home');
+ await page.locator('#fileInput').setInputFiles('tests/fixtures/synthetic-a.webm');await expect(page).toHaveURL(/#play$/,{timeout:60000});await page.locator('#stage').click();
+ await expect(page.locator('#labSavePhoto')).toBeVisible();await page.locator('#labSavePhoto').click();
+ await page.locator('#backBtn').click();await routes(page,'home');await page.locator('[data-route="history"]').click();await expect(page.locator('.saved')).toHaveCount(1);
+ await page.locator('#legacyLibrarySection [data-nav-back]').click();await page.locator('[data-route="favorites"]').click();await expect(page.locator('.labPhotoCard')).toHaveCount(1);
+ const image=await page.locator('.labPhotoCard img').getAttribute('src');expect(image).toMatch(/^data:image\//);
+ await page.locator('.labPhotoShare').click();await routes(page,'share');await expect(page.locator('#shareFavoriteOptions')).toBeVisible();await page.locator('#shareFavoriteBuild').click();await expect(page.locator('#shareOutput')).toBeVisible();
+ const pending=page.waitForEvent('download');await page.locator('#shareOutputSave').click();const d=await pending;expect(d.suggestedFilename()).toMatch(/\.jpg$/);const bytes=await readFile((await d.path())!);expect(bytes.subarray(0,3)).toEqual(Buffer.from([255,216,255]));
+ const rgb=async(src:string)=>page.evaluate(async src=>{const i=new Image();i.src=src;await i.decode();const c=document.createElement('canvas');c.width=i.width;c.height=i.height;const x=c.getContext('2d')!;x.drawImage(i,0,0);return Array.from(x.getImageData(5,5,1,1).data).slice(0,3)},src);
+ const original=await rgb(image!);const output=await rgb('data:image/jpeg;base64,'+bytes.toString('base64'));output.forEach((v,i)=>expect(Math.abs(v-original[i])).toBeLessThan(30));
+});

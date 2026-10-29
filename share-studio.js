@@ -15,7 +15,14 @@ let selectedStopIndex=null, selectedDraw=null, frameGridPage=0;
 const FRAME_PAGE_SIZE=30;
 const savedGallery=byId('shareSavedGallery');
 const pickerStatus=byId('sharePickerStatus');
-const message=(s)=>{status.textContent=s||'';};
+const message=(s)=>{
+ status.textContent=s||'';
+ // GIF privacy export happens inside the GIF page, not the roulette sharing page.
+ if(editorSource?.kind==='gif'){
+  const gifStatus=byId('labGifStatus');
+  if(gifStatus){gifStatus.style.display='block';gifStatus.textContent=s||'';}
+ }
+};
 const editorMessage=(s)=>{byId('sharePrivacyStatus').textContent=s||'';};
 const stopPicker=byId('shareStopPicker');
 const getCreation=()=>savedSelection||(shareFromPlayer?window.__memoryShareGetActiveCreation?.():null);
@@ -588,7 +595,7 @@ function sourceForCurrent(){
 }
 function sourceForGif(){
  const result=window.__memoryShareGetGifSource?.();
- if(!result?.frames?.length)throw new Error('先にGIF画面で動画を選択してください。');
+ if(!result?.frames||result.frames.length<2)throw new Error('先にGIF画面で2コマ以上の動画を選択してください。');
  if(result.frames.length>LIMIT)throw new Error('GIFのコマ数が120枚を超えます。');
  return {kind:'gif',title:result.title,frames:result.frames.map(f=>f.image),
   times:result.frames.map(f=>f.time),delay:result.delay};
@@ -620,8 +627,27 @@ byId('shareFavoriteBuild').addEventListener('click',e=>runBusy(e.currentTarget,a
  const blob=await makePhotoBlob(favoritePhoto.image);
  ready(blob,'memory-moment-'+Date.now()+'.jpg','お気に入りの写真');
 }));
+// The GIF editor stays within the GIF workflow and reuses the same stamp controls.
+const gifEditorHost=byId('labGifEditor');
+const originalEditorAnchor=editor.nextSibling,originalOutputAnchor=output.nextSibling;
+function closeGifPrivacy(){
+ if(!gifEditorHost||editor.parentNode!==gifEditorHost)return;
+ editor.hidden=true;editorSource=null;marks=[];clearOutput();
+ panel.insertBefore(editor,originalEditorAnchor);
+ panel.insertBefore(output,originalOutputAnchor);
+}
+window.__memoryShareGifClose=closeGifPrivacy;
 byId('sharePrivacyGif').addEventListener('click',()=>{
- try{const src=sourceForGif();window.__memoryNavigate?.('share');openEditor({...src,selectedFormat:'gif'});}catch(err){message(err.message);}
+ try{
+  const src=sourceForGif();
+  closeGifPrivacy();
+  if(!gifEditorHost)throw new Error('GIF編集画面を開けませんでした。ページを再読み込みしてください。');
+  gifEditorHost.append(editor,output);
+  openEditor({...src,selectedFormat:'gif'});
+ }catch(err){
+  const gifStatus=byId('labGifStatus');
+  if(gifStatus){gifStatus.style.display='block';gifStatus.textContent=err?.message||String(err);}
+ }
 });
 function openEditor(src){
  editorSource=src;marks=src.frames.map(()=>[]);editIndex=src.kind==='roulette'?Math.max(0,Math.min(src.frames.length-1,src.stopIndex||0)):0;chosen='🐻';maskSize=.27;
@@ -669,7 +695,10 @@ byId('shareMaskCopy').addEventListener('click',()=>{
 });
 byId('shareMaskSize').addEventListener('input',e=>{maskSize=Number(e.target.value)/100;});
 byId('shareMaskType').addEventListener('change',e=>{chosen=e.target.value;});
-byId('sharePrivacyClose').addEventListener('click',()=>{editor.hidden=true;editorSource=null;});
+byId('sharePrivacyClose').addEventListener('click',()=>{
+ if(editorSource?.kind==='gif')closeGifPrivacy();
+ else{editor.hidden=true;editorSource=null;}
+});
 function exportChecked(){
  if(!editorSource)throw new Error('編集する画像を選んでください。');
  if(!marks.some(arr=>arr.length))throw new Error('まずスタンプを置いてください。');

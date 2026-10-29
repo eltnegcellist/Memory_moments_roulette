@@ -39,7 +39,9 @@ async function importSynthetic(page: Page) {
 }
 test('N10 receive → play → share → play → receive keeps data temporary @smoke', async ({page})=>{
  await page.goto('/#home');
- const before=await dbCounts(page);
+ const seed=await synthetic(page);
+ await page.evaluate(async frames=>{await (window as any).__memoryHistoryMigrationPromise;const db=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('babyExpressionRouletteDB',3);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});await new Promise<void>((resolve,reject)=>{const tx=db.transaction('creations','readwrite');tx.objectStore('creations').put({id:'canary',title:'Existing',createdAt:1700000000000,mode:'roulette',frames,times:[0,1]});tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)});db.close()},seed);
+ const before=await dbCounts(page);const existing=await creationRecords(page);
  const frames=await importSynthetic(page);
  await page.locator('#stage').click();
  const stopped=await page.locator('#playImage').getAttribute('src'); expect(frames).toContain(stopped);
@@ -48,7 +50,7 @@ test('N10 receive → play → share → play → receive keeps data temporary @
  await page.locator('#shareBackBtn').click(); await routes(page,'play');
  await expect(page.locator('#playImage')).toHaveAttribute('src',stopped!);
  await page.locator('#backBtn').click(); await routes(page,'receive');
- expect(await dbCounts(page)).toEqual(before);
+ expect(await dbCounts(page)).toEqual(before);expect(await creationRecords(page)).toEqual(existing);
 });
 test('N14 playable file contains selected synthetic frames @smoke',async({page})=>{
  await page.goto('/#home'); const frames=await importSynthetic(page);
@@ -263,6 +265,7 @@ test('S05 alternating two saved roulettes exports only selected frames',async({p
  }
 });
 test('S08 close output and save again without external share',async({page})=>{
+ await page.addInitScript(()=>{Object.defineProperty(navigator,'share',{value:undefined,configurable:true});Object.defineProperty(navigator,'canShare',{value:undefined,configurable:true})});
  await page.goto('/#home'); await importSynthetic(page); await page.locator('#shareOpenFromPlay').click();
  await page.locator('#shareRouletteFormat').selectOption('play'); await page.locator('#shareRouletteBuild').click();
  await expect(page.locator('#shareOutput')).toBeVisible();await page.locator('#shareOutputClose').click();
@@ -270,6 +273,8 @@ test('S08 close output and save again without external share',async({page})=>{
  await page.locator('#shareRouletteBuild').click();await expect(page.locator('#shareOutput')).toBeVisible();
  const pending=page.waitForEvent('download');await page.locator('#shareOutputSave').click();const d=await pending;
  expect(d.suggestedFilename()).toMatch(/\.mmrplay$/);expect(JSON.parse(await readFile((await d.path())!,'utf8')).frames).toHaveLength(2);
+ await page.locator('#shareRouletteBuild').click();await expect(page.locator('#shareOutputSend')).toContainText('端末へ保存');
+ const fallback=page.waitForEvent('download');await page.locator('#shareOutputSend').click();const saved=await fallback;expect(saved.suggestedFilename()).toMatch(/\.mmrplay$/);
 });
 test('S13 share and receive refresh remain safe with ephemeral data',async({page})=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
@@ -315,4 +320,14 @@ test('N01 past synthetic video selection keeps 8 source frames and GIF controls'
  await expect(page.locator('#labGifSelectedTitle')).toContainText('8コマ');await expect(page.locator('#labGifSpeed')).toBeVisible();await expect(page.locator('#labMakeGif')).toBeEnabled();await routes(page,'gif');
  const data=await page.evaluate(async()=>{const source=(window as any).__memoryShareGetGifSource();const id=(document.querySelector('#labGifSource') as HTMLSelectElement).value;const db=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('babyExpressionRouletteDB',3);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});const item=await new Promise<any>((resolve,reject)=>{const r=db.transaction('deckSources').objectStore('deckSources').get(id);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});db.close();return {fileName:item.fileName,count:source.frames.length}});
  expect(data).toEqual({fileName:'synthetic-a.webm',count:8});
+});
+test('S01 stop picker previous, next, grid and past draw select the right frame',async({page})=>{
+ await page.goto('/#home');const frames=await synthetic(page);
+ await page.evaluate(async frames=>{await (window as any).__memoryHistoryMigrationPromise;const db=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('babyExpressionRouletteDB',3);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});await new Promise<void>((resolve,reject)=>{const tx=db.transaction('creations','readwrite');tx.objectStore('creations').put({id:'a',title:'Synthetic A',createdAt:1700000000000,mode:'roulette',frames,times:[0,1],drawHistory:[{index:1,drawnAt:1700000000000}]});tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)});db.close()},frames);
+ await page.locator('[data-route="share-picker"]').click();await page.locator('.shareSavedCard').filter({hasText:'Synthetic A'}).click();await routes(page,'share');
+ await expect(page.locator('#shareSelectedFrameImage')).toHaveAttribute('src',frames[1]);
+ await page.locator('#shareStopPrev').click();await expect(page.locator('#shareSelectedFrameImage')).toHaveAttribute('src',frames[0]);
+ await page.locator('#shareStopNext').click();await expect(page.locator('#shareSelectedFrameImage')).toHaveAttribute('src',frames[1]);
+ await page.locator('#shareAllFramesDetails summary').click();await page.getByRole('button',{name:'1コマ目を停止位置にする'}).click();await expect(page.locator('#shareSelectedFrameImage')).toHaveAttribute('src',frames[0]);
+ await page.locator('.shareDrawCard').click();await expect(page.locator('#shareSelectedFrameImage')).toHaveAttribute('src',frames[1]);
 });

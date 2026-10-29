@@ -101,3 +101,21 @@ test('S11 leaving while GIF encoding does not reopen results',async({page})=>{
  await page.locator('#labMakeGif').click(); await expect(page.locator('#labGifStatus')).toContainText('GIFを作って'); await page.locator('#labGifSection [data-nav-back]').click();await expect(page).toHaveURL(/#home$/);
  await page.locator('[data-route="gif"]').click();await expect(page).toHaveURL(/#gif$/);await expect(page.locator('#labGifResult')).not.toBeVisible();await expect(page.locator('#labGifEditor')).not.toBeVisible(); await page.waitForTimeout(2000);await expect(page.locator('#labGifResult')).not.toBeVisible();
 });
+test('S02/S19 two real synthetic videos can be searched by filename and kept separate',async({page})=>{
+ test.setTimeout(120000);await page.goto('/#home');await page.locator('[data-route="gif"]').click();
+ await page.locator('#labGifFileInput').setInputFiles('tests/fixtures/synthetic-a.webm');await expect(page.locator('#labGifEditor')).toBeVisible({timeout:60000});
+ await page.locator('#labGifFileInput').setInputFiles('tests/fixtures/synthetic-b.webm');await expect(page.locator('#labGifSelectedTitle')).toContainText('12コマ',{timeout:60000});
+ const names=await page.evaluate(async()=>{const db=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('babyExpressionRouletteDB',3);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});const records=await new Promise<any[]>((resolve,reject)=>{const r=db.transaction('deckSources').objectStore('deckSources').getAll();r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});db.close();return records.map(x=>x.fileName)});expect(names).toEqual(expect.arrayContaining(['synthetic-a.webm','synthetic-b.webm']));
+ await page.locator('#labGifChangeVideo').click();await page.locator('#labGifSearch').fill('synthetic-a');
+ await expect(page.locator('#labGifSourceGrid .deckVideoPick')).toHaveCount(1);
+ await page.locator('#labGifSourceGrid .deckVideoPick').click();await expect(page.locator('#labGifSelectedTitle')).toContainText('8コマ');
+});
+test('S19 two imported synthetic videos remain separate in generated GIF',async({page})=>{
+ test.setTimeout(120000);await page.goto('/#home');await page.locator('[data-route="gif"]').click();
+ await page.locator('#labGifFileInput').setInputFiles('tests/fixtures/synthetic-a.webm');await expect(page.locator('#labGifEditor')).toBeVisible({timeout:60000});
+ await page.locator('#labGifFileInput').setInputFiles('tests/fixtures/synthetic-b.webm');await expect(page.locator('#labGifSelectedTitle')).toContainText('12コマ',{timeout:60000});
+ await page.locator('#labMakeGif').click();await expect(page.locator('#labGifResult')).toBeVisible();
+ const url=await page.locator('#labGifDownload').getAttribute('href');const bytes=await page.evaluate(async url=>Array.from(new Uint8Array(await (await fetch(url!)).arrayBuffer())),url);
+ const frames=decompressFrames(parseGIF(Uint8Array.from(bytes)),true);expect(frames).toHaveLength(12);
+ const first=Array.from(frames[0].patch.slice((5*frames[0].dims.width+5)*4,(5*frames[0].dims.width+5)*4+3));expect(first[0]).toBeGreaterThan(140);expect(first[2]).toBeGreaterThan(140);expect(first[1]).toBeLessThan(90);
+});

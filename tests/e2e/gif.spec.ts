@@ -38,6 +38,8 @@ test('N01–N04 legacy synthetic source: stamp editor stays in GIF and produces 
  await expect(page.locator('#shareMaskIndex')).toHaveText('1 / 8コマ');
  await page.locator('#sharePrivacyCanvas').click({position:{x:20,y:20}});
  await expect(page.locator('#shareMaskCount')).toContainText('1個');
+ await page.locator('#shareMaskUndo').click();await expect(page.locator('#shareMaskCount')).toContainText('0個');
+ await page.locator('#shareMaskSize').fill('50');await page.locator('#sharePrivacyCanvas').click({position:{x:20,y:20}});await expect(page.locator('#shareMaskCount')).toContainText('1個');
  page.once('dialog', dialog=>dialog.accept());await page.locator('#shareMaskCopy').click();
  await page.locator('#shareMaskNext').click();await expect(page.locator('#shareMaskCount')).toContainText('1個');
  await page.locator('#shareMaskPrev').click();

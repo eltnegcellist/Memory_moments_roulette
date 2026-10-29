@@ -296,3 +296,12 @@ test('S17 create from synthetic video, favorite and share',async({page})=>{
  const rgb=async(src:string)=>page.evaluate(async src=>{const i=new Image();i.src=src;await i.decode();const c=document.createElement('canvas');c.width=i.width;c.height=i.height;const x=c.getContext('2d')!;x.drawImage(i,0,0);return Array.from(x.getImageData(5,5,1,1).data).slice(0,3)},src);
  const original=await rgb(image!);const output=await rgb('data:image/jpeg;base64,'+bytes.toString('base64'));output.forEach((v,i)=>expect(Math.abs(v-original[i])).toBeLessThan(30));
 });
+test('S04 importing video B for GIF preserves prior roulette selection and creations',async({page})=>{
+ test.setTimeout(120000);await page.goto('/#home');await page.locator('#fileInput').setInputFiles('tests/fixtures/synthetic-a.webm');await expect(page).toHaveURL(/#play$/,{timeout:60000});
+ await expect.poll(async()=>(await creationRecords(page)).length).toBe(1);
+ async function selected(){return page.evaluate(async()=>{const db=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('babyExpressionRouletteDB',3);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});const item=await new Promise<any>((resolve,reject)=>{const r=db.transaction('deckMeta').objectStore('deckMeta').get('selectedSourceIds');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});db.close();return item?.value})}
+ const selectedBefore=await selected(),historyBefore=await creationRecords(page);expect(selectedBefore).toHaveLength(1);
+ await page.locator('#backBtn').click();await routes(page,'home');await page.locator('[data-route="gif"]').click();
+ await page.locator('#labGifFileInput').setInputFiles('tests/fixtures/synthetic-b.webm');await expect(page.locator('#labGifSelectedTitle')).toContainText('12コマ',{timeout:60000});await routes(page,'gif');
+ expect(await selected()).toEqual(selectedBefore);expect(await creationRecords(page)).toEqual(historyBefore);
+});

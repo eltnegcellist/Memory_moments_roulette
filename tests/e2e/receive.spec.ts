@@ -100,7 +100,7 @@ test('N12/S01 selected photo and mask do not leak into subsequent unmasked JPEG'
  async function pixel(buf:Buffer,x:number,y:number) {return page.evaluate(async ({data,x,y})=>{const image=new Image(); image.src=`data:image/jpeg;base64,${data}`; await image.decode();const c=document.createElement('canvas');c.width=image.width;c.height=image.height;const ctx=c.getContext('2d')!;ctx.drawImage(image,0,0);return Array.from(ctx.getImageData(x,y,1,1).data);},{data:buf.toString('base64'),x,y});}
  const blue=await pixel(plain,5,5); expect(blue[2]).toBeGreaterThan(150);expect(blue[2]).toBeGreaterThan(blue[0]);
  const p=await pixel(plain,20,20),m=await pixel(masked,20,20); expect(m.slice(0,3)).not.toEqual(p.slice(0,3));
- const meanError=await page.evaluate(async ({src,jpeg})=>{async function pixels(src:string){const img=new Image();img.src=src;await img.decode();const c=document.createElement('canvas');c.width=img.width;c.height=img.height;const x=c.getContext('2d')!;x.drawImage(img,0,0);return x.getImageData(0,0,c.width,c.height).data}const a=await pixels(src),b=await pixels('data:image/jpeg;base64,'+jpeg);if(a.length!==b.length)throw Error('dimensions differ');let sum=0;for(let i=0;i<a.length;i+=4)for(let k=0;k<3;k++)sum+=Math.abs(a[i+k]-b[i+k]);return sum/(a.length/4*3)},{src:sourceFrames[1],jpeg:plain.toString('base64')});expect(meanError).toBeLessThan(5);
+ const meanError=await page.evaluate(async ({src,jpeg})=>{async function pixels(src:string){const img=new Image();img.src=src;await img.decode();const c=document.createElement('canvas');c.width=img.width;c.height=img.height;const x=c.getContext('2d')!;x.drawImage(img,0,0);return x.getImageData(0,0,c.width,c.height).data}const a=await pixels(src),b=await pixels('data:image/jpeg;base64,'+jpeg);if(a.length!==b.length)throw Error('dimensions differ');let sum=0,maxRegion=0;for(let i=0;i<a.length;i+=4)for(let k=0;k<3;k++){const d=Math.abs(a[i+k]-b[i+k]);sum+=d;const n=i/4;if(n%120<35&&Math.floor(n/120)<35)maxRegion=Math.max(maxRegion,d)}return {mean:sum/(a.length/4*3),maxRegion}},{src:sourceFrames[1],jpeg:plain.toString('base64')});expect(meanError.mean).toBeLessThan(5);expect(meanError.maxRegion).toBeLessThan(35);
 
 });
 test('N06/N07 history selection returns to picker with selected image',async({page})=>{
@@ -330,4 +330,14 @@ test('S01 stop picker previous, next, grid and past draw select the right frame'
  await page.locator('#shareStopNext').click();await expect(page.locator('#shareSelectedFrameImage')).toHaveAttribute('src',frames[1]);
  await page.locator('#shareAllFramesDetails summary').click();await page.getByRole('button',{name:'1コマ目を停止位置にする'}).click();await expect(page.locator('#shareSelectedFrameImage')).toHaveAttribute('src',frames[0]);
  await page.locator('.shareDrawCard').click();await expect(page.locator('#shareSelectedFrameImage')).toHaveAttribute('src',frames[1]);
+});
+test('S02 library searches filenames and sorts two synthetic videos',async({page})=>{
+ test.setTimeout(120000);await page.goto('/#home');
+ const a=await readFile('tests/fixtures/synthetic-a.webm'),b=await readFile('tests/fixtures/synthetic-b.webm');
+ await page.locator('#fileInput').setInputFiles({name:'synthetic-a.webm',mimeType:'video/webm',buffer:a,lastModified:1577836800000});await expect(page).toHaveURL(/#play$/,{timeout:60000});await page.locator('#backBtn').click();
+ await page.locator('#fileInput').setInputFiles({name:'synthetic-b.webm',mimeType:'video/webm',buffer:b,lastModified:1640995200000});await expect(page).toHaveURL(/#play$/,{timeout:60000});await page.locator('#backBtn').click();
+ await page.locator('#homePastVideoBtn').click();await routes(page,'library');await expect(page.locator('#deckPicker .deckVideoPick')).toHaveCount(2);
+ const newest=await page.locator('#deckPicker .deckVideoTile').evaluateAll(xs=>xs.map(x=>(x as HTMLElement).dataset.sourceId));
+ await page.locator('#deckSort').selectOption('oldest');const oldest=await page.locator('#deckPicker .deckVideoTile').evaluateAll(xs=>xs.map(x=>(x as HTMLElement).dataset.sourceId));expect(oldest).toEqual([...newest].reverse());
+ await page.locator('#deckSearch').fill('synthetic-a');await expect(page.locator('#deckPicker .deckVideoPick')).toHaveCount(1);await page.locator('#deckPicker .deckVideoPick').click();await expect(page.locator('#deckDrawBtn')).toBeEnabled();
 });

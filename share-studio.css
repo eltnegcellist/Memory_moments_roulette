@@ -1,43 +1,43 @@
 /* Local sharing and per-frame privacy editor. */
-#shareSection [hidden]{display:none!important}
-#shareSection h2{margin-top:8px}
-#shareSection .shareActions{display:flex;flex-direction:column;gap:10px;margin:14px 0}
-#shareSection .shareActions>button{width:100%;min-height:47px}
-#shareSection .shareActions>.note{margin:-8px 1px 6px;font-size:12px;line-height:1.6}
-#shareSection #shareStatus,#shareSection #sharePrivacyStatus{min-height:22px;white-space:normal;overflow-wrap:anywhere}
-#shareSection #shareOutput.shareOutputOverlay{
+:is(#shareSection,#labGifEditor) [hidden]{display:none!important}
+:is(#shareSection,#labGifEditor) h2{margin-top:8px}
+:is(#shareSection,#labGifEditor) .shareActions{display:flex;flex-direction:column;gap:10px;margin:14px 0}
+:is(#shareSection,#labGifEditor) .shareActions>button{width:100%;min-height:47px}
+:is(#shareSection,#labGifEditor) .shareActions>.note{margin:-8px 1px 6px;font-size:12px;line-height:1.6}
+:is(#shareSection,#labGifEditor) #shareStatus,:is(#shareSection,#labGifEditor) #sharePrivacyStatus{min-height:22px;white-space:normal;overflow-wrap:anywhere}
+:is(#shareSection,#labGifEditor) #shareOutput.shareOutputOverlay{
  position:fixed;inset:0;z-index:11000;display:flex;align-items:center;justify-content:center;
  padding:20px;box-sizing:border-box;background:rgba(28,19,25,.68);margin:0;
 }
-#shareSection .shareOutputPanel{
+:is(#shareSection,#labGifEditor) .shareOutputPanel{
  position:relative;width:min(100%,480px);max-height:calc(100dvh - 48px);overflow:auto;
  padding:28px 18px 20px;background:#fff9f2;color:#352525;border-radius:20px;
  box-shadow:0 15px 45px rgba(0,0,0,.24);box-sizing:border-box;
 }
-#shareSection .shareOutputPanel h3{padding-right:34px;margin:0 0 12px}
-#shareSection .shareOutputClose{position:absolute;right:12px;top:10px;width:38px;height:38px;min-width:0;padding:0}
-#shareSection #shareRouletteOptions{padding:14px;border-radius:14px;background:#fff7ef;border:1px solid rgba(80,65,50,.12)}
-#shareSection #shareRouletteOptions h3{margin:2px 0 8px}
-#shareSection #shareRouletteOptions select{width:100%;min-height:48px;font-size:15px;padding:10px;border-radius:12px}
-#shareSection .shareFormatLabel{font-weight:700;font-size:14px}
-#shareSection .shareMaskOption{display:flex;align-items:center;gap:10px;line-height:1.6;
+:is(#shareSection,#labGifEditor) .shareOutputPanel h3{padding-right:34px;margin:0 0 12px}
+:is(#shareSection,#labGifEditor) .shareOutputClose{position:absolute;right:12px;top:10px;width:38px;height:38px;min-width:0;padding:0}
+:is(#shareSection,#labGifEditor) #shareRouletteOptions{padding:14px;border-radius:14px;background:#fff7ef;border:1px solid rgba(80,65,50,.12)}
+:is(#shareSection,#labGifEditor) #shareRouletteOptions h3{margin:2px 0 8px}
+:is(#shareSection,#labGifEditor) #shareRouletteOptions select{width:100%;min-height:48px;font-size:15px;padding:10px;border-radius:12px}
+:is(#shareSection,#labGifEditor) .shareFormatLabel{font-weight:700;font-size:14px}
+:is(#shareSection,#labGifEditor) .shareMaskOption{display:flex;align-items:center;gap:10px;line-height:1.6;
  padding:12px 8px;margin-top:3px;border-radius:12px;background:#fff;border:1px solid rgba(80,65,50,.1)}
-#shareSection .shareMaskOption input{width:20px;height:20px;flex-shrink:0}
-#shareSection #shareOutput[hidden]{display:none!important}
-#shareSection #shareOutputLabel{display:block;line-height:1.5;overflow-wrap:anywhere}
-#shareSection .shareOutputActions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
-#shareSection .shareOutputActions button{flex:1;min-width:115px}
-#shareSection #sharePrivacyEditor{margin-top:20px;padding:12px;border:1px solid rgba(90,64,50,.25);border-radius:16px}
-#shareSection #sharePrivacyCanvas{display:block;max-width:100%;max-height:65vh;width:auto;height:auto;margin:12px auto;border-radius:10px;background:#ddd;touch-action:manipulation;cursor:crosshair;box-shadow:0 1px 8px rgba(0,0,0,.14)}
-#shareSection .shareFrameNav{display:flex;align-items:center;justify-content:space-between;gap:10px}
-#shareSection .shareMaskTools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;margin:12px 0}
-#shareSection .shareMaskTools label{display:flex;align-items:center;gap:5px}
-#shareSection .shareMaskTools select{min-width:72px;padding:7px}
-#shareSection .shareMaskTools input[type=range]{width:125px}
-#shareSection input[type=file]{width:100%;max-width:100%;box-sizing:border-box}
-#shareSection button:disabled{opacity:.48;cursor:not-allowed}
-#shareSection hr{margin:26px 0;border:0;border-top:1px solid rgba(80,65,50,.2)}
-@media(max-width:420px){#shareSection .shareOutputActions button{min-width:105px;font-size:12px}#shareSection #sharePrivacyEditor{padding:9px}}
+:is(#shareSection,#labGifEditor) .shareMaskOption input{width:20px;height:20px;flex-shrink:0}
+:is(#shareSection,#labGifEditor) #shareOutput[hidden]{display:none!important}
+:is(#shareSection,#labGifEditor) #shareOutputLabel{display:block;line-height:1.5;overflow-wrap:anywhere}
+:is(#shareSection,#labGifEditor) .shareOutputActions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+:is(#shareSection,#labGifEditor) .shareOutputActions button{flex:1;min-width:115px}
+:is(#shareSection,#labGifEditor) #sharePrivacyEditor{margin-top:20px;padding:12px;border:1px solid rgba(90,64,50,.25);border-radius:16px}
+:is(#shareSection,#labGifEditor) #sharePrivacyCanvas{display:block;max-width:100%;max-height:65vh;width:auto;height:auto;margin:12px auto;border-radius:10px;background:#ddd;touch-action:manipulation;cursor:crosshair;box-shadow:0 1px 8px rgba(0,0,0,.14)}
+:is(#shareSection,#labGifEditor) .shareFrameNav{display:flex;align-items:center;justify-content:space-between;gap:10px}
+:is(#shareSection,#labGifEditor) .shareMaskTools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;margin:12px 0}
+:is(#shareSection,#labGifEditor) .shareMaskTools label{display:flex;align-items:center;gap:5px}
+:is(#shareSection,#labGifEditor) .shareMaskTools select{min-width:72px;padding:7px}
+:is(#shareSection,#labGifEditor) .shareMaskTools input[type=range]{width:125px}
+:is(#shareSection,#labGifEditor) input[type=file]{width:100%;max-width:100%;box-sizing:border-box}
+:is(#shareSection,#labGifEditor) button:disabled{opacity:.48;cursor:not-allowed}
+:is(#shareSection,#labGifEditor) hr{margin:26px 0;border:0;border-top:1px solid rgba(80,65,50,.2)}
+@media(max-width:420px){:is(#shareSection,#labGifEditor) .shareOutputActions button{min-width:105px;font-size:12px}:is(#shareSection,#labGifEditor) #sharePrivacyEditor{padding:9px}}
 
 /* Share and receive are separate pages, opened from their own home shortcuts. */
 #receiveSection .receiveFileLabel{

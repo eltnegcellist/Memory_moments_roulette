@@ -247,3 +247,31 @@ test('N18 empty storage safely handles sharing without selection',async({page})=
  await expect(page.locator('#shareSourceState')).toContainText('ありません');await expect(page.locator('#shareRouletteBuild')).toBeDisabled();
  expect(errors).toEqual([]);
 });
+test('S05 alternating two saved roulettes exports only selected frames',async({page})=>{
+ await page.goto('/#home');const frames=await synthetic(page);
+ await page.evaluate(async frames=>{await (window as any).__memoryHistoryMigrationPromise;const db=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('babyExpressionRouletteDB',3);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});await new Promise<void>((resolve,reject)=>{const tx=db.transaction('creations','readwrite');for(const [id,fs] of [['A',[frames[0],frames[0]]],['B',[frames[1],frames[1]]]] as [string,string[]][])tx.objectStore('creations').put({id,title:'Synthetic '+id,createdAt:1700000000000,mode:'roulette',frames:fs,times:[0,1]});tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)});db.close()},frames);
+ await page.locator('[data-route="share-picker"]').click();
+ for(const [name,expected] of [['A',frames[0]],['B',frames[1]],['A',frames[0]]] as [string,string][]){
+  await page.locator('.shareSavedCard').filter({hasText:'Synthetic '+name}).click();await routes(page,'share');
+  await expect(page.locator('#shareSourceState')).toContainText('Synthetic '+name);
+  await page.locator('#shareRouletteFormat').selectOption('play');await page.locator('#shareRouletteBuild').click();await expect(page.locator('#shareOutput')).toBeVisible();
+  const pending=page.waitForEvent('download');await page.locator('#shareOutputSave').click();const d=await pending;
+  const data=JSON.parse(await readFile((await d.path())!,'utf8'));expect(data.frames).toEqual([expected,expected]);
+  await page.locator('#shareBackBtn').click();await routes(page,'share-picker');
+ }
+});
+test('S08 close output and save again without external share',async({page})=>{
+ await page.goto('/#home'); await importSynthetic(page); await page.locator('#shareOpenFromPlay').click();
+ await page.locator('#shareRouletteFormat').selectOption('play'); await page.locator('#shareRouletteBuild').click();
+ await expect(page.locator('#shareOutput')).toBeVisible();await page.locator('#shareOutputClose').click();
+ await expect(page.locator('#shareOutput')).not.toBeVisible(); await routes(page,'share');
+ await page.locator('#shareRouletteBuild').click();await expect(page.locator('#shareOutput')).toBeVisible();
+ const pending=page.waitForEvent('download');await page.locator('#shareOutputSave').click();const d=await pending;
+ expect(d.suggestedFilename()).toMatch(/\.mmrplay$/);expect(JSON.parse(await readFile((await d.path())!,'utf8')).frames).toHaveLength(2);
+});
+test('S13 share and receive refresh remain safe with ephemeral data',async({page})=>{
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/#home');await importSynthetic(page);await page.locator('#shareOpenFromPlay').click();await routes(page,'share');
+ await page.reload();await routes(page,'share');await expect(page.locator('#shareSourceState')).toContainText('ありません');await expect(page.locator('#shareRouletteBuild')).toBeDisabled();
+ await page.goto('/#receive');await page.reload();await routes(page,'receive');await expect(page.locator('#receiveStatus')).toBeEmpty();expect(errors).toEqual([]);
+});

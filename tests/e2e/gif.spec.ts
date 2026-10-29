@@ -38,6 +38,9 @@ test('N01–N04 legacy synthetic source: stamp editor stays in GIF and produces 
  await expect(page.locator('#shareMaskIndex')).toHaveText('1 / 8コマ');
  await page.locator('#sharePrivacyCanvas').click({position:{x:20,y:20}});
  await expect(page.locator('#shareMaskCount')).toContainText('1個');
+ page.once('dialog', dialog=>dialog.accept());await page.locator('#shareMaskCopy').click();
+ await page.locator('#shareMaskNext').click();await expect(page.locator('#shareMaskCount')).toContainText('1個');
+ await page.locator('#shareMaskPrev').click();
  await page.locator('#sharePrivacyExportSelected').click();
  await expect(page.locator('#shareOutput')).toBeVisible();
  const downloadPromise=page.waitForEvent('download'); await page.locator('#shareOutputSave').click();
@@ -49,6 +52,7 @@ test('N01–N04 legacy synthetic source: stamp editor stays in GIF and produces 
  // First image is red; the centered stamp must change the pixels there.
  const frame=decoded[0]; const pixel=(x:number,y:number)=>Array.from(frame.patch.slice((y*frame.dims.width+x)*4,(y*frame.dims.width+x)*4+3));
  expect(pixel(5,5)[0]).toBeGreaterThan(180); expect(pixel(20,20)).not.toEqual(pixel(5,5));
+ for(const f of decoded){const color=(x:number,y:number)=>Array.from(f.patch.slice((y*f.dims.width+x)*4,(y*f.dims.width+x)*4+3));expect(color(20,20)).not.toEqual(color(5,5));}
  await page.locator('#sharePrivacyClose').click();
  await expect(page.locator('#sharePrivacyEditor')).not.toBeVisible();
  await expect(page.locator('#labGifSelectedTitle')).toContainText('Synthetic A');
@@ -89,4 +93,11 @@ test('N05 changing synthetic source clears the previous GIF and stamp editor',as
  await expect(page.locator('#labGifResult')).not.toBeVisible(); await expect(page.locator('#sharePrivacyEditor')).not.toBeVisible();
  await page.locator('#sharePrivacyGif').click(); await expect(page.locator('#shareMaskCount')).toContainText('0個');
  await expect(page.locator('#shareMaskIndex')).toHaveText('1 / 12コマ'); await expect(page).toHaveURL(/#gif$/);
+});
+test('S11 leaving while GIF encoding does not reopen results',async({page})=>{
+ await page.goto('/#home');
+ await page.evaluate(async()=>{await (window as any).__memoryHistoryMigrationPromise;const db=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('babyExpressionRouletteDB',3);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});const frames=Array.from({length:40},(_,i)=>{const c=document.createElement('canvas');c.width=c.height=120;const x=c.getContext('2d')!;x.fillStyle=`hsl(${i*9},90%,50%)`;x.fillRect(0,0,120,120);return c.toDataURL()});await new Promise<void>((resolve,reject)=>{const tx=db.transaction('creations','readwrite');tx.objectStore('creations').put({id:'long',title:'Synthetic long',createdAt:1700000000000,mode:'roulette',frames,times:frames.map((_,i)=>i)});tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)});db.close()});
+ await page.locator('[data-route="gif"]').click();await page.locator('#labGifChoosePast').click();await page.getByRole('button',{name:/Synthetic long.*40コマ/}).click();await expect(page.locator('#labMakeGif')).toBeEnabled();
+ await page.locator('#labMakeGif').click(); await expect(page.locator('#labGifStatus')).toContainText('GIFを作って'); await page.locator('#labGifSection [data-nav-back]').click();await expect(page).toHaveURL(/#home$/);
+ await page.locator('[data-route="gif"]').click();await expect(page).toHaveURL(/#gif$/);await expect(page.locator('#labGifResult')).not.toBeVisible();await expect(page.locator('#labGifEditor')).not.toBeVisible(); await page.waitForTimeout(2000);await expect(page.locator('#labGifResult')).not.toBeVisible();
 });

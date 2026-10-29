@@ -144,3 +144,65 @@ test('N08 history → play → share → play → history preserves selected cre
  await page.locator('#backBtn').click(); await routes(page,'history');
  await expect(page.locator('.saved').filter({hasText:'Synthetic A'})).toBeVisible();
 });
+test('N16 normal synthetic video import reaches play and persists history',async({page})=>{
+ test.setTimeout(120000);
+ await page.goto('/#home'); const before=await dbCounts(page);
+ await page.locator('#fileInput').setInputFiles('tests/fixtures/synthetic-a.webm');
+ await expect(page).toHaveURL(/#play$/, {timeout:90000}); await routes(page,'play');
+ await expect(page.locator('#playImage')).toHaveAttribute('src',/^data:image\//);
+ await expect.poll(async()=>(await dbCounts(page)).babyExpressionRouletteDB.creations,{timeout:15000}).toBe(before.babyExpressionRouletteDB.creations+1);
+ const after=await dbCounts(page);expect(after.babyExpressionRouletteDB.deckSources).toBe(before.babyExpressionRouletteDB.deckSources+1);
+});
+test('N15/S15 browser back and forward alternate with in-app back',async({page})=>{
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/#home');
+ for(let i=0;i<12;i++){
+  await page.locator('[data-route="gif"]').click(); await routes(page,'gif');
+  await page.goBack(); await routes(page,'home');
+  await page.goForward(); await routes(page,'gif');
+  await page.locator('#labGifSection [data-nav-back]').click(); await routes(page,'home');
+ }
+ expect(errors).toEqual([]);
+});
+test('N14 selected stop frame is present in generated roulette movie',async({page})=>{
+ test.setTimeout(60000); await page.goto('/#home');await importSynthetic(page);
+ await page.locator('#shareOpenFromPlay').click(); await routes(page,'share');
+ await page.locator('#shareAllFramesDetails summary').click();
+ await page.getByRole('button',{name:'2コマ目を停止位置にする'}).click();
+ await page.locator('#shareRouletteFormat').selectOption('movie');
+ await page.locator('#shareRouletteBuild').click(); await expect(page.locator('#shareOutput')).toBeVisible({timeout:30000});
+ const pending=page.waitForEvent('download'); await page.locator('#shareOutputSave').click(); const d=await pending;
+ const ext=d.suggestedFilename().endsWith('.mp4')?'mp4':'webm';expect(d.suggestedFilename()).toMatch(/\.(mp4|webm)$/);
+ const bytes=await readFile((await d.path())!);expect(bytes.length).toBeGreaterThan(1000);
+ if(ext==='webm')expect(bytes.subarray(0,4)).toEqual(Buffer.from([0x1a,0x45,0xdf,0xa3]));
+ else expect(bytes.subarray(4,8).toString()).toBe('ftyp');
+ const rgb=await page.evaluate(async ({data,ext})=>{
+  const binary=Uint8Array.from(atob(data),c=>c.charCodeAt(0));const url=URL.createObjectURL(new Blob([binary],{type:ext==='mp4'?'video/mp4':'video/webm'}));
+  try { const v=document.createElement('video');v.src=url;v.muted=true;await new Promise<void>((resolve,reject)=>{v.onloadedmetadata=()=>resolve();v.onerror=()=>reject(new Error('video metadata failed'))});
+   v.currentTime=2.7;await new Promise<void>((resolve,reject)=>{v.onseeked=()=>resolve();v.onerror=()=>reject(new Error('video seek failed'))});
+   const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;const ctx=c.getContext('2d')!;ctx.drawImage(v,0,0);return Array.from(ctx.getImageData(20,Math.floor(c.height/2),1,1).data);
+  } finally {URL.revokeObjectURL(url)}
+ },{data:bytes.toString('base64'),ext});
+ expect(rgb[2]).toBeGreaterThan(120);expect(rgb[2]).toBeGreaterThan(rgb[0]);
+});
+test('N09 library selection → play → share → play → library',async({page})=>{
+ test.setTimeout(90000);await page.goto('/#home');
+ await page.locator('[data-route="gif"]').click();await page.locator('#labGifFileInput').setInputFiles('tests/fixtures/synthetic-a.webm');
+ await expect(page.locator('#labGifEditor')).toBeVisible({timeout:60000});
+ await page.locator('#labGifSection [data-nav-back]').click();await routes(page,'home');
+ await page.locator('#homePastVideoBtn').click();await routes(page,'library');
+ await page.locator('#deckPicker .deckVideoPick').first().click();
+ await expect(page.locator('#deckDrawBtn')).toBeEnabled();await page.locator('#deckDrawBtn').click();
+ await routes(page,'play');await page.locator('#stage').click();
+ const stopped=await page.locator('#playImage').getAttribute('src');expect(stopped).toMatch(/^data:image\//);
+ const index=await page.evaluate(()=>(window as any).__memoryShareGetCurrentIndex());
+ async function rgb(src:string) {return page.evaluate(async src=>{const img=new Image();img.src=src;await img.decode();const c=document.createElement('canvas');c.width=img.width;c.height=img.height;const x=c.getContext('2d')!;x.drawImage(img,0,0);return Array.from(x.getImageData(5,5,1,1).data).slice(0,3)},src)}
+ const before=await rgb(stopped!);
+ await page.locator('#shareOpenFromPlay').click();await routes(page,'share');
+ const selected=await page.locator('#shareSelectedFrameImage').getAttribute('src');
+ const shared=await rgb(selected!);shared.forEach((v,i)=>expect(Math.abs(v-before[i])).toBeLessThan(40));
+ await page.locator('#shareBackBtn').click();await routes(page,'play');
+ expect(await page.evaluate(()=>(window as any).__memoryShareGetCurrentIndex())).toBe(index);
+ const after=await rgb((await page.locator('#playImage').getAttribute('src'))!);after.forEach((v,i)=>expect(Math.abs(v-before[i])).toBeLessThan(40));
+ await page.locator('#backBtn').click();await routes(page,'library');
+});

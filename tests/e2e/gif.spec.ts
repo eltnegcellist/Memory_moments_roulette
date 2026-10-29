@@ -24,6 +24,8 @@ test('N01–N04 legacy synthetic source: stamp editor stays in GIF and produces 
   const encoded=await page.evaluate(async url=>{const b=await (await fetch(url!)).arrayBuffer();return Array.from(new Uint8Array(b));},file);
   const decoded=decompressFrames(parseGIF(Uint8Array.from(encoded)),true);
   expect(decoded).toHaveLength(8);
+  const expectedColors=await page.evaluate(()=>Array.from({length:8},(_,i)=>{const c=document.createElement('canvas');c.width=c.height=1;const x=c.getContext('2d')!;x.fillStyle=`hsl(${i*40},90%,50%)`;x.fillRect(0,0,1,1);return Array.from(x.getImageData(0,0,1,1).data).slice(0,3)}));
+  decoded.forEach((frame,i)=>{const offset=(5*frame.dims.width+5)*4;for(let channel=0;channel<3;channel++)expect(Math.abs(frame.patch[offset+channel]-expectedColors[i][channel])).toBeLessThan(60)});
   expect(decoded.map(f=>f.delay)).toEqual(Array(8).fill(Number(seconds)*1000));
  }
  await page.locator('#labGifSpeed').selectOption('0.2');
@@ -49,4 +51,27 @@ test('N01–N04 legacy synthetic source: stamp editor stays in GIF and produces 
  await expect(page.locator('#sharePrivacyEditor')).not.toBeVisible();
  await expect(page.locator('#labGifSelectedTitle')).toContainText('Synthetic A');
  await expect(page).toHaveURL(/#gif$/);
+});
+test('N05 changing synthetic source clears the previous GIF and stamp editor',async({page})=>{
+ await page.goto('/#home');
+ await page.evaluate(async()=>{
+  await (window as any).__memoryHistoryMigrationPromise;
+  const db=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('babyExpressionRouletteDB',3);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});
+  const tx=db.transaction('creations','readwrite');
+  for(const [name,color,count] of [['A','#e02020',8],['B','#2040e0',12]] as const){
+   const frames=Array.from({length:count},(_,i)=>{const c=document.createElement('canvas');c.width=120;c.height=80;const ctx=c.getContext('2d')!;ctx.fillStyle=color;ctx.fillRect(0,0,120,80);ctx.fillStyle='white';ctx.font='30px sans-serif';ctx.fillText(String(i+1),40,50);return c.toDataURL('image/png')});
+   tx.objectStore('creations').put({id:'synthetic-'+name,title:'Synthetic '+name,createdAt:1700000000000,mode:'roulette',frames,times:frames.map((_,i)=>i)});
+  }
+  await new Promise<void>((resolve,reject)=>{tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)});db.close();
+ });
+ await page.locator('[data-route="gif"]').click(); await page.locator('#labGifChoosePast').click();
+ await page.getByRole('button',{name:/Synthetic A.*8コマ/}).click(); await expect(page.locator('#labMakeGif')).toBeEnabled();
+ await page.locator('#labMakeGif').click(); await expect(page.locator('#labGifResult')).toBeVisible();
+ await page.locator('#sharePrivacyGif').click(); await page.locator('#sharePrivacyExportSelected').click(); await expect(page.locator('#sharePrivacyStatus')).toContainText('まずスタンプ'); await expect(page.locator('#shareOutput')).not.toBeVisible(); await page.locator('#sharePrivacyCanvas').click({position:{x:20,y:20}}); await expect(page.locator('#shareMaskCount')).toContainText('1個');
+ await page.locator('#labGifChangeVideo').click();
+ await page.getByRole('button',{name:/Synthetic B.*12コマ/}).click();
+ await expect(page.locator('#labGifSelectedTitle')).toContainText('Synthetic B');
+ await expect(page.locator('#labGifResult')).not.toBeVisible(); await expect(page.locator('#sharePrivacyEditor')).not.toBeVisible();
+ await page.locator('#sharePrivacyGif').click(); await expect(page.locator('#shareMaskCount')).toContainText('0個');
+ await expect(page.locator('#shareMaskIndex')).toHaveText('1 / 12コマ'); await expect(page).toHaveURL(/#gif$/);
 });

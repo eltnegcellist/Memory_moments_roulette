@@ -232,3 +232,18 @@ test('S09 unsupported and oversized received files leave data untouched',async({
  await page.evaluate(()=>{const input=document.querySelector('#shareImportFile') as HTMLInputElement;const dt=new DataTransfer();dt.items.add(new File([new Uint8Array(48*1024*1024+1)],'large.mmrplay',{type:'application/json'}));input.files=dt.files;input.dispatchEvent(new Event('change',{bubbles:true}));});
  await expect(page.locator('#receiveStatus')).toContainText('48MB以下');await routes(page,'receive');expect(await dbCounts(page)).toEqual(before);expect(await creationRecords(page)).toEqual(records);
 });
+test('S18 denied save falls back to download while preserving history',async({page})=>{
+ await page.goto('/#home');const before=await dbCounts(page);await importSynthetic(page);
+ await page.locator('#shareOpenFromPlay').click();await page.locator('#shareRouletteFormat').selectOption('play');await page.locator('#shareRouletteBuild').click();await expect(page.locator('#shareOutput')).toBeVisible();
+ await page.evaluate(()=>{(window as any).showSaveFilePicker=async()=>({createWritable:async()=>{throw new DOMException('test quota','QuotaExceededError')}})});
+ const pending=page.waitForEvent('download');await page.locator('#shareOutputSave').click();const d=await pending;expect(d.suggestedFilename()).toMatch(/\.mmrplay$/);
+ await expect(page.locator('#shareStatus')).toContainText('ダウンロード');expect(await dbCounts(page)).toEqual(before);
+});
+test('N18 empty storage safely handles sharing without selection',async({page})=>{
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/#home');await page.locator('[data-route="share-picker"]').click();await routes(page,'share-picker');
+ await expect(page.locator('#sharePickerStatus')).toContainText('ありません');
+ await page.goto('/#share');await page.reload();await routes(page,'share');
+ await expect(page.locator('#shareSourceState')).toContainText('ありません');await expect(page.locator('#shareRouletteBuild')).toBeDisabled();
+ expect(errors).toEqual([]);
+});

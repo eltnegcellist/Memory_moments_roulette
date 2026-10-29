@@ -20,6 +20,8 @@ test('N01–N04 legacy synthetic source: stamp editor stays in GIF and produces 
   await page.locator('#labGifSpeed').selectOption(seconds);
   await page.locator('#labMakeGif').click();
   await expect(page.locator('#labGifResult')).toBeVisible();
+  const intervals=await page.locator('#labGifPreview').evaluate((img:HTMLImageElement)=>new Promise<number[]>((resolve,reject)=>{const times:number[]=[];const timer=setTimeout(()=>{observer.disconnect();reject(new Error('preview did not advance'))},5000);const observer=new MutationObserver(()=>{times.push(performance.now());if(times.length===3){clearTimeout(timer);observer.disconnect();resolve([times[1]-times[0],times[2]-times[1]])}});observer.observe(img,{attributes:true,attributeFilter:['src']})}));
+  for(const interval of intervals)expect(Math.abs(interval-Number(seconds)*1000)).toBeLessThan(Math.max(100,Number(seconds)*300));
   const file=await page.locator('#labGifDownload').getAttribute('href');
   const encoded=await page.evaluate(async url=>{const b=await (await fetch(url!)).arrayBuffer();return Array.from(new Uint8Array(b));},file);
   const decoded=decompressFrames(parseGIF(Uint8Array.from(encoded)),true);
@@ -51,6 +53,19 @@ test('N01–N04 legacy synthetic source: stamp editor stays in GIF and produces 
  await expect(page.locator('#sharePrivacyEditor')).not.toBeVisible();
  await expect(page.locator('#labGifSelectedTitle')).toContainText('Synthetic A');
  await expect(page).toHaveURL(/#gif$/);
+ // N13: transition from GIF output to a different received roulette.
+ await page.locator('#labGifSection [data-nav-back]').click();
+ await page.locator('[data-route="receive"]').click();
+ const frames=await page.evaluate(()=>['red','blue'].map(color=>{const c=document.createElement('canvas');c.width=c.height=80;const x=c.getContext('2d')!;x.fillStyle=color;x.fillRect(0,0,80,80);return c.toDataURL()}));
+ const payload={format:'memory-moments-playable',version:1,title:'Received B',mode:'roulette',frames,times:[0,1]};
+ await page.locator('#shareImportFile').setInputFiles({name:'b.mmrplay',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(payload))});
+ await expect(page).toHaveURL(/#play$/);await page.locator('#stage').click();
+ await page.locator('#shareOpenFromPlay').click(); await expect(page).toHaveURL(/#share$/);
+ await expect(page.locator('#shareSourceState')).toContainText('Received B');
+ await expect(page.locator('#shareRouletteOptions')).toBeVisible();
+ await expect(page.locator('#sharePrivacyEditor')).not.toBeVisible();
+ await expect(page.locator('#shareOutput')).not.toBeVisible();
+ const current=await page.locator('#shareSelectedFrameImage').getAttribute('src');expect(frames).toContain(current);
 });
 test('N05 changing synthetic source clears the previous GIF and stamp editor',async({page})=>{
  await page.goto('/#home');

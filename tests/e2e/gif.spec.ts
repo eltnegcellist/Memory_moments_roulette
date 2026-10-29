@@ -98,6 +98,8 @@ test('N05 changing synthetic source clears the previous GIF and stamp editor',as
  await expect(page.locator('#labGifResult')).not.toBeVisible(); await expect(page.locator('#sharePrivacyEditor')).not.toBeVisible();
  await page.locator('#sharePrivacyGif').click(); await expect(page.locator('#shareMaskCount')).toContainText('0個');
  await expect(page.locator('#shareMaskIndex')).toHaveText('1 / 12コマ'); await expect(page).toHaveURL(/#gif$/);
+ await page.locator('#sharePrivacyCanvas').click({position:{x:20,y:20}});await page.locator('#labGifSpeed').selectOption('0.5');await expect(page.locator('#sharePrivacyEditor')).not.toBeVisible();await expect(page.locator('#labGifResult')).not.toBeVisible();
+ await page.locator('#labGifSection [data-nav-back]').click();await page.locator('[data-route="gif"]').click();await expect(page.locator('#labGifEditor')).not.toBeVisible();await expect(page.locator('#sharePrivacyEditor')).not.toBeVisible();await expect(page.locator('#labGifResult')).not.toBeVisible();
 });
 test('S11 leaving while GIF encoding does not reopen results',async({page})=>{
  await page.goto('/#home');
@@ -135,4 +137,9 @@ test('S12 delayed first source cannot overwrite the last selection',async({page}
  await page.getByRole('button',{name:/Synthetic A.*2コマ/}).click();await page.getByRole('button',{name:/Synthetic B.*2コマ/}).click();
  await expect(page.locator('#labGifSelectedTitle')).toContainText('Synthetic B');await page.waitForTimeout(900);await expect(page.locator('#labGifSelectedTitle')).toContainText('Synthetic B');
  const src=await page.locator('#labGifSelectedFrames img').first().getAttribute('src');const rgb=await page.evaluate(async src=>{const i=new Image();i.src=src!;await i.decode();const c=document.createElement('canvas');c.width=c.height=50;const x=c.getContext('2d')!;x.drawImage(i,0,0);return Array.from(x.getImageData(5,5,1,1).data)},src);expect(rgb[2]).toBeGreaterThan(200);expect(rgb[0]).toBeLessThan(30);
+});
+test('S07 one-frame legacy history cannot produce a GIF',async({page})=>{
+ await page.goto('/#home');await page.evaluate(async()=>{await (window as any).__memoryHistoryMigrationPromise;const c=document.createElement('canvas');c.width=c.height=50;const x=c.getContext('2d')!;x.fillStyle='red';x.fillRect(0,0,50,50);const db=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('babyExpressionRouletteDB',3);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});await new Promise<void>((resolve,reject)=>{const t=db.transaction('creations','readwrite');t.objectStore('creations').put({id:'one',title:'One frame',createdAt:1700000000000,mode:'roulette',frames:[c.toDataURL()],times:[0]});t.oncomplete=()=>resolve();t.onerror=()=>reject(t.error)});db.close()});
+ await page.locator('[data-route="gif"]').click();await page.locator('#labGifChoosePast').click();await expect(page.locator('#labGifSourceGrid .deckVideoPick')).toHaveCount(0);await expect(page.locator('#labGifFrameInfo')).toContainText('ありません');await expect(page.locator('#labGifEditor')).not.toBeVisible();await expect(page.locator('#labGifResult')).not.toBeVisible();await expect(page).toHaveURL(/#gif$/);
+ await expect(page.locator('#labGifFrameInfo')).toContainText('2枚');
 });

@@ -75,7 +75,7 @@ test('N17 direct gif and empty play deep links remain usable @smoke',async({page
  await page.goto('/#play'); await page.reload(); await expect(page).toHaveURL(/#home$/); await routes(page,'home');
 });
 test('N12/S01 selected photo and mask do not leak into subsequent unmasked JPEG',async({page})=>{
- await page.goto('/#home'); await importSynthetic(page);
+ await page.goto('/#home'); const sourceFrames=await importSynthetic(page);
  await page.locator('#shareOpenFromPlay').click(); await routes(page,'share');
  await page.locator('#shareAllFramesDetails summary').click();
  await page.getByRole('button',{name:'2コマ目を停止位置にする'}).click();
@@ -98,6 +98,8 @@ test('N12/S01 selected photo and mask do not leak into subsequent unmasked JPEG'
  async function pixel(buf:Buffer,x:number,y:number) {return page.evaluate(async ({data,x,y})=>{const image=new Image(); image.src=`data:image/jpeg;base64,${data}`; await image.decode();const c=document.createElement('canvas');c.width=image.width;c.height=image.height;const ctx=c.getContext('2d')!;ctx.drawImage(image,0,0);return Array.from(ctx.getImageData(x,y,1,1).data);},{data:buf.toString('base64'),x,y});}
  const blue=await pixel(plain,5,5); expect(blue[2]).toBeGreaterThan(150);expect(blue[2]).toBeGreaterThan(blue[0]);
  const p=await pixel(plain,20,20),m=await pixel(masked,20,20); expect(m.slice(0,3)).not.toEqual(p.slice(0,3));
+ const meanError=await page.evaluate(async ({src,jpeg})=>{async function pixels(src:string){const img=new Image();img.src=src;await img.decode();const c=document.createElement('canvas');c.width=img.width;c.height=img.height;const x=c.getContext('2d')!;x.drawImage(img,0,0);return x.getImageData(0,0,c.width,c.height).data}const a=await pixels(src),b=await pixels('data:image/jpeg;base64,'+jpeg);if(a.length!==b.length)throw Error('dimensions differ');let sum=0;for(let i=0;i<a.length;i+=4)for(let k=0;k<3;k++)sum+=Math.abs(a[i+k]-b[i+k]);return sum/(a.length/4*3)},{src:sourceFrames[1],jpeg:plain.toString('base64')});expect(meanError).toBeLessThan(5);
+
 });
 test('N06/N07 history selection returns to picker with selected image',async({page})=>{
  await page.goto('/#home'); const frames=await synthetic(page);
@@ -304,4 +306,13 @@ test('S04 importing video B for GIF preserves prior roulette selection and creat
  await page.locator('#backBtn').click();await routes(page,'home');await page.locator('[data-route="gif"]').click();
  await page.locator('#labGifFileInput').setInputFiles('tests/fixtures/synthetic-b.webm');await expect(page.locator('#labGifSelectedTitle')).toContainText('12コマ',{timeout:60000});await routes(page,'gif');
  expect(await selected()).toEqual(selectedBefore);expect(await creationRecords(page)).toEqual(historyBefore);
+});
+test('N01 past synthetic video selection keeps 8 source frames and GIF controls',async({page})=>{
+ test.setTimeout(90000);await page.goto('/#home');await page.locator('[data-route="gif"]').click();
+ await page.locator('#labGifFileInput').setInputFiles('tests/fixtures/synthetic-a.webm');await expect(page.locator('#labGifEditor')).toBeVisible({timeout:60000});
+ await page.locator('#labGifSection [data-nav-back]').click();await page.locator('[data-route="gif"]').click();await page.locator('#labGifChoosePast').click();
+ await expect(page.locator('#labGifSourceGrid .deckVideoPick')).toHaveCount(1);await page.locator('#labGifSourceGrid .deckVideoPick').click();
+ await expect(page.locator('#labGifSelectedTitle')).toContainText('8コマ');await expect(page.locator('#labGifSpeed')).toBeVisible();await expect(page.locator('#labMakeGif')).toBeEnabled();await routes(page,'gif');
+ const data=await page.evaluate(async()=>{const source=(window as any).__memoryShareGetGifSource();const id=(document.querySelector('#labGifSource') as HTMLSelectElement).value;const db=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('babyExpressionRouletteDB',3);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});const item=await new Promise<any>((resolve,reject)=>{const r=db.transaction('deckSources').objectStore('deckSources').get(id);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});db.close();return {fileName:item.fileName,count:source.frames.length}});
+ expect(data).toEqual({fileName:'synthetic-a.webm',count:8});
 });

@@ -45,7 +45,9 @@ test('N01–N04 legacy synthetic source: stamp editor stays in GIF and produces 
  await page.locator('#shareMaskPrev').click();
  await page.locator('#sharePrivacyExportSelected').click();
  await expect(page.locator('#shareOutput')).toBeVisible();
+ await page.evaluate(()=>{const save=(window as any).__memorySaveMediaFile;(window as any).__memorySaveMediaFile=(blob:Blob,name:string)=>{(window as any).__observedMime=blob.type;return save(blob,name)}});
  const downloadPromise=page.waitForEvent('download'); await page.locator('#shareOutputSave').click();
+ expect(await page.evaluate(()=>(window as any).__observedMime)).toBe('image/gif');
  const download=await downloadPromise;expect(download.suggestedFilename()).toMatch(/\.gif$/);
  const bytes=await readFile((await download.path())!);expect(bytes.subarray(0,6).toString()).toBe('GIF89a');expect(bytes.length).toBeGreaterThan(100);
  const decoded=decompressFrames(parseGIF(bytes),true);
@@ -53,8 +55,9 @@ test('N01–N04 legacy synthetic source: stamp editor stays in GIF and produces 
  expect(decoded.map(f=>f.delay)).toEqual(Array(8).fill(200));
  // First image is red; the centered stamp must change the pixels there.
  const frame=decoded[0]; const pixel=(x:number,y:number)=>Array.from(frame.patch.slice((y*frame.dims.width+x)*4,(y*frame.dims.width+x)*4+3));
- expect(pixel(5,5)[0]).toBeGreaterThan(180); expect(pixel(20,20)).not.toEqual(pixel(5,5));
- for(const f of decoded){const color=(x:number,y:number)=>Array.from(f.patch.slice((y*f.dims.width+x)*4,(y*f.dims.width+x)*4+3));expect(color(20,20)).not.toEqual(color(5,5));}
+ expect(pixel(100,10)[0]).toBeGreaterThan(180); expect(pixel(20,20)).not.toEqual(pixel(100,10));
+ const expectedColors=await page.evaluate(()=>Array.from({length:8},(_,i)=>{const c=document.createElement('canvas');c.width=c.height=1;const x=c.getContext('2d')!;x.fillStyle=`hsl(${i*40},90%,50%)`;x.fillRect(0,0,1,1);return Array.from(x.getImageData(0,0,1,1).data).slice(0,3)}));
+ decoded.forEach((f,i)=>{const color=(x:number,y:number)=>Array.from(f.patch.slice((y*f.dims.width+x)*4,(y*f.dims.width+x)*4+3));expect(color(20,20)).not.toEqual(color(100,10));color(100,10).forEach((v,c)=>expect(Math.abs(v-expectedColors[i][c])).toBeLessThan(60))});
  await page.locator('#sharePrivacyClose').click();
  await expect(page.locator('#sharePrivacyEditor')).not.toBeVisible();
  await expect(page.locator('#labGifSelectedTitle')).toContainText('Synthetic A');
@@ -103,7 +106,7 @@ test('S11 leaving while GIF encoding does not reopen results',async({page})=>{
  await page.locator('#labMakeGif').click(); await expect(page.locator('#labGifStatus')).toContainText('GIFを作って'); await page.locator('#labGifSection [data-nav-back]').click();await expect(page).toHaveURL(/#home$/);
  await page.locator('[data-route="gif"]').click();await expect(page).toHaveURL(/#gif$/);await expect(page.locator('#labGifResult')).not.toBeVisible();await expect(page.locator('#labGifEditor')).not.toBeVisible(); await page.waitForTimeout(2000);await expect(page.locator('#labGifResult')).not.toBeVisible();
 });
-test('S02/S19 two real synthetic videos can be searched by filename and kept separate',async({page})=>{
+test('S02/S19 two real synthetic videos can be searched by filename and kept separate @smoke',async({page})=>{
  test.setTimeout(120000);await page.goto('/#home');await page.locator('[data-route="gif"]').click();
  await page.locator('#labGifFileInput').setInputFiles('tests/fixtures/synthetic-a.webm');await expect(page.locator('#labGifEditor')).toBeVisible({timeout:60000});
  await page.locator('#labGifFileInput').setInputFiles('tests/fixtures/synthetic-b.webm');await expect(page.locator('#labGifSelectedTitle')).toContainText('12コマ',{timeout:60000});
@@ -116,9 +119,12 @@ test('S19 two imported synthetic videos remain separate in generated GIF',async(
  test.setTimeout(120000);await page.goto('/#home');await page.locator('[data-route="gif"]').click();
  await page.locator('#labGifFileInput').setInputFiles('tests/fixtures/synthetic-a.webm');await expect(page.locator('#labGifEditor')).toBeVisible({timeout:60000});
  await page.locator('#labGifFileInput').setInputFiles('tests/fixtures/synthetic-b.webm');await expect(page.locator('#labGifSelectedTitle')).toContainText('12コマ',{timeout:60000});
+ const expected=await page.evaluate(async()=>{const source=(window as any).__memoryShareGetGifSource();const sourceId=(document.querySelector('#labGifSource') as HTMLSelectElement).value;const db=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('babyExpressionRouletteDB',3);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});const saved=await new Promise<any>((resolve,reject)=>{const r=db.transaction('deckSources').objectStore('deckSources').get(sourceId);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});db.close();const colors=[];for(const frame of source.frames){const img=new Image();img.src=frame.image;await img.decode();const c=document.createElement('canvas');c.width=img.width;c.height=img.height;const x=c.getContext('2d')!;x.drawImage(img,0,0);colors.push(Array.from(x.getImageData(5,5,1,1).data).slice(0,3))}return {name:saved.fileName,colors}});
+ expect(expected.name).toBe('synthetic-b.webm');expect(expected.colors).toHaveLength(12);
  await page.locator('#labMakeGif').click();await expect(page.locator('#labGifResult')).toBeVisible();
  const url=await page.locator('#labGifDownload').getAttribute('href');const bytes=await page.evaluate(async url=>Array.from(new Uint8Array(await (await fetch(url!)).arrayBuffer())),url);
  const frames=decompressFrames(parseGIF(Uint8Array.from(bytes)),true);expect(frames).toHaveLength(12);
+ frames.forEach((frame,i)=>{const offset=(5*frame.dims.width+5)*4;for(let c=0;c<3;c++)expect(Math.abs(frame.patch[offset+c]-expected.colors[i][c])).toBeLessThan(70)});
  const first=Array.from(frames[0].patch.slice((5*frames[0].dims.width+5)*4,(5*frames[0].dims.width+5)*4+3));expect(first[0]).toBeGreaterThan(140);expect(first[2]).toBeGreaterThan(140);expect(first[1]).toBeLessThan(90);
 });
 test('S12 delayed first source cannot overwrite the last selection',async({page})=>{

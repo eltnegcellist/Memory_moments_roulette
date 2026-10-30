@@ -159,6 +159,7 @@ let gifGenerating=false;
 let gifPreviewTimer=null;
 let gifChooserSignature='';
 let gifSourceCatalog=[];
+let gifInsufficientFrameSources=0;
 let gifLoadedSourceKey=null;
 let gifLoadedFrames=[];
 let gifLoading=false;
@@ -1684,7 +1685,7 @@ miracleBack.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();
 function gifFrameGroups(){
   return gifSourceCatalog.map(src=>({
     key:src.id,label:src.label,count:src.count,thumbnail:src.thumbnail,
-    origin:src.origin,dateMs:src.dateMs,dateLabel:src.dateLabel,
+    fileName:src.fileName||'',origin:src.origin,dateMs:src.dateMs,dateLabel:src.dateLabel,
     monthKey:src.monthKey,monthLabel:src.monthLabel,
     items:gifLoadedSourceKey===src.id?gifLoadedFrames:[]
   }));
@@ -1693,7 +1694,7 @@ function renderGifSourceCards(groups){
   if(!gifSourceGrid)return;
   const q=(gifSearch?.value||'').trim().toLowerCase();
   const oldest=gifSort?.value==='oldest';
-  const visible=groups.filter(g=>!q||[g.label,g.dateLabel,g.monthLabel,g.origin==='legacy'?'旧履歴':'動画'].join(' ').toLowerCase().includes(q))
+  const visible=groups.filter(g=>!q||[g.label,g.fileName,g.dateLabel,g.monthLabel,g.origin==='legacy'?'旧履歴':'動画'].join(' ').toLowerCase().includes(q))
     .sort((a,b)=>oldest?a.dateMs-b.dateMs:b.dateMs-a.dateMs);
   const signature=JSON.stringify(visible.map(g=>[g.key,g.label,g.count,g.monthKey]));
   if(gifChooserSignature!==signature){
@@ -1745,7 +1746,9 @@ function renderGifSourceCards(groups){
     }
     if(!visible.length){
       const note=document.createElement('p');note.className='note';
-      note.textContent=groups.length?'検索条件に合う動画はありません。':'保存した動画がありません。新しい動画を選んでください。';
+      note.textContent=groups.length?'検索条件に合う動画はありません。':
+        gifInsufficientFrameSources>0?'GIFには2枚以上の画像が必要です。1コマだけの履歴はGIFにできません。':
+        '保存した動画がありません。新しい動画を選んでください。';
       gifSourceGrid.appendChild(note);
     }
   }
@@ -1772,7 +1775,9 @@ function syncGifSourceChooser(){
   makeGifBtn.disabled=gifGenerating||gifLoading||!chosen||gifLoadedSourceKey!==chosen.key||gifLoadedFrames.length<2;
   gifFrameInfo.textContent=groups.length
     ? '保存済み：'+groups.length+'本。画像をタップしてGIFにする動画を選んでください。'
-    : '過去の動画がありません。新しい動画を選んでください。';
+    : gifInsufficientFrameSources>0
+      ? 'GIFに使える過去の動画はありません。GIFには2枚以上の画像が必要です。1コマだけの過去の履歴は選べません。'
+      : '過去の動画がありません。新しい動画を選んでください。';
   gifSourceNote.textContent='1本ずつGIFにします。別の動画のコマは混ぜません。';
 }
 async function loadGifSource(sourceKey){
@@ -1818,7 +1823,7 @@ window.__memoryShareGetGifSource=()=>{
 window.__memoryGifOpen=async()=>{
   const token=++gifLoadToken;
   clearGifResult();
-  gifPastOpen=false;gifSourceCatalog=[];gifLoadedSourceKey=null;gifLoadedFrames=[];
+  gifPastOpen=false;gifSourceCatalog=[];gifInsufficientFrameSources=0;gifLoadedSourceKey=null;gifLoadedFrames=[];
   gifChooserSignature='';gifLoading=true;
   gifPast.hidden=true;gifEditor.hidden=true;
   gifChoosePast?.setAttribute('aria-expanded','false');
@@ -1830,6 +1835,7 @@ window.__memoryGifOpen=async()=>{
     const sources=await window.__memoryGifListSources?.();
     if(token!==gifLoadToken||document.body.dataset.appView!=='gif')return;
     gifSourceCatalog=Array.isArray(sources)?sources:[];
+    gifInsufficientFrameSources=Number(sources?.insufficientFrameSources)||0;
     gifSource.selectedIndex=-1;
     gifChooserSignature='';
   }catch(err){
@@ -1843,7 +1849,7 @@ window.__memoryGifOpen=async()=>{
 };
 window.__memoryGifClose=()=>{
   ++gifLoadToken;gifLoading=false;gifPastOpen=false;
-  gifSourceCatalog=[];gifLoadedFrames=[];gifLoadedSourceKey=null;gifChooserSignature='';
+  gifSourceCatalog=[];gifInsufficientFrameSources=0;gifLoadedFrames=[];gifLoadedSourceKey=null;gifChooserSignature='';
   clearGifResult();
 };
 function openGifPast(){
@@ -1888,7 +1894,7 @@ gifFileInput?.addEventListener('change',async()=>{
   }catch(err){
     console.error('GIF video import failed',err);
     gifStatus.style.display='block';
-    gifStatus.textContent='動画を取り込めませんでした: '+(err?.message||err);
+    gifStatus.textContent='動画を取り込めませんでした：'+(err?.message||err);
   }finally{
     gifAddVideo.disabled=false;gifFileInput.value='';
   }

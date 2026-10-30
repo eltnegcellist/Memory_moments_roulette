@@ -23,7 +23,7 @@ test('S16 simulated old service worker updates to current cache then works offli
  try{await page.goto(`http://127.0.0.1:${addr.port}/#home`);await page.evaluate(()=>navigator.serviceWorker.ready);await expect.poll(()=>page.evaluate(()=>caches.keys())).toContain('synthetic-old-cache');
  old=false;await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();await r!.update()});
  await expect.poll(async()=>page.evaluate(()=>caches.keys()),{timeout:15000}).toEqual([activeCacheName]);
- const cachedUrls=await page.evaluate(async()=>{const cache=await caches.open(activeCacheName);return (await cache.keys()).map(r=>r.url)});expect(cachedUrls.some(url=>url.includes('navigation.js?v=1.2.1-share-gallery-stop1'))).toBe(true);expect(cachedUrls.some(url=>url.includes('navigation.js?old'))).toBe(false);
+ const cachedUrls=await page.evaluate(async(cacheName)=>{const cache=await caches.open(cacheName);return (await cache.keys()).map(r=>r.url)},activeCacheName);expect(cachedUrls.some(url=>url.includes('navigation.js?v=1.2.1-share-gallery-stop1'))).toBe(true);expect(cachedUrls.some(url=>url.includes('navigation.js?old'))).toBe(false);
  await page.reload();await context.setOffline(true);await page.reload();await page.locator('[data-route="gif"]').click();await expect(page.locator('#labGifAddVideo')).toBeVisible();await expect(page).toHaveURL(/#gif$/);await context.setOffline(false);
  }finally{await context.setOffline(false);await new Promise<void>(resolve=>server.close(()=>resolve()))}
 });

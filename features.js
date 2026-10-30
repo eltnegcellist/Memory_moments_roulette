@@ -1776,7 +1776,7 @@ function syncGifSourceChooser(){
   gifFrameInfo.textContent=groups.length
     ? '保存済み：'+groups.length+'本。画像をタップしてGIFにする動画を選んでください。'
     : gifInsufficientFrameSources>0
-      ? 'GIFには2枚以上の画像が必要です。1コマだけの過去の履歴は選べません。'
+      ? 'GIFに使える過去の動画はありません。GIFには2枚以上の画像が必要です。1コマだけの過去の履歴は選べません。'
       : '過去の動画がありません。新しい動画を選んでください。';
   gifSourceNote.textContent='1本ずつGIFにします。別の動画のコマは混ぜません。';
 }

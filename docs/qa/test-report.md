@@ -84,3 +84,7 @@ CI初回は15件中14件成功、1件失敗。自動回転中のコマを固定�
 再現: `npm ci`、`npx playwright install chromium`、`npx playwright test --project=desktop-chromium tests/e2e/receive.spec.ts tests/e2e/gif.spec.ts`。探索は `npx playwright test --project=desktop-chromium tests/e2e/explore.spec.ts`。
 
 全操作イベント、動的なダイアログの全状態、キーボード・スクリーンリーダー、実機長時間利用の網羅は未完了。画面ルートの31辺は各1例を検証したが、全操作イベントの網羅率ではない。
+
+## 2026-10-30 修正後の検証追記
+
+検証用ドラフトPR #55のコミット `857baae13fd4b553739bccac6c0403b5c1b769b2` について、GitHub Actions [E2E audit #41006810027](https://github.com/eltnegcellist/Memory_moments_roulette/actions/runs/41006810027) は全件実行で140件成功、失敗0件、3件スキップ。修正PR #54は検証版と変更5ファイルのblob SHAが一致し、squashマージ済み（main `b476b1871afd7d82b4f0fc363d526d974167203b`）。このPR #53のテスト・設定ファイルは検証版と一致する。検証用PRのワークフローだけは全件実行を強制するため意図的に異なる。mainに修正を反映した後のPR #53スモークCIは再実行して合否を確認する。

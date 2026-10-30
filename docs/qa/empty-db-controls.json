@@ -1,0 +1,730 @@
+[
+  {
+    "tag": "button",
+    "id": "homeNewVideoBtn",
+    "route": "home",
+    "label": "＋ 新しい動画から作る今選ぶ動画だけですぐにルーレット ›",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "homePastVideoBtn",
+    "route": "home",
+    "label": "▦ 過去の動画から作るまだ保存した動画はありません ›",
+    "target": "library",
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": null,
+    "route": "home",
+    "label": "♡お気に入りまだありません",
+    "target": "favorites",
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": null,
+    "route": "home",
+    "label": "↺履歴まだありません",
+    "target": "history",
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": null,
+    "route": "home",
+    "label": "動画からGIFを作る",
+    "target": "gif",
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": null,
+    "route": "home",
+    "label": "⚙設定ルーレット・データ",
+    "target": "settings",
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": null,
+    "route": "home",
+    "label": "⇧共有するルーレットを送る",
+    "target": "share-picker",
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": null,
+    "route": "home",
+    "label": "受け取って遊ぶもらったファイルを開く",
+    "target": "receive",
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "howtoOpen",
+    "route": "home",
+    "label": "📖 アプリの使い方を見る ›",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": null,
+    "route": "create",
+    "label": "← ホーム",
+    "target": null,
+    "back": true
+  },
+  {
+    "tag": "input",
+    "id": "fileInput",
+    "route": "create",
+    "label": null,
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "createPickBtn",
+    "route": "create",
+    "label": "動画を選ぶ・選び直す",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": null,
+    "route": "library",
+    "label": "← ホーム",
+    "target": null,
+    "back": true
+  },
+  {
+    "tag": "button",
+    "id": "deckLibraryManageBtn",
+    "route": "library",
+    "label": "動画を管理",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "input",
+    "id": "deckSearch",
+    "route": "library",
+    "label": "日付で絞り込み（例 10/7）",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "select",
+    "id": "deckSort",
+    "route": "library",
+    "label": "動画の並び順",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "deckSelectAllBtn",
+    "route": "library",
+    "label": "すべて選択",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "deckClearSelectionBtn",
+    "route": "library",
+    "label": "選択を解除",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "deckDrawBtn",
+    "route": "library",
+    "label": "🎴 選んだ動画でおみくじを引く",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "playBtn",
+    "route": "home",
+    "label": "この内容で遊ぶ",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "reextractBtn",
+    "route": "home",
+    "label": "もう一度抽出する",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": null,
+    "route": "history",
+    "label": "← ホーム",
+    "target": null,
+    "back": true
+  },
+  {
+    "tag": "button",
+    "id": "backBtn",
+    "route": "play",
+    "label": "← 戻る",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "labReplaySpecial",
+    "route": "play",
+    "label": "✨ 特別リプレイ",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "labSaveSpecialMovieResult",
+    "route": "play",
+    "label": "🎬 この演出をムービー保存",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "labSavePhoto",
+    "route": "play",
+    "label": "♡ お気に入りに保存",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "photoAction",
+    "route": "play",
+    "label": "写真を全画面で見る",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "shareOpenFromPlay",
+    "route": "play",
+    "label": "⇧ このルーレットを共有する",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": null,
+    "route": "share-picker",
+    "label": "← ホーム",
+    "target": null,
+    "back": true
+  },
+  {
+    "tag": "button",
+    "id": "shareBackBtn",
+    "route": "share",
+    "label": "← 戻る",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "shareStopPrev",
+    "route": "share",
+    "label": "← 前のコマ",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "shareStopNext",
+    "route": "share",
+    "label": "次のコマ →",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "shareFramePagePrev",
+    "route": "share",
+    "label": "← 前のページ",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "shareFramePageNext",
+    "route": "share",
+    "label": "次のページ →",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "select",
+    "id": "shareRouletteFormat",
+    "route": "share",
+    "label": "🎬 抽選からSTOPまでの動画 🎲 相手も遊べるルーレットファイル 📷 停止した写真",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "input",
+    "id": "shareRouletteMask",
+    "route": "share",
+    "label": null,
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "shareRouletteBuild",
+    "route": "share",
+    "label": "作成して保存・共有",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "input",
+    "id": "shareFavoriteMask",
+    "route": "share",
+    "label": null,
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "shareFavoriteBuild",
+    "route": "share",
+    "label": "写真を作成して保存・共有",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "shareOutputClose",
+    "route": "share",
+    "label": "閉じる",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "shareOutputSave",
+    "route": "share",
+    "label": "↓ 端末に保存",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "shareOutputSend",
+    "route": "share",
+    "label": "共有先を選ぶ",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "shareMaskPrev",
+    "route": "share",
+    "label": "← 前",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "shareMaskNext",
+    "route": "share",
+    "label": "次 →",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "select",
+    "id": "shareMaskType",
+    "route": "share",
+    "label": "🐻🐱🌸⭐🔒",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "input",
+    "id": "shareMaskSize",
+    "route": "share",
+    "label": null,
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "shareMaskUndo",
+    "route": "share",
+    "label": "直前を取り消す",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "shareMaskCopy",
+    "route": "share",
+    "label": "位置を全コマへコピー",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "sharePrivacyClose",
+    "route": "share",
+    "label": "閉じる",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "sharePrivacyExportSelected",
+    "route": "share",
+    "label": "加工して保存・共有する",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": null,
+    "route": "receive",
+    "label": "← ホーム",
+    "target": null,
+    "back": true
+  },
+  {
+    "tag": "input",
+    "id": "shareImportFile",
+    "route": "receive",
+    "label": null,
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "labClearHistory",
+    "route": "play",
+    "label": "履歴をクリア",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": null,
+    "route": "gif",
+    "label": "← ホーム",
+    "target": null,
+    "back": true
+  },
+  {
+    "tag": "button",
+    "id": "labGifAddVideo",
+    "route": "gif",
+    "label": "＋ 新しい動画から作る端末から新しい動画を選ぶ ›",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "labGifChoosePast",
+    "route": "gif",
+    "label": "▦ 過去の動画から作る保存済みの動画・以前のルーレット ›",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "input",
+    "id": "labGifFileInput",
+    "route": "gif",
+    "label": null,
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "input",
+    "id": "labGifSearch",
+    "route": "gif",
+    "label": "GIFにする動画を検索",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "select",
+    "id": "labGifSort",
+    "route": "gif",
+    "label": "動画の並び順",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "select",
+    "id": "labGifSource",
+    "route": "gif",
+    "label": null,
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "labGifChangeVideo",
+    "route": "gif",
+    "label": "別の動画を選ぶ",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "select",
+    "id": "labGifSpeed",
+    "route": "gif",
+    "label": "0.05秒ごと（最速・毎秒20コマ） 0.1秒ごと（毎秒10コマ） 0.2秒ごと（おすすめ・毎秒5コマ） 0.5秒ごと（毎秒2コマ） 1秒ごと（毎秒1コマ）",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "labMakeGif",
+    "route": "gif",
+    "label": "選んだ動画からGIFを作る",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "sharePrivacyGif",
+    "route": "gif",
+    "label": "🐻 ひみつスタンプでGIFを作る",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": null,
+    "route": "favorites",
+    "label": "← ホーム",
+    "target": null,
+    "back": true
+  },
+  {
+    "tag": "button",
+    "id": null,
+    "route": "settings",
+    "label": "← ホーム",
+    "target": null,
+    "back": true
+  },
+  {
+    "tag": "select",
+    "id": "frameCount",
+    "route": "settings",
+    "label": "おまかせ（8〜15枚） 8枚 12枚 15枚",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "input",
+    "id": "plainMode",
+    "route": "settings",
+    "label": null,
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "input",
+    "id": "showFortunes",
+    "route": "settings",
+    "label": null,
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "settingsVersionTrigger",
+    "route": "settings",
+    "label": "アプリバージョン v1.2.0 β3",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "input",
+    "id": "showScores",
+    "route": "settings",
+    "label": null,
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "input",
+    "id": "deluxeMode",
+    "route": "settings",
+    "label": null,
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "select",
+    "id": "labSpecialMode",
+    "route": "settings",
+    "label": "通常（確率どおり） 毎回スローモーション 特大吉を毎回表示 大逆転大吉を毎回表示",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "labResetAppData",
+    "route": "settings",
+    "label": "完全初期化",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "deckBackupBtn",
+    "route": "settings",
+    "label": "バックアップを書き出す",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "deckRestoreBtn",
+    "route": "settings",
+    "label": "バックアップから復元",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "deckClearBtn",
+    "route": "settings",
+    "label": "保存済み動画をすべて削除",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "input",
+    "id": "deckRestoreInput",
+    "route": "settings",
+    "label": null,
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "howtoClose",
+    "route": "home",
+    "label": "使い方を閉じる",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "howtoDemoPhoto",
+    "route": "home",
+    "label": "説明用ルーレットを止める",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "howtoDone",
+    "route": "home",
+    "label": "使ってみる",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "photoViewerClose",
+    "route": "home",
+    "label": "写真表示を閉じる",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "labGifViewerClose",
+    "route": "home",
+    "label": "GIFを閉じる",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "labGifViewerDone",
+    "route": "home",
+    "label": "閉じる",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "labPhotoViewerClose",
+    "route": "home",
+    "label": "画像を閉じる",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "labPhotoViewerDone",
+    "route": "home",
+    "label": "閉じる",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "labDownloadNoticeOpen",
+    "route": "home",
+    "label": "開く",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "labDownloadNoticeClose",
+    "route": "home",
+    "label": "閉じる",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "labReplayAgain",
+    "route": "home",
+    "label": "↻ リプレイ",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "labSaveSpecialMovie",
+    "route": "home",
+    "label": "🎬 ムービー保存",
+    "target": null,
+    "back": false
+  },
+  {
+    "tag": "button",
+    "id": "labMiracleBack",
+    "route": "home",
+    "label": "結果へ戻る",
+    "target": null,
+    "back": false
+  }
+]

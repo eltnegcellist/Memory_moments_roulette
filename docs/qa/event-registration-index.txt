@@ -1,0 +1,127 @@
+share-studio.js:73:byId('shareOutputClose').addEventListener('click',closeOutput);
+share-studio.js:74:output.addEventListener('click',e=>{if(e.target===output)closeOutput();});
+share-studio.js:75:document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!output.hidden)closeOutput();});
+share-studio.js:76:byId('shareOutputSave').addEventListener('click',async()=>{
+share-studio.js:86:byId('shareOutputSend').addEventListener('click',async()=>{
+share-studio.js:343:  btn.addEventListener('click',()=>selectStop(i));
+share-studio.js:366:  b.addEventListener('click',()=>selectStop(draw.index,draw));
+share-studio.js:388:byId('shareStopPrev').addEventListener('click',()=>{
+share-studio.js:391:byId('shareStopNext').addEventListener('click',()=>{
+share-studio.js:394:byId('shareFramePagePrev').addEventListener('click',()=>{frameGridPage--;renderFramePage();});
+share-studio.js:395:byId('shareFramePageNext').addEventListener('click',()=>{frameGridPage++;renderFramePage();});
+share-studio.js:396:byId('shareAllFramesDetails').addEventListener('toggle',()=>{
+share-studio.js:455:   card.addEventListener('click',async()=>{
+share-studio.js:506:byId('shareOpenFromPlay').addEventListener('click',()=>{
+share-studio.js:512:byId('shareRouletteFormat').addEventListener('change',()=>{
+share-studio.js:516:byId('shareRouletteMask').addEventListener('change',()=>{
+share-studio.js:546:byId('shareRouletteBuild').addEventListener('click',e=>runBusy(e.currentTarget,async()=>{
+share-studio.js:575:byId('shareImportFile').addEventListener('change',async e=>{
+share-studio.js:618:byId('shareFavoriteMask').addEventListener('change',()=>{
+share-studio.js:621:byId('shareFavoriteBuild').addEventListener('click',e=>runBusy(e.currentTarget,async()=>{
+share-studio.js:640:byId('sharePrivacyGif').addEventListener('click',()=>{
+share-studio.js:679:canvas.addEventListener('click',e=>{
+share-studio.js:687:byId('shareMaskPrev').addEventListener('click',()=>{editIndex=(editIndex-1+marks.length)%marks.length;renderEditor().catch(console.error);});
+share-studio.js:688:byId('shareMaskNext').addEventListener('click',()=>{editIndex=(editIndex+1)%marks.length;renderEditor().catch(console.error);});
+share-studio.js:689:byId('shareMaskUndo').addEventListener('click',()=>{marks[editIndex]?.pop();renderEditor().catch(console.error);});
+share-studio.js:690:byId('shareMaskCopy').addEventListener('click',()=>{
+share-studio.js:696:byId('shareMaskSize').addEventListener('input',e=>{maskSize=Number(e.target.value)/100;});
+share-studio.js:697:byId('shareMaskType').addEventListener('change',e=>{chosen=e.target.value;});
+share-studio.js:698:byId('sharePrivacyClose').addEventListener('click',()=>{
+share-studio.js:712:byId('sharePrivacyExportSelected').addEventListener('click',e=>runBusy(e.currentTarget,async()=>{
+hidden-settings.js:82:triggers.forEach(trigger=>trigger.addEventListener('click',()=>{
+hidden-settings.js:93:scoreBox.addEventListener('change',save);
+hidden-settings.js:94:specialMode.addEventListener('change',()=>{window.__babyLabSpecialMode=specialMode.value;window.__babyLabForcedSpecial=null;save();});
+hidden-settings.js:95:deluxeMode.addEventListener('change',()=>{
+hidden-settings.js:100:plainMode.addEventListener('change',syncDeluxeForMode);
+hidden-settings.js:101:resetAppDataBtn?.addEventListener('click',()=>{
+navigation.js:83:document.addEventListener('click',e=>{
+navigation.js:120:document.getElementById('fileInput')?.addEventListener('change',e=>{
+navigation.js:125:window.addEventListener('pagehide',()=>{
+navigation.js:130:window.addEventListener('popstate',()=>applyView(routeFromHash()));
+navigation.js:131:window.addEventListener('hashchange',()=>applyView(routeFromHash()));
+index.html:561:  scoreBox?.addEventListener('change',sync);fortuneBox?.addEventListener('change',sync);
+index.html:617:  demo?.addEventListener('click',()=>{
+index.html:631:  open?.addEventListener('click',show);
+index.html:632:  close?.addEventListener('click',hide);
+index.html:633:  done?.addEventListener('click',hide);
+index.html:634:  modal?.addEventListener('click',e=>{if(e.target===modal)hide();});
+index.html:635:  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal?.classList.contains('show'))hide();});
+deck.js:290:    document.addEventListener('visibilitychange',on);
+deck.js:592:    choose.onclick=async()=>{
+deck.js:611:    del.onclick=async e=>{
+deck.js:1053:    el.addEventListener(name,done,{once:true});
+deck.js:1054:    el.addEventListener('error',fail,{once:true});
+deck.js:1551:deckDrawBtn.addEventListener('click',async()=>{
+deck.js:1560:deckAddBtn?.addEventListener('click',()=>fileInput.click());
+deck.js:1561:deckManageBtn?.addEventListener('click',()=>{
+deck.js:1566:deckLibraryManageBtn?.addEventListener('click',()=>{
+deck.js:1910:deckClearBtn?.addEventListener('click',async()=>{
+deck.js:1929:deckBackupBtn?.addEventListener('click',backupDeck);
+deck.js:1930:deckRestoreBtn?.addEventListener('click',()=>deckRestoreInput?.click());
+deck.js:1931:deckRestoreInput?.addEventListener('change',async()=>{
+deck.js:1937:deckSearch?.addEventListener('input',()=>renderSourceLibraries());
+deck.js:1938:deckSearch?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();renderSourceLibraries();}});
+deck.js:1939:deckSort?.addEventListener('change',()=>renderSourceLibraries());
+deck.js:1940:deckSelectAllBtn?.addEventListener('click',async()=>{
+deck.js:1947:deckClearSelectionBtn?.addEventListener('click',async()=>{
+deck.js:1953:document.addEventListener('visibilitychange',()=>{
+deck.js:1963:window.addEventListener('pageshow',()=>{
+deluxe.js:162:photoAction.addEventListener('pointerdown',e=>{
+deluxe.js:166:photoViewer.addEventListener('pointerdown',e=>{
+deluxe.js:169:photoViewerClose.addEventListener('pointerdown',e=>{
+deluxe.js:172:document.addEventListener('fullscreenchange',()=>{
+features.js:64:gifViewerClose.addEventListener('click',closeGifViewer);
+features.js:65:gifViewerDone.addEventListener('click',closeGifViewer);
+features.js:117:photoViewerClose.addEventListener('click',closeDailyPhoto);
+features.js:118:photoViewerDone.addEventListener('click',closeDailyPhoto);
+features.js:119:downloadNoticeOpen.addEventListener('click',()=>{
+features.js:123:downloadNoticeClose.addEventListener('click',hideDownloadNotice);
+features.js:1006:    el.addEventListener(name,on,{once:true});
+features.js:1033:    el.addEventListener('seeked',onSeeked);
+features.js:1034:    el.addEventListener('timeupdate',onTimeUpdate);
+features.js:1658:miracleMovieBtn.addEventListener('click',e=>{
+features.js:1662:movieResultBtn.addEventListener('click',e=>{
+features.js:1667:miracleReplayAgain.addEventListener('pointerdown',e=>{
+features.js:1672:replaySpecialBtn.addEventListener('pointerdown',e=>{
+features.js:1681:miracleBack.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();closeMiracle();});
+features.js:1735:      button.addEventListener('click',()=>{
+features.js:1856:gifChoosePast?.addEventListener('click',openGifPast);
+features.js:1857:gifSearch?.addEventListener('input',()=>{gifChooserSignature='';syncGifSourceChooser();});
+features.js:1858:gifSort?.addEventListener('change',()=>{gifChooserSignature='';syncGifSourceChooser();});
+features.js:1859:gifChangeVideo?.addEventListener('click',()=>{
+features.js:1862:gifAddVideo?.addEventListener('click',()=>{
+features.js:1866:gifFileInput?.addEventListener('change',async()=>{
+features.js:1913:    card.addEventListener('click',()=>showHistoryEntry(x));
+features.js:2135:stageEl.addEventListener('pointerdown',e=>{
+features.js:2140:window.addEventListener('pointermove',e=>{
+features.js:2144:window.addEventListener('pointerup',e=>{
+features.js:2154:window.addEventListener('pointercancel',e=>{
+features.js:2190:saveBtn.addEventListener('pointerdown',async e=>{
+features.js:2219:clearHistoryBtn.addEventListener('click',()=>{
+features.js:2226:gifDownload.addEventListener('click',async e=>{
+features.js:2241:makeGifBtn.addEventListener('click',async()=>{
+features.js:2286:gifSource?.addEventListener('change',()=>{clearGifResult();syncGifSourceChooser();loadGifSource(gifSource.value);});
+features.js:2287:gifSpeed?.addEventListener('change',()=>{
+features.js:2610:    card.querySelector('.labPhotoDownload').addEventListener('click',async e=>{
+features.js:2622:    card.querySelector('.labPhotoOpen').addEventListener('click',e=>{
+features.js:2632:    shareButton.addEventListener('click',e=>{
+features.js:2638:    deleteBtn.addEventListener('click',e=>{
+app.js:79:plainModeEl.addEventListener('change',async()=>{ savePublicSettings(); if(selectedFrames.length){ if(modeName()==='omikuji'){ selectedFortunes=await assignFortunes(selectedFrames); } renderGrid(); } updatePreviewMeta(); });
+app.js:80:frameCountEl.addEventListener('change',savePublicSettings);
+app.js:81:showFortunesEl?.addEventListener('change',savePublicSettings);
+app.js:82:function once(target,event,timeout=6000){return new Promise((resolve,reject)=>{let done=false; const fn=()=>{if(done)return; done=true; clearTimeout(to); target.removeEventListener(event,fn); resolve();}; const to=setTimeout(()=>{if(done)return; done=true; target.removeEventListener(event,fn); reject(new Error(event+' timeout'));},timeout); target.addEventListener(event,fn,{once:true});})}
+app.js:272:    el.querySelector('.open').onclick=async()=>{
+app.js:281:    el.querySelector('.renameToggle').onclick=()=>{const row=el.querySelector('.renameRow');row.style.display=row.style.display==='none'?'flex':'none';};
+app.js:282:    el.querySelector('.saveName').onclick=async()=>{const nx=(el.querySelector('.renameRow input').value||'').trim();if(!nx)return;x.title=nx;x.updatedAt=Date.now();await dbPut(x);refreshLibrary();};
+app.js:283:    el.querySelector('.del').onclick=async()=>{if(confirm('削除しますか？')){await dbDelete(x.id);refreshLibrary();}};
+app.js:302:osc.addEventListener('ended',()=>{activeTones.delete(osc);osc.disconnect();gain.disconnect();},{once:true});
+app.js:309:fileInput.addEventListener('click',primeRouletteAudio);
+app.js:384:fileInput.addEventListener('change',()=>{ if(fileInput.files?.length){ currentCreation=null; if(typeof window.__memoryDeckHandleFiles==='function'){ window.__memoryDeckHandleFiles(Array.from(fileInput.files)); return; } extractFromCurrentFile(); } });
+app.js:385:reextractBtn.addEventListener('click',()=>{ if(lastFile){ currentCreation=null; extractFromCurrentFile(); } });
+app.js:386:playBtn.addEventListener('click',()=>{ if(!selectedFrames.length) return; unlockAudio(); currentCreation=makeCreation(); persistCreation(currentCreation).catch(e=>console.error('roulette history save failed',e)); preparePlay(currentCreation); });
+app.js:387:stage.addEventListener('pointerdown',e=>{ e.preventDefault(); if(!primed) unlockAudio(); if(running) stopRun(); else startRun(); },{passive:false});
+app.js:416:$('backBtn').addEventListener('click',()=>{
+app.js:436:window.addEventListener('DOMContentLoaded',()=>setTimeout(()=>{
+sw.js:3:self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
+sw.js:4:self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+sw.js:5:self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;e.respondWith(fetch(e.request).then(r=>{const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy)).catch(()=>{});return r;}).catch(()=>caches.match(e.request).then(r=>r||caches.match('./index.html'))));});

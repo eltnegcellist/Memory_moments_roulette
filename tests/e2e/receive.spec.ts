@@ -25,6 +25,9 @@ async function dbCounts(page: Page) {
 async function creationRecords(page: Page) {
  return page.evaluate(async()=>{const db=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('babyExpressionRouletteDB',3);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});const records=await new Promise<any[]>((resolve,reject)=>{const r=db.transaction('creations').objectStore('creations').getAll();r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});db.close();return records});
 }
+async function userRecords(page: Page) {
+ return page.evaluate(async()=>{const out:Record<string,unknown[]>={};for(const [name,stores] of [['babyExpressionRouletteDB',['creations','deckSources','deckFrames','deckReplays','deckMeta']],['babyExpressionRouletteLabDB',['dailyPhotos']]] as [string,string[]][]){const db=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open(name);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});for(const store of stores)out[store]=await new Promise<any[]>((resolve,reject)=>{const r=db.transaction(store).objectStore(store).getAll();r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});db.close()}return out});
+}
 async function synthetic(page: Page) {
  return page.evaluate(() => ['#e83131','#1650dd'].map((color,i)=>{ const c=document.createElement('canvas');c.width=120;c.height=80;const ctx=c.getContext('2d')!;ctx.fillStyle=color;ctx.fillRect(0,0,120,80);ctx.fillStyle='white';ctx.font='40px sans-serif';ctx.fillText(String(i+1),45,55);return c.toDataURL('image/png'); }));
 }
@@ -156,8 +159,10 @@ test('N08 history → play → share → play → history preserves selected cre
 test('N16 normal synthetic video import reaches play and persists history',async({page})=>{
  test.setTimeout(120000);
  await page.goto('/#home'); const before=await dbCounts(page);
+ await page.evaluate(()=>{(window as any).__viewTransitions=[];new MutationObserver(()=>{(window as any).__viewTransitions.push(document.body.dataset.appView)}).observe(document.body,{attributes:true,attributeFilter:['data-app-view']})});
  await page.locator('#fileInput').setInputFiles('tests/fixtures/synthetic-a.webm');
  await expect(page).toHaveURL(/#play$/, {timeout:90000}); await routes(page,'play');
+ const transitions=await page.evaluate(()=>(window as any).__viewTransitions as string[]);expect(transitions.indexOf('create')).toBeGreaterThanOrEqual(0);expect(transitions.lastIndexOf('play')).toBeGreaterThan(transitions.indexOf('create'));
  await expect(page.locator('#playImage')).toHaveAttribute('src',/^data:image\//);
  await expect.poll(async()=>(await dbCounts(page)).babyExpressionRouletteDB.creations,{timeout:15000}).toBe(before.babyExpressionRouletteDB.creations+1);
  const after=await dbCounts(page);expect(after.babyExpressionRouletteDB.deckSources).toBe(before.babyExpressionRouletteDB.deckSources+1);
@@ -233,12 +238,14 @@ test('N11 favorite sharing produces selected JPEG and returns to favorites',asyn
 test('S09 unsupported and oversized received files leave data untouched',async({page})=>{
  await page.goto('/#home');const frames=await synthetic(page);
  await page.evaluate(async frames=>{await (window as any).__memoryHistoryMigrationPromise;const db=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('babyExpressionRouletteDB',3);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});await new Promise<void>((resolve,reject)=>{const tx=db.transaction('creations','readwrite');tx.objectStore('creations').put({id:'canary',title:'Canary',createdAt:1700000000000,mode:'roulette',frames,times:[0,1]});tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)});db.close()},frames);
- const before=await dbCounts(page);const records=await creationRecords(page);
+ await page.evaluate(async image=>{const main=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('babyExpressionRouletteDB',3);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});await new Promise<void>((resolve,reject)=>{const t=main.transaction(['deckSources','deckFrames','deckReplays'],'readwrite');t.objectStore('deckSources').put({id:'source-canary',fileName:'canary.webm',candidateCount:1,thumbnailData:image,storageBytes:0});t.objectStore('deckFrames').put({id:'frame-canary',sourceVideoId:'source-canary',imageData:image,timestamp:0});t.objectStore('deckReplays').put({id:'replay-canary',frames:[image]});t.oncomplete=()=>resolve();t.onerror=()=>reject(t.error)});main.close();const lab=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('babyExpressionRouletteLabDB',1);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});await new Promise<void>((resolve,reject)=>{const t=lab.transaction('dailyPhotos','readwrite');t.objectStore('dailyPhotos').put({id:'favorite-canary',image,createdAt:1700000000000});t.oncomplete=()=>resolve();t.onerror=()=>reject(t.error)});lab.close()},frames[0]);
+ const before=await dbCounts(page);const records=await creationRecords(page);const allRecords=await userRecords(page);
  await page.locator('[data-route="receive"]').click();
+ await page.locator('#shareImportFile').setInputFiles({name:'broken.mmrplay',mimeType:'application/json',buffer:Buffer.from('{broken')});await expect(page.locator('#receiveStatus')).toContainText('読み込めませんでした');
  await page.locator('#shareImportFile').setInputFiles({name:'unsupported.mmrplay',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({format:'unknown',version:1,frames:[]}))});
  await expect(page.locator('#receiveStatus')).toContainText('対応していない');await routes(page,'receive');
  await page.evaluate(()=>{const input=document.querySelector('#shareImportFile') as HTMLInputElement;const dt=new DataTransfer();dt.items.add(new File([new Uint8Array(48*1024*1024+1)],'large.mmrplay',{type:'application/json'}));input.files=dt.files;input.dispatchEvent(new Event('change',{bubbles:true}));});
- await expect(page.locator('#receiveStatus')).toContainText('48MB以下');await routes(page,'receive');expect(await dbCounts(page)).toEqual(before);expect(await creationRecords(page)).toEqual(records);
+ await expect(page.locator('#receiveStatus')).toContainText('48MB以下');await routes(page,'receive');expect(await dbCounts(page)).toEqual(before);expect(await creationRecords(page)).toEqual(records);expect(await userRecords(page)).toEqual(allRecords);
 });
 test('S18 denied save falls back to download while preserving history',async({page})=>{
  await page.goto('/#home');const before=await dbCounts(page);await importSynthetic(page);
@@ -252,19 +259,20 @@ test('N18 empty storage safely handles sharing without selection',async({page})=
  await page.goto('/#home');await page.locator('[data-route="share-picker"]').click();await routes(page,'share-picker');
  await expect(page.locator('#sharePickerStatus')).toContainText('ありません');
  await page.goto('/#share');await page.reload();await routes(page,'share');
- await expect(page.locator('#shareSourceState')).toContainText('ありません');await expect(page.locator('#shareRouletteBuild')).toBeDisabled();
+ await expect(page.locator('#shareSourceState')).toContainText('ありません');await expect(page.locator('#shareRouletteBuild')).toBeDisabled();await page.locator('#shareBackBtn').click();await routes(page,'home');
  expect(errors).toEqual([]);
 });
 test('S05 alternating two saved roulettes exports only selected frames',async({page})=>{
- await page.goto('/#home');const frames=await synthetic(page);
- await page.evaluate(async frames=>{await (window as any).__memoryHistoryMigrationPromise;const db=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('babyExpressionRouletteDB',3);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});await new Promise<void>((resolve,reject)=>{const tx=db.transaction('creations','readwrite');for(const [id,fs] of [['A',[frames[0],frames[0]]],['B',[frames[1],frames[1]]]] as [string,string[]][])tx.objectStore('creations').put({id,title:'Synthetic '+id,createdAt:1700000000000,mode:'roulette',frames:fs,times:[0,1]});tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)});db.close()},frames);
+ await page.goto('/#home');const frames=await page.evaluate(()=>['red','green','blue','yellow'].map(color=>{const c=document.createElement('canvas');c.width=c.height=80;const x=c.getContext('2d')!;x.fillStyle=color;x.fillRect(0,0,80,80);return c.toDataURL()}));
+ await page.evaluate(async frames=>{await (window as any).__memoryHistoryMigrationPromise;const db=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('babyExpressionRouletteDB',3);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});await new Promise<void>((resolve,reject)=>{const tx=db.transaction('creations','readwrite');for(const [id,fs] of [['A',frames.slice(0,2)],['B',frames.slice(2,4)]] as [string,string[]][])tx.objectStore('creations').put({id,title:'Synthetic '+id,createdAt:1700000000000,mode:'roulette',frames:fs,times:[0,1]});tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)});db.close()},frames);
  await page.locator('[data-route="share-picker"]').click();
- for(const [name,expected] of [['A',frames[0]],['B',frames[1]],['A',frames[0]]] as [string,string][]){
-  await page.locator('.shareSavedCard').filter({hasText:'Synthetic '+name}).click();await routes(page,'share');
-  await expect(page.locator('#shareSourceState')).toContainText('Synthetic '+name);
+ for(const [name,expected] of [['A',frames.slice(0,2)],['B',frames.slice(2,4)],['A',frames.slice(0,2)]] as [string,string[]][]){
+  await page.locator('.shareSavedCard').filter({hasText:'Synthetic '+name}).click();await routes(page,'share');await expect(page.locator('#shareSourceState')).toContainText('Synthetic '+name);
   await page.locator('#shareRouletteFormat').selectOption('play');await page.locator('#shareRouletteBuild').click();await expect(page.locator('#shareOutput')).toBeVisible();
-  const pending=page.waitForEvent('download');await page.locator('#shareOutputSave').click();const d=await pending;
-  const data=JSON.parse(await readFile((await d.path())!,'utf8'));expect(data.frames).toEqual([expected,expected]);
+  const pending=page.waitForEvent('download');await page.locator('#shareOutputSave').click();const d=await pending;const data=JSON.parse(await readFile((await d.path())!,'utf8'));expect(data.frames).toEqual(expected);
+  await page.locator('#shareRouletteFormat').selectOption('photo');await page.locator('#shareAllFramesDetails summary').click();await page.getByRole('button',{name:'2コマ目を停止位置にする'}).click();await expect(page.locator('#shareSelectedFrameImage')).toHaveAttribute('src',expected[1]);await page.locator('#shareRouletteBuild').click();
+  const imagePending=page.waitForEvent('download');await page.locator('#shareOutputSave').click();const imageFile=await imagePending;const bytes=await readFile((await imageFile.path())!);
+  const pixels=await page.evaluate(async ({orig,jpeg})=>{async function rgb(src:string){const i=new Image();i.src=src;await i.decode();const c=document.createElement('canvas');c.width=i.width;c.height=i.height;const x=c.getContext('2d')!;x.drawImage(i,0,0);return Array.from(x.getImageData(5,5,1,1).data).slice(0,3)}return [await rgb(orig),await rgb('data:image/jpeg;base64,'+jpeg)]},{orig:expected[1],jpeg:bytes.toString('base64')});pixels[1].forEach((v,i)=>expect(Math.abs(v-pixels[0][i])).toBeLessThan(15));
   await page.locator('#shareBackBtn').click();await routes(page,'share-picker');
  }
 });
@@ -287,12 +295,15 @@ test('S13 share and receive refresh remain safe with ephemeral data',async({page
  await page.goto('/#receive');await page.reload();await routes(page,'receive');await expect(page.locator('#receiveStatus')).toBeEmpty();expect(errors).toEqual([]);
 });
 test('S10 leaving a spinning received roulette stops timers without recording draws',async({page})=>{
+ await page.addInitScript(()=>{const proto=AudioContext.prototype,original=proto.createOscillator;(window as any).__audioContexts=new Set();(window as any).__activeOscillators=new Set();proto.createOscillator=function(){(window as any).__audioContexts.add(this);const osc=original.call(this);(window as any).__activeOscillators.add(osc);osc.addEventListener('ended',()=>{(window as any).__activeOscillators.delete(osc)});return osc}});
  await page.goto('/#home');const before=await dbCounts(page);await importSynthetic(page);
+ await page.locator('#stage').click();await page.locator('#stage').click();
  await page.locator('#shareOpenFromPlay').click();await routes(page,'share');
  await page.locator('#shareBackBtn').click();await routes(page,'play');
  const source=await page.locator('#playImage').getAttribute('src');await page.waitForTimeout(500);
  await expect(page.locator('#playImage')).toHaveAttribute('src',source!);
  await expect(page.locator('#rouletteBadge')).toContainText('再開');
+ expect(await page.evaluate(()=>(window as any).__audioContexts.size)).toBeGreaterThan(0);await expect.poll(()=>page.evaluate(()=>Array.from((window as any).__audioContexts as Set<AudioContext>).every(ctx=>ctx.state!=='running')),{timeout:3000}).toBe(true);
  await page.locator('#backBtn').click();await routes(page,'receive');expect(await dbCounts(page)).toEqual(before);
 });
 test('S17 create from synthetic video, favorite and share',async({page})=>{
@@ -334,6 +345,8 @@ test('S01 stop picker previous, next, grid and past draw select the right frame'
  await page.locator('#shareStopNext').click();await expect(page.locator('#shareSelectedFrameImage')).toHaveAttribute('src',frames[1]);
  await page.locator('#shareAllFramesDetails summary').click();await page.getByRole('button',{name:'1コマ目を停止位置にする'}).click();await expect(page.locator('#shareSelectedFrameImage')).toHaveAttribute('src',frames[0]);
  await page.locator('.shareDrawCard').click();await expect(page.locator('#shareSelectedFrameImage')).toHaveAttribute('src',frames[1]);
+ await page.locator('#shareRouletteFormat').selectOption('photo');await page.locator('#shareRouletteBuild').click();const pending=page.waitForEvent('download');await page.locator('#shareOutputSave').click();const d=await pending;const bytes=await readFile((await d.path())!);const rgb=await page.evaluate(async data=>{const i=new Image();i.src='data:image/jpeg;base64,'+data;await i.decode();const c=document.createElement('canvas');c.width=i.width;c.height=i.height;const x=c.getContext('2d')!;x.drawImage(i,0,0);return Array.from(x.getImageData(5,5,1,1).data)},bytes.toString('base64'));expect(rgb[2]).toBeGreaterThan(150);expect(rgb[2]).toBeGreaterThan(rgb[0]);
+ await page.locator('#shareRouletteFormat').selectOption('movie');await page.locator('#shareRouletteBuild').click();await expect(page.locator('#shareOutput')).toBeVisible({timeout:30000});const moviePending=page.waitForEvent('download');await page.locator('#shareOutputSave').click();const movie=await moviePending;const movieBytes=await readFile((await movie.path())!);const movieColor=await page.evaluate(async ({data,name})=>{const binary=Uint8Array.from(atob(data),c=>c.charCodeAt(0));const url=URL.createObjectURL(new Blob([binary],{type:name.endsWith('.mp4')?'video/mp4':'video/webm'}));try{const v=document.createElement('video');v.src=url;v.muted=true;await new Promise<void>((resolve,reject)=>{v.onloadedmetadata=()=>resolve();v.onerror=()=>reject(Error('video load'))});v.currentTime=2.7;await new Promise<void>((resolve,reject)=>{v.onseeked=()=>resolve();v.onerror=()=>reject(Error('video seek'))});const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;const x=c.getContext('2d')!;x.drawImage(v,0,0);return Array.from(x.getImageData(20,Math.floor(c.height/2),1,1).data)}finally{URL.revokeObjectURL(url)}},{data:movieBytes.toString('base64'),name:movie.suggestedFilename()});expect(movieColor[2]).toBeGreaterThan(120);expect(movieColor[2]).toBeGreaterThan(movieColor[0]);
 });
 test('S02 library searches filenames and sorts two synthetic videos',async({page})=>{
  test.setTimeout(120000);await page.goto('/#home');
@@ -363,4 +376,28 @@ test('S18 quota failure during video import reports error and preserves existing
  const before=await creationRecords(page);await page.locator('[data-route="gif"]').click();
  await page.evaluate(()=>{const original=IDBDatabase.prototype.transaction;IDBDatabase.prototype.transaction=function(stores:any,mode?:any,options?:any){if(mode==='readwrite'&&(Array.isArray(stores)?stores.includes('deckSources'):stores==='deckSources'))throw new DOMException('synthetic quota','QuotaExceededError');return original.call(this,stores,mode,options)}});
  await page.locator('#labGifFileInput').setInputFiles('tests/fixtures/synthetic-a.webm');await expect(page.locator('#labGifStatus')).toContainText(/取り込め|形式を確認/,{timeout:60000});await routes(page,'gif');expect(await creationRecords(page)).toEqual(before);await expect(page.locator('#labGifStatus')).toContainText(/容量|空き/);
+});
+test('N18 empty database safely initializes every route',async({page})=>{
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ const selectors:[string,string][]=[['home','#homeNewVideoBtn'],['create','#createPickBtn'],['library','#deckDrawBtn'],['favorites','#labCollectionSection'],['history','#legacyLibrarySection'],['settings','#frameCount'],['gif','#labGifAddVideo'],['share-picker','#sharePickerStatus'],['share','#shareRouletteBuild'],['receive','#shareImportFile']];
+ for(const [route,selector] of selectors){await page.goto('/#'+route);await page.reload();await routes(page,route);await expect(page.locator(selector)).toBeAttached()}
+ await page.goto('/#create');await page.reload();await page.locator('#createSection [data-nav-back]').click();await routes(page,'home');
+ await page.goto('/#play');await page.reload();await expect(page).toHaveURL(/#home$/);await routes(page,'home');expect(errors).toEqual([]);
+});
+test('N15 browser history preserves received roulette context',async({page})=>{
+ await page.goto('/#home');const frames=await importSynthetic(page);await page.locator('#stage').click();const stopped=await page.locator('#playImage').getAttribute('src');expect(frames).toContain(stopped);
+ await page.locator('#shareOpenFromPlay').click();await routes(page,'share');await page.goBack();await routes(page,'play');await expect(page.locator('#playImage')).toHaveAttribute('src',stopped!);
+ await page.goBack();await routes(page,'receive');await page.goForward();await routes(page,'play');await expect(page.locator('#playImage')).toHaveAttribute('src',stopped!);
+ await page.goForward();await routes(page,'share');await expect(page.locator('#shareSelectedFrameImage')).toHaveAttribute('src',stopped!);await page.locator('#shareBackBtn').click();await routes(page,'play');await page.locator('#backBtn').click();await routes(page,'receive');
+});
+test('S13 GIF refresh discards editor state and saved source can be reopened',async({page})=>{
+ test.setTimeout(90000);await page.goto('/#home');await page.locator('[data-route="gif"]').click();await page.locator('#labGifFileInput').setInputFiles('tests/fixtures/synthetic-a.webm');await expect(page.locator('#labGifEditor')).toBeVisible({timeout:60000});await page.locator('#labGifSpeed').selectOption('0.5');await page.locator('#sharePrivacyGif').click();await page.locator('#sharePrivacyCanvas').click({position:{x:20,y:20}});
+ await page.reload();await routes(page,'gif');await expect(page.locator('#sharePrivacyEditor')).not.toBeVisible();await expect(page.locator('#labGifEditor')).not.toBeVisible();await page.locator('#labGifChoosePast').click();await page.locator('#labGifSourceGrid .deckVideoPick').first().click();await expect(page.locator('#labGifSelectedTitle')).toContainText('8コマ');await expect(page.locator('#labMakeGif')).toBeEnabled();await expect(page.locator('#shareOutput')).not.toBeVisible();
+});
+test('N12 masked playable export has no original frames and off restores originals',async({page})=>{
+ await page.goto('/#home');const originals=await importSynthetic(page);await page.locator('#shareOpenFromPlay').click();await page.locator('#shareRouletteFormat').selectOption('play');await page.locator('#shareRouletteMask').check();await page.locator('#shareRouletteBuild').click();await expect(page.locator('#sharePrivacyEditor')).toBeVisible();
+ await page.locator('#sharePrivacyCanvas').click({position:{x:20,y:20}});page.once('dialog',dialog=>dialog.accept());await page.locator('#shareMaskCopy').click();await page.locator('#sharePrivacyExportSelected').click();await expect(page.locator('#shareOutput')).toBeVisible();
+ async function downloaded(){const p=page.waitForEvent('download');await page.locator('#shareOutputSave').click();const d=await p;expect(d.suggestedFilename()).toMatch(/\.mmrplay$/);return JSON.parse(await readFile((await d.path())!,'utf8'))}
+ const masked=await downloaded();expect(masked.frames).toHaveLength(2);for(let i=0;i<2;i++){expect(masked.frames[i]).not.toBe(originals[i]);expect(JSON.stringify(masked)).not.toContain(originals[i]);const diff=await page.evaluate(async ({a,b})=>{async function p(src:string){const i=new Image();i.src=src;await i.decode();const c=document.createElement('canvas');c.width=i.width;c.height=i.height;const x=c.getContext('2d')!;x.drawImage(i,0,0);return Array.from(x.getImageData(20,20,1,1).data)}const x=await p(a),y=await p(b);return x.slice(0,3).reduce((sum,v,i)=>sum+Math.abs(v-y[i]),0)},{a:originals[i],b:masked.frames[i]});expect(diff).toBeGreaterThan(30)}
+ await page.locator('#shareRouletteMask').uncheck();await page.locator('#shareRouletteBuild').click();await expect(page.locator('#shareOutput')).toBeVisible();const plain=await downloaded();expect(plain.frames).toEqual(originals);
 });

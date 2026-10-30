@@ -23,10 +23,10 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium webkit
       - name: Smoke on PR and main
-        if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
+        if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' && github.head_ref != 'verify/e2e-three-fixes-against-pr53-20261030'
         run: npm run test:e2e:smoke
       - name: Full implemented suite
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.head_ref == 'verify/e2e-three-fixes-against-pr53-20261030'
         run: npm run test:e2e
       - uses: actions/upload-artifact@v4
         if: always()

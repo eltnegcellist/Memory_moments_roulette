@@ -15,5 +15,6 @@ test('S20 backup and restore synthetic video frames in a fresh context',async({p
  await expect(target.locator('#deckNotice')).toContainText('復元',{timeout:30000});
  const restored=await target.evaluate(async()=>{const db=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('babyExpressionRouletteDB',3);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});const all=await new Promise<any[]>((resolve,reject)=>{const r=db.transaction('deckFrames').objectStore('deckFrames').getAll();r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});db.close();return all.map(x=>({id:x.id,imageData:x.imageData}))});
  expect(restored.sort((a,b)=>a.id.localeCompare(b.id))).toEqual(frames.sort((a,b)=>a.id.localeCompare(b.id)));
+ await target.locator('#settingsSection [data-nav-back]').click();await expect(target).toHaveURL(/#home$/);
  }finally{await ctx.close()}
 });

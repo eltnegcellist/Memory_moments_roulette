@@ -58,8 +58,9 @@ test('N14 playable file contains selected synthetic frames @smoke',async({page})
  await page.locator('#shareRouletteFormat').selectOption('play');
  await page.locator('#shareRouletteBuild').click();
  await expect(page.locator('#shareOutput')).toBeVisible();
+ await page.evaluate(()=>{const save=(window as any).__memorySaveMediaFile;(window as any).__memorySaveMediaFile=(blob:Blob,name:string)=>{(window as any).__observedMime=blob.type;return save(blob,name)}});
  const downloadPromise=page.waitForEvent('download'); await page.locator('#shareOutputSave').click();
- const download=await downloadPromise; expect(download.suggestedFilename()).toMatch(/\.mmrplay$/);
+ const download=await downloadPromise; expect(await page.evaluate(()=>(window as any).__observedMime)).toBe('application/json');expect(download.suggestedFilename()).toMatch(/\.mmrplay$/);
  const raw=await readFile((await download.path())!,'utf8'); const data=JSON.parse(raw);
  expect(data.format).toBe('memory-moments-playable'); expect(data.version).toBe(1); expect(data.frames).toEqual(frames);
 });
@@ -84,9 +85,10 @@ test('N12/S01 selected photo and mask do not leak into subsequent unmasked JPEG'
  await expect(page.locator('#shareSelectedFrameLabel')).toContainText('2 / 2');
  await page.locator('#shareRouletteFormat').selectOption('photo');
  await expect(page.locator('#shareSelectedFrameLabel')).toContainText('2 / 2');
+ await page.evaluate(()=>{const save=(window as any).__memorySaveMediaFile;(window as any).__memorySaveMediaFile=(blob:Blob,name:string)=>{(window as any).__observedMime=blob.type;return save(blob,name)}});
  async function save() {
   const pending=page.waitForEvent('download'); await page.locator('#shareOutputSave').click();
-  const d=await pending; expect(d.suggestedFilename()).toMatch(/\.jpg$/); return readFile((await d.path())!);
+  const d=await pending; expect(await page.evaluate(()=>(window as any).__observedMime)).toBe('image/jpeg');expect(d.suggestedFilename()).toMatch(/\.jpg$/); return readFile((await d.path())!);
  }
  await page.locator('#shareRouletteMask').check(); await page.locator('#shareRouletteBuild').click();
  await expect(page.locator('#sharePrivacyEditor')).toBeVisible();
@@ -178,19 +180,21 @@ test('N14 selected stop frame is present in generated roulette movie',async({pag
  await page.getByRole('button',{name:'2コマ目を停止位置にする'}).click();
  await page.locator('#shareRouletteFormat').selectOption('movie');
  await page.locator('#shareRouletteBuild').click(); await expect(page.locator('#shareOutput')).toBeVisible({timeout:30000});
+ await page.evaluate(()=>{const save=(window as any).__memorySaveMediaFile;(window as any).__memorySaveMediaFile=(blob:Blob,name:string)=>{(window as any).__observedMime=blob.type;return save(blob,name)}});
  const pending=page.waitForEvent('download'); await page.locator('#shareOutputSave').click(); const d=await pending;
  const ext=d.suggestedFilename().endsWith('.mp4')?'mp4':'webm';expect(d.suggestedFilename()).toMatch(/\.(mp4|webm)$/);
+ expect(await page.evaluate(()=>(window as any).__observedMime)).toBe(ext==='mp4'?'video/mp4':'video/webm');
  const bytes=await readFile((await d.path())!);expect(bytes.length).toBeGreaterThan(1000);
  if(ext==='webm')expect(bytes.subarray(0,4)).toEqual(Buffer.from([0x1a,0x45,0xdf,0xa3]));
  else expect(bytes.subarray(4,8).toString()).toBe('ftyp');
- const rgb=await page.evaluate(async ({data,ext})=>{
+ const playback=await page.evaluate(async ({data,ext})=>{
   const binary=Uint8Array.from(atob(data),c=>c.charCodeAt(0));const url=URL.createObjectURL(new Blob([binary],{type:ext==='mp4'?'video/mp4':'video/webm'}));
   try { const v=document.createElement('video');v.src=url;v.muted=true;await new Promise<void>((resolve,reject)=>{v.onloadedmetadata=()=>resolve();v.onerror=()=>reject(new Error('video metadata failed'))});
    v.currentTime=2.7;await new Promise<void>((resolve,reject)=>{v.onseeked=()=>resolve();v.onerror=()=>reject(new Error('video seek failed'))});
-   const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;const ctx=c.getContext('2d')!;ctx.drawImage(v,0,0);return Array.from(ctx.getImageData(20,Math.floor(c.height/2),1,1).data);
+   const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;const ctx=c.getContext('2d')!;ctx.drawImage(v,0,0);return {duration:v.duration,rgb:Array.from(ctx.getImageData(20,Math.floor(c.height/2),1,1).data)};
   } finally {URL.revokeObjectURL(url)}
  },{data:bytes.toString('base64'),ext});
- expect(rgb[2]).toBeGreaterThan(120);expect(rgb[2]).toBeGreaterThan(rgb[0]);
+ expect(playback.duration).toBeGreaterThan(2.7);expect(playback.duration).toBeLessThan(10);expect(playback.rgb[2]).toBeGreaterThan(120);expect(playback.rgb[2]).toBeGreaterThan(playback.rgb[0]);
 });
 test('N09 library selection → play → share → play → library',async({page})=>{
  test.setTimeout(90000);await page.goto('/#home');
@@ -340,4 +344,23 @@ test('S02 library searches filenames and sorts two synthetic videos',async({page
  const newest=await page.locator('#deckPicker .deckVideoTile').evaluateAll(xs=>xs.map(x=>(x as HTMLElement).dataset.sourceId));
  await page.locator('#deckSort').selectOption('oldest');const oldest=await page.locator('#deckPicker .deckVideoTile').evaluateAll(xs=>xs.map(x=>(x as HTMLElement).dataset.sourceId));expect(oldest).toEqual([...newest].reverse());
  await page.locator('#deckSearch').fill('synthetic-a');await expect(page.locator('#deckPicker .deckVideoPick')).toHaveCount(1);await page.locator('#deckPicker .deckVideoPick').click();await expect(page.locator('#deckDrawBtn')).toBeEnabled();
+});
+test('S08 cancelling the save picker keeps output available',async({page})=>{
+ await page.goto('/#home');await importSynthetic(page);await page.locator('#shareOpenFromPlay').click();await page.locator('#shareRouletteFormat').selectOption('play');await page.locator('#shareRouletteBuild').click();await expect(page.locator('#shareOutput')).toBeVisible();
+ await page.evaluate(()=>{(window as any).showSaveFilePicker=async()=>{throw new DOMException('cancelled','AbortError')}});let downloads=0;page.on('download',()=>downloads++);
+ await page.locator('#shareOutputSave').click();await expect(page.locator('#shareOutput')).toBeVisible();expect(downloads).toBe(0);await page.locator('#shareOutputClose').click();await expect(page.locator('#shareOutput')).not.toBeVisible();
+});
+test('N11 normal roulette output followed by favorite photo does not mix formats or sources',async({page})=>{
+ await page.goto('/#home');const frames=await synthetic(page);
+ await page.evaluate(async image=>{const db=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('babyExpressionRouletteLabDB',1);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});await new Promise<void>((resolve,reject)=>{const t=db.transaction('dailyPhotos','readwrite');t.objectStore('dailyPhotos').put({id:'fav',image,createdAt:1700000000000,fortune:'吉'});t.oncomplete=()=>resolve();t.onerror=()=>reject(t.error)});db.close()},frames[1]);await page.reload();
+ await importSynthetic(page);await page.locator('#shareOpenFromPlay').click();await page.locator('#shareRouletteFormat').selectOption('play');await page.locator('#shareRouletteBuild').click();await expect(page.locator('#shareOutput')).toBeVisible();await page.locator('#shareOutputClose').click();await page.locator('#shareBackBtn').click();await page.locator('#backBtn').click();await routes(page,'receive');await page.locator('#receiveSection [data-nav-back]').click();
+ await page.locator('[data-route="favorites"]').click();await page.locator('.labPhotoShare').click();await routes(page,'share');await expect(page.locator('#shareRouletteOptions')).not.toBeVisible();await expect(page.locator('#shareOutput')).not.toBeVisible();await expect(page.locator('#shareFavoriteOptions')).toBeVisible();
+ await page.locator('#shareFavoriteBuild').click();const pending=page.waitForEvent('download');await page.locator('#shareOutputSave').click();const d=await pending;expect(d.suggestedFilename()).toMatch(/\.jpg$/);const bytes=await readFile((await d.path())!);const color=await page.evaluate(async bytes=>{const img=new Image();img.src='data:image/jpeg;base64,'+bytes;await img.decode();const c=document.createElement('canvas');c.width=img.width;c.height=img.height;const x=c.getContext('2d')!;x.drawImage(img,0,0);return Array.from(x.getImageData(5,5,1,1).data)},bytes.toString('base64'));expect(color[2]).toBeGreaterThan(150);expect(color[2]).toBeGreaterThan(color[0]);
+});
+test('S18 quota failure during video import reports error and preserves existing history',async({page})=>{
+ test.setTimeout(90000);await page.goto('/#home');const frames=await synthetic(page);
+ await page.evaluate(async frames=>{await (window as any).__memoryHistoryMigrationPromise;const db=await new Promise<IDBDatabase>((resolve,reject)=>{const r=indexedDB.open('babyExpressionRouletteDB',3);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)});await new Promise<void>((resolve,reject)=>{const tx=db.transaction('creations','readwrite');tx.objectStore('creations').put({id:'canary',title:'Canary',createdAt:1700000000000,mode:'roulette',frames,times:[0,1]});tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error)});db.close()},frames);
+ const before=await creationRecords(page);await page.locator('[data-route="gif"]').click();
+ await page.evaluate(()=>{const original=IDBDatabase.prototype.transaction;IDBDatabase.prototype.transaction=function(stores:any,mode?:any,options?:any){if(mode==='readwrite'&&(Array.isArray(stores)?stores.includes('deckSources'):stores==='deckSources'))throw new DOMException('synthetic quota','QuotaExceededError');return original.call(this,stores,mode,options)}});
+ await page.locator('#labGifFileInput').setInputFiles('tests/fixtures/synthetic-a.webm');await expect(page.locator('#labGifStatus')).toContainText(/取り込め|形式を確認/,{timeout:60000});await routes(page,'gif');expect(await creationRecords(page)).toEqual(before);await expect(page.locator('#labGifStatus')).toContainText(/容量|空き/);
 });

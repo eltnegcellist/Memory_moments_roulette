@@ -1,10 +1,13 @@
 import { test, expect } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+const activeCacheName=readFileSync('sw.js','utf8').match(/^const CACHE='([^']+)'/m)?.[1];
+if(!activeCacheName)throw new Error('Service Worker CACHE constant was not found');
 test.use({serviceWorkers:'allow'});
 test('S16 installed service worker supports offline navigation',async({page,context})=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/#home');await page.evaluate(()=>navigator.serviceWorker.ready);
  await page.reload();await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
- const keys=await page.evaluate(()=>caches.keys());expect(keys.some(x=>x.includes('gif-stamp-fix1'))).toBeTruthy();
+ const keys=await page.evaluate(()=>caches.keys());expect(keys.includes(activeCacheName)).toBeTruthy();
  await context.setOffline(true);await page.reload();
  await expect(page.locator('body')).toHaveAttribute('data-app-view','home');
  await page.locator('[data-route="gif"]').click();await expect(page).toHaveURL(/#gif$/);await expect(page.locator('#labGifAddVideo')).toBeVisible();
@@ -19,8 +22,8 @@ test('S16 simulated old service worker updates to current cache then works offli
  await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const addr=server.address();if(!addr||typeof addr==='string')throw new Error('server failed');
  try{await page.goto(`http://127.0.0.1:${addr.port}/#home`);await page.evaluate(()=>navigator.serviceWorker.ready);await expect.poll(()=>page.evaluate(()=>caches.keys())).toContain('synthetic-old-cache');
  old=false;await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();await r!.update()});
- await expect.poll(async()=>page.evaluate(()=>caches.keys()),{timeout:15000}).toEqual(['baby-roulette-pages-1.2.1-gif-stamp-fix1']);
- const cachedUrls=await page.evaluate(async()=>{const cache=await caches.open('baby-roulette-pages-1.2.1-gif-stamp-fix1');return (await cache.keys()).map(r=>r.url)});expect(cachedUrls.some(url=>url.includes('navigation.js?v=1.2.1-share-gallery-stop1'))).toBe(true);expect(cachedUrls.some(url=>url.includes('navigation.js?old'))).toBe(false);
+ await expect.poll(async()=>page.evaluate(()=>caches.keys()),{timeout:15000}).toEqual([activeCacheName]);
+ const cachedUrls=await page.evaluate(async()=>{const cache=await caches.open(activeCacheName);return (await cache.keys()).map(r=>r.url)});expect(cachedUrls.some(url=>url.includes('navigation.js?v=1.2.1-share-gallery-stop1'))).toBe(true);expect(cachedUrls.some(url=>url.includes('navigation.js?old'))).toBe(false);
  await page.reload();await context.setOffline(true);await page.reload();await page.locator('[data-route="gif"]').click();await expect(page.locator('#labGifAddVideo')).toBeVisible();await expect(page).toHaveURL(/#gif$/);await context.setOffline(false);
  }finally{await context.setOffline(false);await new Promise<void>(resolve=>server.close(()=>resolve()))}
 });
@@ -32,7 +35,7 @@ test('S16 historical h25 release updates to current and works offline',async({pa
  await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));const addr=server.address();if(!addr||typeof addr==='string')throw new Error('server failed');
  try{await page.goto(`http://127.0.0.1:${addr.port}/#home`);await page.evaluate(()=>navigator.serviceWorker.ready);await expect.poll(()=>page.evaluate(()=>caches.keys())).toContain('baby-roulette-pages-1.1.0-h25-android-tested-r3');
  old=false;await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();await r!.update()});
- await expect.poll(()=>page.evaluate(()=>caches.keys()),{timeout:30000}).toEqual(['baby-roulette-pages-1.2.1-gif-stamp-fix1']);
+ await expect.poll(()=>page.evaluate(()=>caches.keys()),{timeout:30000}).toEqual([activeCacheName]);
  await page.reload();await expect(page.locator('[data-route="gif"]')).toBeVisible();await context.setOffline(true);await page.reload();await page.locator('[data-route="gif"]').click();await expect(page.locator('#labGifAddVideo')).toBeVisible();await expect(page).toHaveURL(/#gif$/);
  }finally{await context.setOffline(false);await new Promise<void>(resolve=>server.close(()=>resolve()))}
 });

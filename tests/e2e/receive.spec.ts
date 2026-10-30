@@ -401,3 +401,9 @@ test('N12 masked playable export has no original frames and off restores origina
  const masked=await downloaded();expect(masked.frames).toHaveLength(2);for(let i=0;i<2;i++){expect(masked.frames[i]).not.toBe(originals[i]);expect(JSON.stringify(masked)).not.toContain(originals[i]);const diff=await page.evaluate(async ({a,b})=>{async function p(src:string){const i=new Image();i.src=src;await i.decode();const c=document.createElement('canvas');c.width=i.width;c.height=i.height;const x=c.getContext('2d')!;x.drawImage(i,0,0);return Array.from(x.getImageData(20,20,1,1).data)}const x=await p(a),y=await p(b);return x.slice(0,3).reduce((sum,v,i)=>sum+Math.abs(v-y[i]),0)},{a:originals[i],b:masked.frames[i]});expect(diff).toBeGreaterThan(30)}
  await page.locator('#shareRouletteMask').uncheck();await page.locator('#shareRouletteBuild').click();await expect(page.locator('#shareOutput')).toBeVisible();const plain=await downloaded();expect(plain.frames).toEqual(originals);
 });
+test('N15 direct hash changes update visible route and preserve received context',async({page})=>{
+ await page.goto('/#home');const frames=await importSynthetic(page);await page.locator('#stage').click();const selected=await page.locator('#playImage').getAttribute('src');expect(frames).toContain(selected);
+ await page.evaluate(()=>{location.hash='receive'});await routes(page,'receive');
+ await page.evaluate(()=>{location.hash='play'});await routes(page,'play');await expect(page.locator('#playImage')).toHaveAttribute('src',selected!);
+ await page.locator('#shareOpenFromPlay').click();await routes(page,'share');await expect(page.locator('#shareSelectedFrameImage')).toHaveAttribute('src',selected!);
+});

@@ -1409,7 +1409,7 @@ window.__memoryDeckHandleFiles=async(files,options={})=>{
   previewSection.style.display='none';
   progressBar.style.width='3%';
   let added=0,duplicates=0,failed=0;
-  const errors=[];
+  const errors=[],failedDetails=[];
   if(!options.gifOnly)liveReplaySourceFiles.clear();
   const batchSourceIds=[];
   const backgroundJobs=[];
@@ -1426,10 +1426,23 @@ window.__memoryDeckHandleFiles=async(files,options={})=>{
         if(r.duplicate)duplicates++;else added+=r.count;
       }catch(e){
         failed++;
+        failedDetails.push(e);
         errors.push(files[i].name+': '+(e?.message||e));
       }
     }
     requestPersistence().catch(()=>{});
+    // The GIF entry point needs a real failure reason instead of an empty list.
+    // Preserve the normal roulette importer's aggregated progress behaviour.
+    if(options.gifOnly&&!batchSourceIds.length&&failedDetails.length){
+      const quota=failedDetails.some(err=>err?.name==='QuotaExceededError'||
+        /QuotaExceededError|quota exceeded|storage quota|保存容量|空き容量/i.test(String(err?.message||err)));
+      if(quota){
+        const error=new Error('保存容量が不足しています。端末やブラウザの空き容量を確保してから再試行してください。');
+        error.name='QuotaExceededError';
+        throw error;
+      }
+      throw new Error('選択した動画を取り込めませんでした。'+errors.join(' / '));
+    }
     // Both entry points save into the same deckSources/deckFrames stores.
     // Only the roulette entry point may change its selected video IDs.
     // GIF imports must not modify in-memory or persisted roulette selections.
@@ -1987,8 +2000,9 @@ window.__memoryGifListSources=async()=>{
     stats(),
     typeof dbAll==='function'?dbAll():Promise.resolve([])
   ]);
+  let insufficientFrameSources=0;
   const entries=saved.sources.map(src=>({
-    id:String(src.id),label:sourceDisplayName(src),
+    id:String(src.id),label:sourceDisplayName(src),fileName:String(src.fileName||''),
     count:Number(src.candidateCount)||0,
     thumbnail:src.thumbnailData||'',origin:'deck',
     ...gifCatalogDate(src.addedAt||src.lastModified)
@@ -2009,7 +2023,7 @@ window.__memoryGifListSources=async()=>{
       groups.get(key).push({image:img,time:Number(creation.times?.[index]),index});
     });
     for(const [key,frames] of groups){
-      if(frames.length<2)continue;
+      if(frames.length<2){insufficientFrameSources++;continue;}
       const historicalId=creation.deckMode?key:'creation:'+String(creation.id);
       if(creation.deckMode&&seenOldSources.has(historicalId))continue;
       seenOldSources.add(historicalId);
@@ -2024,6 +2038,8 @@ window.__memoryGifListSources=async()=>{
     }
   }
   gifLegacyRefs=refs;
+  // Preserve the array API and expose only transient catalog metadata.
+  entries.insufficientFrameSources=insufficientFrameSources;
   return entries.sort((a,b)=>b.dateMs-a.dateMs);
 };
 window.__memoryGifLoadSource=async sourceId=>{

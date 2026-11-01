@@ -49,16 +49,18 @@ header.hero[data-app-view="home"] .heroTopline{margin-bottom:8px}
 header.hero[data-app-view="home"] h1{line-height:1.1}
 .howtoBanner{margin-bottom:9px}
 .homeBenefits{
-  margin:0 2px 18px;
-  padding:13px 12px 15px;
-  border:1px solid #eddbd5;
-  border-radius:18px;
-  background:linear-gradient(135deg,#fffdfa,#fff7f6);
-  box-shadow:0 5px 15px rgba(109,66,73,.055);
+  margin:4px 2px 18px;
+  padding:17px 2px 0;
+  border:0;
+  border-top:1px solid #e7dbd5;
+  border-radius:0;
+  background:none;
+  box-shadow:none;
 }
 .homeBenefitsLabel{
-  margin:0 0 14px;
-  text-align:center;
+  margin:0 0 15px;
+  padding:0 4px;
+  text-align:left;
   color:#624039;
   font-size:17px;
   font-weight:900;
@@ -73,21 +75,23 @@ header.hero[data-app-view="home"] h1{line-height:1.1}
   flex-direction:column;
   align-items:center;
   text-align:center;
+  cursor:default;
 }
-.homeBenefit + .homeBenefit{border-left:1px solid #edddd8}
+.homeBenefit + .homeBenefit{border-left:1px solid #ece2dd}
 .homeBenefitIcon{
   display:grid;
   place-items:center;
-  width:48px;height:48px;
-  margin:0 0 10px;
-  border-radius:15px;
-  color:#fff;
-  box-shadow:0 5px 12px rgba(111,65,70,.15),inset 0 1px 0 rgba(255,255,255,.3);
+  width:36px;height:32px;
+  margin:0 0 6px;
+  border:0;
+  border-radius:0;
+  background:none;
+  box-shadow:none;
 }
-.homeBenefit:nth-child(1) .homeBenefitIcon{background:linear-gradient(135deg,#e76f8e,#eea269)}
-.homeBenefit:nth-child(2) .homeBenefitIcon{background:linear-gradient(135deg,#b28dd1,#e5a2bc)}
-.homeBenefit:nth-child(3) .homeBenefitIcon{background:linear-gradient(135deg,#6e9fb3,#79b8ad)}
-.homeBenefitIcon svg{width:28px;height:28px;stroke-width:2.2}
+.homeBenefit:nth-child(1) .homeBenefitIcon{color:#bb647d}
+.homeBenefit:nth-child(2) .homeBenefitIcon{color:#9774ae}
+.homeBenefit:nth-child(3) .homeBenefitIcon{color:#548d91}
+.homeBenefitIcon svg{width:29px;height:29px;stroke-width:2.1}
 .homeBenefit strong{
   display:block;
   min-height:2.8em;
@@ -108,11 +112,11 @@ header.hero[data-app-view="home"] h1{line-height:1.1}
   header.hero[data-app-view="home"] .heroMark{width:74px;height:74px;flex-basis:74px;border-radius:21px}
   header.hero[data-app-view="home"] .heroTopline{margin-bottom:5px}
   header.hero[data-app-view="home"] h1{font-size:clamp(22px,6.8vw,29px)}
-  .homeBenefits{padding:14px 7px 15px}
-  .homeBenefitsLabel{font-size:16px;margin-bottom:13px}
+  .homeBenefits{padding:14px 2px 0}
+  .homeBenefitsLabel{font-size:16px;margin-bottom:12px}
   .homeBenefit{padding:0 6px}
-  .homeBenefitIcon{width:46px;height:46px;border-radius:14px;margin-bottom:9px}
-  .homeBenefitIcon svg{width:27px;height:27px}
+  .homeBenefitIcon{width:34px;height:31px;margin-bottom:5px}
+  .homeBenefitIcon svg{width:28px;height:28px}
   .homeBenefit strong{font-size:12.5px}
   .homeBenefit small{font-size:10px}
 }
@@ -120,8 +124,8 @@ header.hero[data-app-view="home"] h1{line-height:1.1}
   header.hero[data-app-view="home"] .heroMark{width:68px;height:68px;flex-basis:68px;border-radius:19px}
   header.hero[data-app-view="home"] h1{font-size:clamp(20px,6.8vw,24px)}
   .homeBenefit{padding:0 4px}
-  .homeBenefitIcon{width:43px;height:43px;border-radius:13px}
-  .homeBenefitIcon svg{width:25px;height:25px}
+  .homeBenefitIcon{width:32px;height:29px}
+  .homeBenefitIcon svg{width:26px;height:26px}
   .homeBenefit strong{font-size:11.3px}
   .homeBenefit small{font-size:9.3px}
 }

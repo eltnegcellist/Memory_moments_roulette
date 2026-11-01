@@ -32,6 +32,7 @@ body:not(.show-score-details) #analysisStatus{display:none!important}
 body:not(.show-fortune-map) #grid .fchip{display:none!important}
 
 .versionBadge#labSettingsTrigger{cursor:pointer;touch-action:manipulation}
+.howtoPanel .howtoConcept{margin:0 0 16px}
 .labSettingsHint{margin-top:14px;text-align:right;font-size:10px;line-height:1.4;color:rgba(92,72,60,.56)}
 </style>
 </head>
@@ -42,8 +43,6 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <div class="heroText">
     <div class="heroTopline"><span class="eyebrow">MEMORY MOMENTS</span><span class="versionBadge" id="labSettingsTrigger" data-lab-trigger title="5回タップでラボ設定">v1.2.0 β3</span></div>
     <h1><span class="titlePart">思い出ルーレット</span><span class="titlePart">おみくじ</span></h1>
-    <p class="heroCatch">動画に隠れた、いろいろな一瞬を。</p>
-    <p class="lead">写真には残さなかった一瞬まで、動画には残っています。自分では選ばなかった一枚に偶然出会い、おみくじと一緒に楽しむアプリです。</p>
   </div>
 </header>
 <section id="homeActions" class="homeActions" data-app-view="home" aria-label="ルーレットの作り方を選ぶ">
@@ -67,12 +66,6 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
     <button type="button" data-route="share-picker"><span aria-hidden="true">⇧</span><strong>共有する</strong><small>ルーレットを送る</small></button>
     <button type="button" data-route="receive"><span aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M16 3.5 28 10v13L16 29 4 23V10L16 3.5Z"/><path d="M4 10 16 16.5 28 10M16 16.5V29"/><g fill="currentColor" stroke="none"><circle cx="12" cy="9.1" r="1.05"/><circle cx="17" cy="11.4" r="1.05"/><circle cx="20.3" cy="8.7" r="1.05"/><circle cx="9.2" cy="16.3" r="1.15"/><circle cx="12.2" cy="22.2" r="1.15"/><circle cx="22.5" cy="16.4" r="1.15"/><circle cx="20.2" cy="22.5" r="1.15"/><circle cx="25" cy="20.9" r="1.15"/></g></svg></span><strong>受け取って遊ぶ</strong><small>もらったファイルを開く</small></button>
   </nav>
-</section>
-<section class="conceptCard" data-app-view="home" aria-label="このアプリが目指すこと">
-  <span class="conceptLabel">このアプリが目指すこと</span>
-  <strong>自分では選ばなかった一枚に、偶然出会う。</strong>
-  <p>写真を撮るとき、私たちは笑顔やきれいに写った「いい瞬間」を残そうとします。でも動画には、その間の半目や動きの途中、思いがけない表情まで、たくさんの一瞬が残っています。</p>
-  <p>そんな普通なら写真にしなかった一瞬をルーレットで偶然引き、「こんな顔してたんだ」「こんな一瞬あったんだ」と家族や身近な人と楽しむ。さらにその一枚におみくじを重ね、今日だけの結果にする。それが、このアプリの中心にある体験です。</p>
 </section>
 <button id="howtoOpen" class="howtoBanner" data-app-view="home" type="button" aria-haspopup="dialog">
   <span class="howtoBannerIcon" aria-hidden="true">📖</span>
@@ -440,7 +433,13 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
       </div>
       <button id="howtoClose" class="howtoClose" type="button" aria-label="使い方を閉じる">×</button>
     </div>
-    <p class="howtoLead">写真では選ばなかった一瞬も、動画の中には残っています。まずはホームの「新しい動画から作る」「過去の動画から作る」の<b>どちらか一方</b>を選びます。どちらもそのままルーレットで遊べます。動画はブラウザ内で処理し、元動画を外部へ送信しません。</p>
+    <section class="conceptCard howtoConcept" aria-label="このアプリが目指すこと">
+      <span class="conceptLabel">このアプリが目指すこと</span>
+      <strong>自分では選ばなかった一枚に、偶然出会う。</strong>
+      <p>写真を撮るとき、私たちは笑顔やきれいに写った「いい瞬間」を残そうとします。でも動画には、その間の半目や動きの途中、思いがけない表情まで、たくさんの一瞬が残っています。</p>
+      <p>そんな普通なら写真にしなかった一瞬をルーレットで偶然引き、「こんな顔してたんだ」「こんな一瞬あったんだ」と家族や身近な人と楽しむ。さらにその一枚におみくじを重ね、今日だけの結果にする。それが、このアプリの中心にある体験です。</p>
+    </section>
+    <p class="howtoLead">まずはホームの「新しい動画から作る」「過去の動画から作る」の<b>どちらか一方</b>を選びます。どちらもそのままルーレットで遊べます。動画はブラウザ内で処理し、元動画を外部へ送信しません。</p>
 
     <div class="howtoSteps">
       

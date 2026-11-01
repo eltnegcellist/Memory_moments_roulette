@@ -33,6 +33,35 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
 
 .versionBadge#labSettingsTrigger{cursor:pointer;touch-action:manipulation}
 .howtoPanel .howtoConcept{margin:0 0 16px}
+/* Home title emphasis without adding decorative content */
+header.hero[data-app-view="home"]{
+  gap:17px;
+  padding:19px 22px;
+  background:linear-gradient(120deg,#fffaf6 0%,#fff2ef 66%,#ffeff2 100%);
+  box-shadow:0 12px 30px rgba(95,52,35,.09);
+}
+header.hero[data-app-view="home"] .heroMark{
+  width:70px;height:70px;flex:0 0 70px;border-radius:21px;
+  box-shadow:0 7px 18px rgba(109,66,43,.13);
+}
+header.hero[data-app-view="home"] .heroMark img{border-radius:inherit}
+header.hero[data-app-view="home"] .heroTopline{margin-bottom:8px}
+header.hero[data-app-view="home"] h1{line-height:1.1}
+.howtoBanner{margin-bottom:7px}
+.homeTrustNote{
+  margin:0 2px 17px;
+  color:#77665e;
+  font-size:12px;
+  line-height:1.6;
+  text-align:center;
+  letter-spacing:.02em;
+}
+@media(max-width:520px){
+  header.hero[data-app-view="home"]{padding:16px 15px;gap:12px;align-items:center}
+  header.hero[data-app-view="home"] .heroMark{width:58px;height:58px;flex-basis:58px;border-radius:18px}
+  header.hero[data-app-view="home"] .heroTopline{margin-bottom:5px}
+}
+
 .labSettingsHint{margin-top:14px;text-align:right;font-size:10px;line-height:1.4;color:rgba(92,72,60,.56)}
 </style>
 </head>
@@ -72,6 +101,7 @@ body:not(.show-fortune-map) #grid .fchip{display:none!important}
   <span>アプリの使い方を見る</span>
   <span class="howtoBannerArrow" aria-hidden="true">›</span>
 </button>
+<p class="homeTrustNote" data-app-view="home">登録不要・動画は端末内で処理</p>
 <section id="createSection" class="card appView" data-app-view="create">
   <div class="viewTopbar"><button class="viewBack" type="button" data-nav-back>← ホーム</button><span>新しい動画</span></div>
   <div class="step">NEW VIDEO</div>

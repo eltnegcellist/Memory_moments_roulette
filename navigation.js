@@ -1,0 +1,134 @@
+(()=>{
+'use strict';
+const VALID=new Set(['home','create','library','play','favorites','history','settings','gif','share','share-picker','receive','received']);
+let currentView='home';
+let returnFromPlay='home';
+let returnFromShare='home';
+let scrollToken=0;
+
+function routeFromHash(){
+  const raw=(location.hash||'').replace(/^#/,'');
+  return VALID.has(raw)?raw:'home';
+}
+function forceTop(){
+  const token=++scrollToken;
+  const go=()=>{
+    if(token!==scrollToken)return;
+    window.scrollTo(0,0);
+    document.documentElement.scrollTop=0;
+    document.body.scrollTop=0;
+  };
+  go();
+  requestAnimationFrame(()=>{go();requestAnimationFrame(go);});
+  setTimeout(go,60);
+}
+function applyView(view){
+  const target=VALID.has(view)?view:'home';
+  // Android's edge-swipe Back changes history without clicking #backBtn.
+  if(currentView==='play'&&target!=='play'){
+    try{window.__memoryExitRoulette?.();}catch(err){console.error('roulette exit failed',err);}
+  }
+  if(currentView==='gif'&&target!=='gif'){
+    try{window.__memoryGifClose?.();}catch(err){console.error('GIF cleanup failed',err);}
+  }
+  if(currentView==='favorites'&&target!=='favorites'){
+    Promise.resolve(window.__memoryCommitFavoriteDeletes?.()).catch(err=>console.error('favorite delete commit failed',err));
+  }
+  const enteringGif=target==='gif'&&currentView!=='gif';
+  document.body.dataset.appView=target;
+  document.querySelectorAll('[data-app-view]').forEach(el=>{
+    const active=el.dataset.appView===target;
+    el.hidden=false;
+    el.classList.toggle('is-active-view',active);
+    el.setAttribute('aria-hidden',active?'false':'true');
+  });
+  currentView=target;
+  if(target==='library')window.__memoryDeckRender?.();
+  if(enteringGif)Promise.resolve(window.__memoryGifOpen?.()).catch(err=>console.error('GIF page init failed',err));
+  if(target==='received')Promise.resolve(window.__memoryReceivedOnOpen?.()).catch(err=>console.error('received view init failed',err));
+  if(target==='share-picker')window.__memoryShareOnPickerOpen?.();
+  if(target==='share')window.__memoryShareOnOpen?.();
+  forceTop();
+}
+function writeRoute(target,replace=false){
+  const hash='#'+target;
+  if(location.hash===hash)return;
+  try{
+    const fn=replace?'replaceState':'pushState';
+    window.history[fn]({view:target},'',hash);
+  }catch(e){
+    location.hash=hash;
+  }
+}
+function navigate(view,options={}){
+  const target=VALID.has(view)?view:'home';
+  if(target==='play'&&currentView!=='play'){
+    // Imported roulettes return to the dedicated receive view.
+    if(!(currentView==='share'&&returnFromShare==='play')){
+      returnFromPlay=currentView==='create'?'home':currentView;
+    }
+  }
+  if(target==='share'&&currentView!=='share'){
+    // The share button in the player should return to that exact player,
+    // not always to the home page.
+    returnFromShare=currentView==='play'?'play':currentView==='create'?'home':currentView;
+  }
+  // Paint the destination first. History updates must never be able to leave a blank page.
+  applyView(target);
+  writeRoute(target,!!options.replace);
+}
+window.__memoryNavigate=navigate;
+window.__memoryBackFromPlay=()=>navigate(returnFromPlay||'home');
+window.__memoryBackFromShare=()=>navigate(returnFromShare||'home');
+
+document.addEventListener('click',e=>{
+  const shareBack=e.target.closest?.('#shareBackBtn');
+  if(shareBack){
+    e.preventDefault();
+    window.__memoryBackFromShare();
+    return;
+  }
+  const newBtn=e.target.closest?.('#homeNewVideoBtn,#createPickBtn');
+  if(newBtn){
+    e.preventDefault();
+    const input=document.getElementById('fileInput');
+    if(input){
+      // Clearing before opening allows choosing the same video again.
+      // The active extraction holds its own File[] snapshot.
+      input.disabled=false;
+      input.value='';
+      input.click();
+    }
+    return;
+  }
+  const back=e.target.closest?.('[data-nav-back]');
+  if(back){
+    e.preventDefault();
+    navigate('home');
+    return;
+  }
+  const routeBtn=e.target.closest?.('[data-route]');
+  if(routeBtn){
+    e.preventDefault();
+    const route=routeBtn.dataset.route;
+    navigate(route);
+    if(route==='library'){
+      Promise.resolve(window.__memoryDeckStartSelection?.()).catch(err=>console.error('library selection init failed',err));
+    }
+  }
+});
+
+document.getElementById('fileInput')?.addEventListener('change',e=>{
+  if(e.currentTarget.files?.length)navigate('create');
+});
+
+// Leaving the PWA/document may trigger pagehide instead of popstate.
+window.addEventListener('pagehide',()=>{
+  if(currentView==='play'){
+    try{window.__memoryExitRoulette?.();}catch(err){console.error('roulette pagehide cleanup failed',err);}
+  }
+});
+window.addEventListener('popstate',()=>applyView(routeFromHash()));
+window.addEventListener('hashchange',()=>applyView(routeFromHash()));
+applyView(routeFromHash());
+})();

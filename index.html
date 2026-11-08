@@ -1,0 +1,858 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#fff7ef">
+<meta name="description" content="写真には残さなかった一瞬まで、動画には残っています。自分では選ばなかった一枚に偶然出会い、おみくじと一緒に楽しむWebアプリです。">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ja_JP">
+<meta property="og:title" content="思い出ルーレットおみくじ">
+<meta property="og:description" content="自分では選ばなかった一枚に、偶然出会う。動画に隠れた一瞬とおみくじを重ねて楽しむWebアプリです。">
+<meta property="og:url" content="https://eltnegcellist.github.io/Memory_moments_roulette/">
+<meta property="og:image" content="https://eltnegcellist.github.io/Memory_moments_roulette/icons/memory-roulette-omikuji.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="思い出ルーレットおみくじ">
+<meta name="twitter:description" content="自分では選ばなかった一枚に、偶然出会う。動画に隠れた一瞬とおみくじを重ねて楽しむWebアプリです。">
+<meta name="twitter:image" content="https://eltnegcellist.github.io/Memory_moments_roulette/icons/memory-roulette-omikuji.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="./manifest.webmanifest?v=1.3.0-release-20261109">
+<link rel="apple-touch-icon" href="./icons/memory-roulette-omikuji.png?v=1.3.0-release-20261109">
+<link rel="icon" href="./icons/memory-roulette-omikuji.png?v=1.3.0-release-20261109" type="image/png">
+<title>思い出ルーレットおみくじ</title>
+<link rel="stylesheet" href="./style.css?v=1.3.0-release-20261109">
+<link rel="stylesheet" href="./deluxe.css?v=1.3.0-release-20261109">
+<link rel="stylesheet" href="./features.css?v=1.3.0-release-20261109">
+<link rel="stylesheet" href="./share-studio.css?v=1.3.0-release-20261109">
+<style>
+body:not(.show-score-details) .scoreChip,
+body:not(.show-score-details) .scoreDetails,
+body:not(.show-score-details) #analysisStatus{display:none!important}
+body:not(.show-fortune-map) #grid .fchip{display:none!important}
+
+.versionBadge#labSettingsTrigger{cursor:pointer;touch-action:manipulation}
+.howtoPanel .howtoConcept{margin:0 0 16px}
+/* Home: a clearer app icon and a compact three-benefit card */
+header.hero[data-app-view="home"]{
+  gap:20px;
+  padding:20px 22px;
+  background:linear-gradient(120deg,#fffaf6 0%,#fff2ef 66%,#ffeff2 100%);
+  box-shadow:0 12px 30px rgba(95,52,35,.09);
+}
+header.hero[data-app-view="home"] .heroMark{
+  width:86px;height:86px;flex:0 0 86px;border-radius:24px;
+  box-shadow:0 7px 18px rgba(109,66,43,.13);
+}
+header.hero[data-app-view="home"] .heroMark img{border-radius:inherit}
+header.hero[data-app-view="home"] .heroTopline{margin-bottom:8px}
+header.hero[data-app-view="home"] h1{line-height:1.1}
+.howtoBanner{margin-bottom:9px}
+.homeBenefits{
+  margin:4px 2px 18px;
+  padding:17px 2px 0;
+  border:0;
+  border-top:1px solid #e7dbd5;
+  border-radius:0;
+  background:none;
+  box-shadow:none;
+}
+.homeBenefitsLabel{
+  margin:0 0 15px;
+  padding:0 4px;
+  text-align:left;
+  color:#624039;
+  font-size:17px;
+  font-weight:900;
+  line-height:1.35;
+  letter-spacing:.01em;
+}
+.homeBenefitsGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.homeBenefit{
+  min-width:0;
+  padding:0 8px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  cursor:default;
+}
+.homeBenefit + .homeBenefit{border-left:1px solid #ece2dd}
+.homeBenefitIcon{
+  display:grid;
+  place-items:center;
+  width:36px;height:32px;
+  margin:0 0 6px;
+  border:0;
+  border-radius:0;
+  background:none;
+  box-shadow:none;
+}
+.homeBenefit:nth-child(1) .homeBenefitIcon{color:#bb647d}
+.homeBenefit:nth-child(2) .homeBenefitIcon{color:#9774ae}
+.homeBenefit:nth-child(3) .homeBenefitIcon{color:#548d91}
+.homeBenefitIcon svg{width:29px;height:29px;stroke-width:2.1}
+.homeBenefit strong{
+  display:block;
+  min-height:2.8em;
+  color:#4d3731;
+  font-size:14px;
+  font-weight:850;
+  line-height:1.4;
+}
+.homeBenefit small{
+  display:block;
+  margin-top:5px;
+  color:#79665d;
+  font-size:10.5px;
+  line-height:1.5;
+}
+@media(max-width:520px){
+  header.hero[data-app-view="home"]{padding:17px 15px;gap:12px;align-items:center}
+  header.hero[data-app-view="home"] .heroMark{width:74px;height:74px;flex-basis:74px;border-radius:21px}
+  header.hero[data-app-view="home"] .heroTopline{margin-bottom:5px}
+  header.hero[data-app-view="home"] h1{font-size:clamp(22px,6.8vw,29px)}
+  .homeBenefits{padding:14px 2px 0}
+  .homeBenefitsLabel{font-size:16px;margin-bottom:12px}
+  .homeBenefit{padding:0 6px}
+  .homeBenefitIcon{width:34px;height:31px;margin-bottom:5px}
+  .homeBenefitIcon svg{width:28px;height:28px}
+  .homeBenefit strong{font-size:12.5px}
+  .homeBenefit small{font-size:10px}
+}
+@media(max-width:360px){
+  header.hero[data-app-view="home"] .heroMark{width:68px;height:68px;flex-basis:68px;border-radius:19px}
+  header.hero[data-app-view="home"] h1{font-size:clamp(20px,6.8vw,24px)}
+  .homeBenefit{padding:0 4px}
+  .homeBenefitIcon{width:32px;height:29px}
+  .homeBenefitIcon svg{width:26px;height:26px}
+  .homeBenefit strong{font-size:11.3px}
+  .homeBenefit small{font-size:9.3px}
+}
+.labSettingsHint{margin-top:14px;text-align:right;font-size:10px;line-height:1.4;color:rgba(92,72,60,.56)}
+body:not(.advancedShareEnabled) .shareAdvancedOnly{display:none!important}
+#shareSimpleActions[hidden],#receivedList[hidden]{display:none!important}
+.shareSimpleAction{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:58px;margin:12px 0;font-size:16px}
+#shareSimpleStatus{min-height:1.5em}
+.receivedCard{width:100%;display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #e8ced6;border-radius:12px;background:#fff;text-align:left;color:inherit;margin:10px 0}
+.receivedCard img{width:74px;height:66px;object-fit:cover;border-radius:8px;background:#f6e3e7}
+.receivedCardDetails{display:flex;flex:1;flex-direction:column;gap:5px;min-width:0}
+.receivedCardDetails small{color:#715c66}
+.receivedCardActions{display:flex;gap:6px;align-items:center}
+.receivedCardActions button{padding:9px 12px}
+</style>
+</head>
+<body data-app-view="home">
+<div class="wrap">
+<header class="hero" data-app-view="home">
+  <div class="heroMark" aria-hidden="true"><img src="./icons/memory-roulette-omikuji.png?v=1.3.0-release-20261109" alt=""></div>
+  <div class="heroText">
+    <div class="heroTopline"><span class="eyebrow">MEMORY MOMENTS</span><span class="versionBadge" id="labSettingsTrigger" data-lab-trigger title="5回タップでラボ設定">v1.3.0</span></div>
+    <h1><span class="titlePart">思い出ルーレット</span><span class="titlePart">おみくじ</span></h1>
+  </div>
+</header>
+<section id="homeActions" class="homeActions" data-app-view="home" aria-label="ルーレットの作り方を選ぶ">
+  <div class="homeChoiceGrid">
+    <button id="homeNewVideoBtn" class="homeChoice homeChoicePrimary" type="button">
+      <span class="homeChoiceCopy"><strong>新しい動画から作る</strong></span>
+      <span class="homeRouletteVisual" aria-hidden="true">
+        <svg class="homeRouletteWheel" viewBox="0 0 240 240" focusable="false">
+          <circle cx="120" cy="120" r="105" fill="#f8e9d7" stroke="#efc78d" stroke-width="3"/>
+          <circle cx="120" cy="120" r="94" fill="none" stroke="#aa2d59" stroke-width="13"/>
+          <circle cx="120" cy="120" r="94" fill="none" stroke="#fff2d9" stroke-width="5" stroke-dasharray="6 12" stroke-linecap="round"/>
+          <circle cx="120" cy="120" r="82" fill="#fff8e8"/>
+          <g transform="rotate(0 120 120)">
+            <path d="M120 120 L120 42 A78 78 0 0 1 187.55 81 Z" fill="#a5d4d3" stroke="#fff5e6" stroke-width="2.6"/>
+            <rect x="140" y="51" width="26" height="34" rx="2" fill="#fff9ed" stroke="#dfc8ad" stroke-width=".65"/>
+            <rect x="143" y="55" width="20" height="24" rx="1" fill="#92ced5"/>
+            <circle cx="156" cy="61" r="4" fill="#fff5d5"/>
+            <path d="M143 74 Q150 66 163 71 L163 79 H143Z" fill="#5f9b91"/>
+          </g>
+          <g transform="rotate(60 120 120)">
+            <path d="M120 120 L120 42 A78 78 0 0 1 187.55 81 Z" fill="#f3bf9f" stroke="#fff5e6" stroke-width="2.6"/>
+            <rect x="140" y="51" width="26" height="34" rx="2" fill="#fff9ed" stroke="#dfc8ad" stroke-width=".65"/>
+            <rect x="143" y="55" width="20" height="24" rx="1" fill="#ffc7a8"/>
+            <circle cx="156" cy="61" r="4" fill="#fff5d5"/>
+            <path d="M143 74 Q150 66 163 71 L163 79 H143Z" fill="#be9774"/>
+          </g>
+          <g transform="rotate(120 120 120)">
+            <path d="M120 120 L120 42 A78 78 0 0 1 187.55 81 Z" fill="#eeb6b9" stroke="#fff5e6" stroke-width="2.6"/>
+            <rect x="140" y="51" width="26" height="34" rx="2" fill="#fff9ed" stroke="#dfc8ad" stroke-width=".65"/>
+            <rect x="143" y="55" width="20" height="24" rx="1" fill="#e7b9c7"/>
+            <circle cx="156" cy="61" r="4" fill="#fff5d5"/>
+            <path d="M143 74 Q150 66 163 71 L163 79 H143Z" fill="#9b7f93"/>
+          </g>
+          <g transform="rotate(180 120 120)">
+            <path d="M120 120 L120 42 A78 78 0 0 1 187.55 81 Z" fill="#f0d5a0" stroke="#fff5e6" stroke-width="2.6"/>
+            <rect x="140" y="51" width="26" height="34" rx="2" fill="#fff9ed" stroke="#dfc8ad" stroke-width=".65"/>
+            <rect x="143" y="55" width="20" height="24" rx="1" fill="#d9d0ac"/>
+            <circle cx="156" cy="61" r="4" fill="#fff5d5"/>
+            <path d="M143 74 Q150 66 163 71 L163 79 H143Z" fill="#91aa8a"/>
+          </g>
+          <g transform="rotate(240 120 120)">
+            <path d="M120 120 L120 42 A78 78 0 0 1 187.55 81 Z" fill="#a6cbb4" stroke="#fff5e6" stroke-width="2.6"/>
+            <rect x="140" y="51" width="26" height="34" rx="2" fill="#fff9ed" stroke="#dfc8ad" stroke-width=".65"/>
+            <rect x="143" y="55" width="20" height="24" rx="1" fill="#b5d6c3"/>
+            <circle cx="156" cy="61" r="4" fill="#fff5d5"/>
+            <path d="M143 74 Q150 66 163 71 L163 79 H143Z" fill="#698f84"/>
+          </g>
+          <g transform="rotate(300 120 120)">
+            <path d="M120 120 L120 42 A78 78 0 0 1 187.55 81 Z" fill="#aac5dd" stroke="#fff5e6" stroke-width="2.6"/>
+            <rect x="140" y="51" width="26" height="34" rx="2" fill="#fff9ed" stroke="#dfc8ad" stroke-width=".65"/>
+            <rect x="143" y="55" width="20" height="24" rx="1" fill="#a9c7de"/>
+            <circle cx="156" cy="61" r="4" fill="#fff5d5"/>
+            <path d="M143 74 Q150 66 163 71 L163 79 H143Z" fill="#709cb0"/>
+          </g>
+          <circle cx="120" cy="120" r="15" fill="#fff8e9" stroke="#d5a869" stroke-width="3"/>
+          <circle cx="120" cy="120" r="5" fill="#a62c52"/>
+        </svg>
+        <span class="homeRoulettePointer"></span>
+        <span class="homeRouletteTwinkle">✦</span>
+      </span>
+      <span class="homeStartAction" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="m10 9 5 3-5 3V9Z" fill="currentColor" stroke="none"/></svg>
+        <span>動画を選ぶ</span>
+        <span class="homeStartActionArrow">›</span>
+      </span>
+    </button>
+    <button id="homePastVideoBtn" class="homeChoice" type="button" data-route="library">
+      <span class="homeChoiceIcon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M8 4.5v15M16 4.5v15M3.5 9h4.5M3.5 15h4.5M16 9h4.5M16 15h4.5"/></svg></span>
+      <span class="homeChoiceCopy"><strong>過去の動画から作る</strong><small id="homeSavedVideoCount">保存した動画を選ぶ</small></span>
+      <span class="homeChoiceArrow" aria-hidden="true">›</span>
+    </button>
+    <button id="homeReceivedBtn" class="homeChoice" type="button" data-route="received">
+      <span class="homeChoiceIcon" aria-hidden="true">🎁</span>
+      <span class="homeChoiceCopy"><strong>友達からもらったルーレットを回す</strong><small id="homeReceivedCount">受け取ったルーレットを遊ぶ</small></span>
+      <span class="homeChoiceArrow" aria-hidden="true">›</span>
+    </button>
+  </div>
+  <h2 class="homeShortcutsTitle">そのほかの機能</h2>
+  <nav class="homeShortcuts" aria-label="そのほかの機能">
+    <button type="button" data-route="favorites"><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.8 4.7a5.5 5.5 0 0 0-7.8 0l-1 1-1-1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.5a5.5 5.5 0 0 0 0-7.8Z"/></svg></span><strong>お気に入り</strong><small id="homeFavoriteCount">保存した写真</small></button>
+    <button type="button" data-route="history"><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 1 2.5 6.3M3 18v-6h6M12 7v5l3 2"/></svg></span><strong>履歴</strong><small id="homeHistoryCount">作ったルーレット</small></button>
+    <button type="button" data-route="gif" aria-label="動画からGIFを作る"><span aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4m-4 6h4m10-6h4m-4 6h4"/></svg></span><strong>GIF作成</strong><small>動画から作る</small></button>
+    <button type="button" data-route="settings"><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 17h16M9 4v6m6 4v6"/><circle cx="9" cy="7" r="2"/><circle cx="15" cy="17" r="2"/></svg></span><strong>設定</strong><small>ルーレット・データ</small></button>
+    <button type="button" data-route="share-picker"><span aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.5 10.8 7-4.2M8.5 13.2l7 4.2"/></svg></span><strong>共有する</strong><small>ルーレットを送る</small></button>
+    <button type="button" class="shareAdvancedOnly" data-route="receive"><span aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M16 3.5 28 10v13L16 29 4 23V10L16 3.5Z"/><path d="M4 10 16 16.5 28 10M16 16.5V29"/><g fill="currentColor" stroke="none"><circle cx="12" cy="9.1" r="1.05"/><circle cx="17" cy="11.4" r="1.05"/><circle cx="20.3" cy="8.7" r="1.05"/><circle cx="9.2" cy="16.3" r="1.15"/><circle cx="12.2" cy="22.2" r="1.15"/><circle cx="22.5" cy="16.4" r="1.15"/><circle cx="20.2" cy="22.5" r="1.15"/><circle cx="25" cy="20.9" r="1.15"/></g></svg></span><strong>受け取って遊ぶ</strong><small>もらったファイルを開く</small></button>
+  </nav>
+</section>
+<button id="howtoOpen" class="howtoBanner" data-app-view="home" type="button" aria-haspopup="dialog">
+  <span class="howtoBannerIcon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6a8 8 0 0 0-9-1v13a8 8 0 0 1 9 1m0-13a8 8 0 0 1 9-1v13a8 8 0 0 0-9 1M12 6v13"/></svg></span>
+  <span>アプリの使い方を見る</span>
+  <span class="howtoBannerArrow" aria-hidden="true">›</span>
+</button>
+<section class="homeBenefits" data-app-view="home" aria-label="このアプリの特長">
+  <h2 class="homeBenefitsLabel">このアプリの特長</h2>
+  <div class="homeBenefitsGrid">
+    <div class="homeBenefit">
+      <span class="homeBenefitIcon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="15" rx="3.5"/><path d="m10 8.5 5 3.5-5 3.5z" fill="currentColor" stroke="none"/></svg></span>
+      <strong>かんたん操作</strong>
+      <small>動画を選んで遊べる</small>
+    </div>
+    <div class="homeBenefit">
+      <span class="homeBenefitIcon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7.5" r="3"/><path d="M3.5 19v-1.5a5.5 5.5 0 0 1 8-4.9M14.5 17.5l2.3 2.3 4-5"/></svg></span>
+      <strong>登録不要</strong>
+      <small>アカウント作成なし</small>
+    </div>
+    <div class="homeBenefit">
+      <span class="homeBenefitIcon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="2" width="13" height="20" rx="3"/><rect x="9" y="11" width="6" height="5" rx="1.1"/><path d="M10.5 11V9.6a1.5 1.5 0 0 1 3 0V11"/></svg></span>
+      <strong>動画は端末内で処理</strong>
+      <small>元動画を外部送信しない</small>
+    </div>
+  </div>
+</section>
+<section id="createSection" class="card appView" data-app-view="create">
+  <div class="viewTopbar"><button class="viewBack" type="button" data-nav-back>← ホーム</button><span>新しい動画</span></div>
+  <div class="step">NEW VIDEO</div>
+  <h2>新しい動画からルーレットを作る</h2>
+  <p class="note viewIntro">今回選んだ動画だけでルーレットを作ります。過去の動画は混ざりません。</p>
+  <div class="filebox newVideoPicker">
+    <input id="fileInput" type="file" accept="video/*" multiple hidden>
+    <button id="createPickBtn" class="primary newVideoPickButton" type="button">動画を選ぶ・選び直す</button>
+    <div class="note">1本でも複数本でも選べます。処理はブラウザ内だけで行い、元動画は外部へ送信しません。</div>
+  </div>
+  <div id="progressWrap"><div class="progress"><div id="progressBar"></div></div><div id="progressText">準備中...</div></div>
+  <p class="note createSettingsNote">抽出枚数や通常ルーレットなどの設定は、ホームの「設定」からまとめて変更できます。</p>
+</section>
+<section id="deckCard" class="card deckCard appView" data-app-view="library">
+  <div class="viewTopbar"><button class="viewBack" type="button" data-nav-back>← ホーム</button><span>過去の動画</span></div>
+  <div class="step">VIDEO LIBRARY</div>
+  <h2>過去の動画からルーレットを作る</h2>
+  <p class="note viewIntro">今回使いたい動画だけを選んでください。1本でも複数本でも選べます。</p>
+  <p id="deckStatus" class="deckStatus">保存した動画を読み込んでいます…</p>
+  <div id="deckProcessingSummary" class="deckProcessingSummary" hidden></div>
+  <div class="deckLibraryManageBar">
+    <span id="deckLibraryManageNote">タップして今回使う動画を選びます。</span>
+    <button id="deckLibraryManageBtn" class="secondary" type="button">動画を管理</button>
+  </div>
+  <div class="deckLibraryToolbar">
+    <div class="deckLibrarySearch">
+      <span aria-hidden="true">⌕</span>
+      <input id="deckSearch" type="search" placeholder="日付で絞り込み（例 10/7）" autocomplete="off">
+    </div>
+    <select id="deckSort" aria-label="動画の並び順">
+      <option value="newest" selected>新しい順</option>
+      <option value="oldest">古い順</option>
+      <option value="mostPlayed">よく遊んだ順</option>
+    </select>
+  </div>
+  <div class="deckSelectionBar">
+    <div>
+      <strong id="deckSelectionStatus">動画を選択してください</strong>
+      <span>写真アプリのようにサムネイルをタップして、今回使う動画を選べます。</span>
+    </div>
+    <div class="deckSelectionActions">
+      <button id="deckSelectAllBtn" class="secondary" type="button">すべて選択</button>
+      <button id="deckClearSelectionBtn" class="secondary" type="button">選択を解除</button>
+    </div>
+  </div>
+  <div id="deckPicker" class="deckPicker deckPhotoLibrary"><div class="note">動画を読み込んでいます…</div></div>
+  <div class="deckActions deckActionsSticky">
+    <button id="deckDrawBtn" class="primary deckDraw" type="button" disabled>🎴 選んだ動画でおみくじを引く</button>
+  </div>
+  <div id="deckNotice" class="note deckNotice"></div>
+
+</section>
+<!-- Legacy DOM hooks kept for older extraction fallback; never shown in the current flow. -->
+<section id="previewSection" class="card" style="display:none" aria-hidden="true">
+  <div class="step">PREVIEW</div><h2 id="previewTitle">自動で作成したおみくじ</h2>
+  <div id="analysisStatus" class="note analysisStatus" style="display:none"></div><div id="grid" class="grid"></div>
+  <div class="row" style="margin-top:13px"><button id="playBtn" class="primary">この内容で遊ぶ</button><button id="reextractBtn" class="secondary">もう一度抽出する</button></div>
+  <div class="note" id="previewNote" style="margin-top:8px">保存名は自動で付けます。必要なら保存後に変更できます。</div>
+</section>
+<section id="receivedSection" class="card appView" data-app-view="received">
+  <div class="viewTopbar"><button type="button" class="viewBack" data-nav-back>← ホーム</button><span>友達からもらったルーレット</span></div>
+  <div class="step">RECEIVED ROULETTES</div>
+  <h2>友達からもらったルーレットを回す</h2>
+  <p class="note">以前受け取ったルーレットを何度でも回せます。写真と抽選履歴はこのブラウザー内に保存します。</p>
+  <div id="receivedListStatus" class="note" role="status" aria-live="polite"></div>
+  <div id="receivedList" aria-label="受信したルーレットの一覧"></div>
+  <label for="receivedImportFile" class="receiveFileLabel">🎁 受信したHTML・ルーレットファイルを追加</label>
+  <input type="file" id="receivedImportFile" accept=".html,.htm,.mmrplay,text/html,application/json">
+  <p id="receivedImportStatus" class="note" role="status" aria-live="polite"></p>
+  <p class="note">LINEでZIPを受け取った場合は、先に解凍して中のHTMLを選択してください。元動画・写真を運営側にアップロードしません。</p>
+</section>
+<section id="legacyLibrarySection" class="card appView" data-app-view="history">
+  <div class="viewTopbar"><button class="viewBack" type="button" data-nav-back>← ホーム</button><span>履歴</span></div>
+  <div class="historyLegacy">
+    <h2>作ったルーレット</h2>
+    <p class="note">新しい形式も含め、作ったルーレットをこの端末に保存します。「遊ぶ」を押すと、そのルーレットをすぐにもう一度回せます。</p>
+    <div id="library"><div class="note">まだ作ったルーレットはありません。</div></div>
+  </div>
+</section>
+<section id="playSection" class="card appView" data-app-view="play">
+  <div class="viewTopbar"><button id="backBtn" class="viewBack" type="button">← 戻る</button><span>ルーレット</span></div>
+  <div class="step">PLAY</div>
+  <div class="playShell"><div id="stage"><img id="playImage" alt=""><div id="fortuneBadge"></div><div id="resultCard"><div id="resultHead">きょうの運勢</div><div id="resultText"></div><div id="message"></div></div><div id="rouletteBadge">タップでストップ</div></div></div>
+  <div id="tapHint">画像をタップすると止まります</div>
+  <button id="shareOpenFromPlay" class="primary" type="button" style="margin-top:12px;width:100%">⇧ このルーレットを共有する</button>
+</section>
+<section id="sharePickerSection" class="card appView" data-app-view="share-picker">
+  <div class="viewTopbar"><button type="button" class="viewBack" data-nav-back>← ホーム</button><span>共有するルーレットを探す</span></div>
+  <div class="step">SELECT ROULETTE</div>
+  <h2>過去のルーレットから選ぶ</h2>
+  <p class="note viewIntro">保存したルーレットのコマを見ながら選べます。次の画面でHTMLを直接共有するか、LINE用ZIPを保存できます。</p>
+  <p id="sharePickerStatus" class="note" role="status" aria-live="polite">履歴を読み込んでいます…</p>
+  <div id="shareSavedGallery" class="shareSavedGallery"></div>
+</section>
+<section id="shareSection" class="card appView" data-app-view="share">
+  <div class="viewTopbar"><button id="shareBackBtn" type="button" class="viewBack">← 戻る</button><span>共有する</span></div>
+  <div class="step">SHARE</div>
+  <h2 id="sharePageHeading">思い出のルーレットを届ける</h2>
+  <p class="note">写真・動画の生成はこの端末内で行います。LINEやSNSへの送信は自分で共有先を選ぶときだけです。</p>
+  <p id="shareSourceState" class="note" aria-live="polite"></p>
+  <div id="shareSimpleActions" class="shareActions">
+    <h3>ルーレットを友達に送る</h3>
+    <p class="note">写真入りHTMLを送ります。受け取った人はHTMLを開き、既存の思い出ルーレットで遊べます。</p>
+    <button id="shareDirectHtml" class="primary shareSimpleAction" type="button" disabled>⇧ HTMLを直接共有する</button>
+    <button id="shareSaveZip" class="secondary shareSimpleAction" type="button" disabled>↓ LINE用ZIPを保存する</button>
+    <p class="note">LINEにはHTMLを直接添付できません。ZIPを保存し、LINEのトーク画面から「＋」→「ファイル」で送ってください。受信した人はZIPを解凍して中のHTMLを開きます。</p>
+    <p id="shareSimpleStatus" class="note" role="status" aria-live="polite">共有ファイルを準備しています…</p>
+  </div>
+  <div id="shareStopPicker" class="shareStopPicker shareAdvancedOnly" hidden>
+    <h3>共有する停止コマ</h3>
+    <p class="note">動画・写真では、選んだコマで停止します。実際に引いた結果を選ぶか、別のコマを指定できます。</p>
+    <div class="shareSelectedFrame">
+      <img id="shareSelectedFrameImage" alt="選択した停止コマのプレビュー">
+      <div class="shareSelectedFrameInfo">
+        <strong id="shareSelectedFrameLabel"></strong>
+        <span id="shareSelectedFrameFortune"></span>
+      </div>
+      <div class="shareFrameStep">
+        <button id="shareStopPrev" type="button" class="secondary">← 前のコマ</button>
+        <button id="shareStopNext" type="button" class="secondary">次のコマ →</button>
+      </div>
+    </div>
+    <div id="sharePastDrawSection" class="sharePastDrawSection" hidden>
+      <h4>過去に止まった結果から選ぶ</h4>
+      <div id="sharePastDrawGallery" class="sharePastDrawGallery"></div>
+    </div>
+    <details id="shareAllFramesDetails" class="shareAllFramesDetails">
+      <summary>すべてのコマから選ぶ</summary>
+      <div class="shareFramePager">
+        <button type="button" id="shareFramePagePrev" class="secondary">← 前のページ</button>
+        <span id="shareFramePageLabel"></span>
+        <button type="button" id="shareFramePageNext" class="secondary">次のページ →</button>
+      </div>
+      <div id="shareStopFrameGrid" class="shareStopFrameGrid"></div>
+    </details>
+    <p id="shareStopNote" class="note" aria-live="polite"></p>
+  </div>
+  <div class="shareActions shareAdvancedOnly" id="shareRouletteOptions">
+    <h3>ルーレットを共有する</h3>
+    <label class="shareFormatLabel" for="shareRouletteFormat">共有する内容</label>
+    <select id="shareRouletteFormat">
+      <option value="movie">🎬 抽選からSTOPまでの動画</option>
+      <option value="play">🎲 相手も遊べるルーレットファイル</option>
+      <option value="zip">📦 LINE用ZIP（解凍してHTMLを開く）</option>
+      <option value="html">🧪 HTMLファイルを開いて遊ぶ（実験）</option>
+      <option value="photo">📷 停止した写真</option>
+    </select>
+    <label class="shareMaskOption"><input type="checkbox" id="shareRouletteMask"> 🐻 ひみつスタンプで隠す（任意）</label>
+    <p class="note">スタンプを使わない場合は、加工前の写真を使います。共有のたびに選べます。</p>
+    <button id="shareRouletteBuild" class="primary" type="button">作成して保存・共有</button>
+    <p class="note">動画は音声なし。MP4非対応時はWebMになります。遊べるファイルには画像そのものが含まれます。</p>
+    <p class="note">📦 LINEでHTMLファイルを送れない場合はZIPを選択してください。中には写真入りHTMLが1つだけ入っています。受信者はZIPを解凍してHTMLを開き、既存アプリにつなぎます。Cloudflare認証が必要な場合は「既存アプリを開いて遊ぶ」で本体を別タブで開きます。ZIPを共有メニューから直接LINEへ渡す実験ができます。添付ができない環境では共有エラー内容を表示します。</p>
+    <p class="note">🧪 HTMLの直接共有はAndroidのLINEで失敗することがあります。写真はCloudflareにアップロードせず、HTML内からブラウザー内で既存アプリへ渡します。</p>
+  </div>
+  <div class="shareActions shareAdvancedOnly" id="shareFavoriteOptions" hidden>
+    <h3>お気に入りの写真を共有する</h3>
+    <p class="note">選んだお気に入り写真を保存・共有できます。ひみつスタンプを使わない場合は、元の写真をそのまま使います。</p>
+    <label class="shareMaskOption"><input type="checkbox" id="shareFavoriteMask"> 🐻 ひみつスタンプで隠す（任意）</label>
+    <button id="shareFavoriteBuild" class="primary" type="button">写真を作成して保存・共有</button>
+  </div>
+  <div id="shareStatus" class="note" role="status" aria-live="polite"></div>
+  <div id="shareOutput" class="shareOutputOverlay" role="dialog" aria-modal="true" aria-labelledby="shareOutputTitle" hidden>
+    <div class="shareOutputPanel">
+      <button id="shareOutputClose" class="shareOutputClose secondary" type="button" aria-label="閉じる">×</button>
+      <h3 id="shareOutputTitle">ファイルができました！</h3>
+      <p id="shareOutputLabel"></p>
+      <p class="note">このまま保存するか、家族や友人に送るか選べます。</p>
+      <div class="shareOutputActions">
+        <button id="shareOutputSave" class="primary" type="button">↓ 端末に保存</button>
+        <button id="shareOutputSend" class="secondary" type="button">共有先を選ぶ</button>
+      </div>
+      <p id="shareOutputHelp" class="note"></p>
+    </div>
+  </div>
+  <div id="sharePrivacyEditor" class="shareAdvancedOnly" hidden>
+    <h3 id="sharePrivacyTitle">ひみつスタンプ</h3>
+    <p class="note">画像をタップすると不透明なスタンプを置きます。顔以外の名前・場所・背景にも注意してください。自動顔検出ではありません。</p>
+    <canvas id="sharePrivacyCanvas" aria-label="スタンプを配置する画像" role="img"></canvas>
+    <div class="shareFrameNav"><button id="shareMaskPrev" type="button" class="secondary">← 前</button><strong id="shareMaskIndex"></strong><button id="shareMaskNext" type="button" class="secondary">次 →</button></div>
+    <div class="shareMaskTools">
+      <label>種類 <select id="shareMaskType"><option>🐻</option><option>🐱</option><option>🌸</option><option>⭐</option><option>🔒</option></select></label>
+      <label>大きさ <input id="shareMaskSize" type="range" min="18" max="85" value="27"></label>
+      <span id="shareMaskCount" class="note">0個のスタンプ</span>
+    </div>
+    <div class="shareOutputActions">
+      <button id="shareMaskUndo" class="secondary" type="button">直前を取り消す</button>
+      <button id="shareMaskCopy" class="secondary" type="button">位置を全コマへコピー</button>
+      <button id="sharePrivacyClose" class="secondary" type="button">閉じる</button>
+    </div>
+    <p class="note">共有前に前後のコマを確認してください。動く顔や背景はスタンプからはみ出すことがあります。確認チェックは不要です。</p>
+    <div class="shareActions">
+      <button id="sharePrivacyExportSelected" type="button" class="primary">加工して保存・共有する</button>
+    </div>
+    <div id="sharePrivacyStatus" class="note" role="status" aria-live="polite"></div>
+  </div>
+</section>
+<section id="receiveSection" class="card appView" data-app-view="receive">
+  <div class="viewTopbar"><button type="button" class="viewBack" data-nav-back>← ホーム</button><span>受け取って遊ぶ</span></div>
+  <div class="step">RECEIVE</div>
+  <h2>受け取ったルーレットで遊ぶ</h2>
+  <p class="note">HTMLまたは .mmrplay ファイルを選ぶと、受信履歴に保存して既存アプリで遊べます。</p>
+  <label for="shareImportFile" class="receiveFileLabel">🎁 受け取ったファイルを選ぶ</label>
+  <input type="file" id="shareImportFile" accept=".html,.htm,.mmrplay,text/html,application/json">
+  <p id="receiveStatus" class="note" aria-live="polite" role="status"></p>
+  <p class="note">受信ルーレットはこのブラウザーの受信履歴に保存します。写真を外部サーバーにアップロードしません。</p>
+</section>
+<section id="labHistorySection" class="card labHistoryCard appView" data-app-view="play">
+  <div class="step">HISTORY</div>
+  <h2>今回引いた写真</h2>
+  <p class="note">ルーレットで止まった写真と、おみくじの結果を見返せます。</p>
+  <div id="labHistoryEmpty" class="note">まだ履歴はありません。</div>
+  <div id="labHistory"></div>
+  <div class="labGifActions">
+    <button id="labClearHistory" class="secondary" type="button" disabled>履歴をクリア</button>
+  </div>
+</section>
+<section id="labGifSection" class="card labGifCard appView" data-app-view="gif">
+  <div class="viewTopbar"><button class="viewBack" type="button" data-nav-back>← ホーム</button><span>GIF作成</span></div>
+  <div class="step">GIF</div>
+  <h2>動画からGIFを作る</h2>
+  <p class="note viewIntro">動画を選ぶだけでGIFを作れます。ルーレットを回す必要はありません。</p>
+  <p class="note">追加した動画と抽出コマはルーレットの動画ライブラリにも保存されます。GIFを作っても、ルーレットの動画選択や作成履歴は変更されません。</p>
+  <div class="homeChoiceGrid labGifChoices" aria-label="GIFに使う動画を選ぶ方法">
+    <button id="labGifAddVideo" class="homeChoice homeChoicePrimary" type="button">
+      <span class="homeChoiceIcon" aria-hidden="true">＋</span>
+      <span class="homeChoiceCopy"><strong>新しい動画から作る</strong><small>端末から新しい動画を選ぶ</small></span>
+      <span class="homeChoiceArrow" aria-hidden="true">›</span>
+    </button>
+    <button id="labGifChoosePast" class="homeChoice" type="button" aria-expanded="false" aria-controls="labGifPast">
+      <span class="homeChoiceIcon" aria-hidden="true">▦</span>
+      <span class="homeChoiceCopy"><strong>過去の動画から作る</strong><small>保存済みの動画・以前のルーレット</small></span>
+      <span class="homeChoiceArrow" aria-hidden="true">›</span>
+    </button>
+    <input id="labGifFileInput" type="file" accept="video/*" hidden>
+  </div>
+  <div id="labGifPast" class="labGifPast" hidden>
+    <div class="deckLibraryToolbar labGifLibraryToolbar">
+      <div class="deckLibrarySearch"><span aria-hidden="true">⌕</span>
+        <input id="labGifSearch" type="search" placeholder="日付・動画名で検索" autocomplete="off" aria-label="GIFにする動画を検索">
+      </div>
+      <select id="labGifSort" aria-label="動画の並び順">
+        <option value="newest" selected>新しい順</option>
+        <option value="oldest">古い順</option>
+      </select>
+    </div>
+    <p id="labGifFrameInfo" class="note" aria-live="polite">保存した動画を読み込んでいます。</p>
+    <div id="labGifSourceWrap" class="labGifSourceWrap" style="display:none">
+      <div id="labGifSourceHeading" class="labGifSourceHeading">GIFにする動画を1本選ぶ</div>
+      <select id="labGifSource" hidden aria-hidden="true" tabindex="-1"></select>
+      <div id="labGifSourceGrid" class="deckPhotoLibrary labGifPhotoLibrary" role="group" aria-labelledby="labGifSourceHeading"></div>
+      <p id="labGifSourceNote" class="note"></p>
+    </div>
+  </div>
+  <div id="labGifStatus" class="note" aria-live="polite" style="display:none"></div>
+  <div id="labGifEditor" class="labGifEditor" hidden>
+    <div class="labGifEditorHeader">
+      <strong id="labGifSelectedTitle">選択した動画</strong>
+      <button id="labGifChangeVideo" class="secondary" type="button">別の動画を選ぶ</button>
+    </div>
+    <div id="labGifSelectedFrames" class="labGifSelectedFrames" aria-label="選んだ動画のコマ見本"></div>
+    <div class="labGifSpeed">
+      <label for="labGifSpeed">GIFの切り替え間隔（プレビュー・保存共通）</label>
+      <select id="labGifSpeed">
+        <option value="0.05">0.05秒ごと（最速・毎秒20コマ）</option>
+        <option value="0.1">0.1秒ごと（毎秒10コマ）</option>
+        <option value="0.2" selected>0.2秒ごと（おすすめ・毎秒5コマ）</option>
+        <option value="0.5">0.5秒ごと（毎秒2コマ）</option>
+        <option value="1">1秒ごと（毎秒1コマ）</option>
+      </select>
+    </div>
+    <div class="labGifActions">
+      <button id="labMakeGif" class="primary" type="button" disabled>選んだ動画からGIFを作る</button>
+    </div>
+    <button id="sharePrivacyGif" class="secondary shareAdvancedOnly" type="button" style="margin-top:12px">🐻 ひみつスタンプでGIFを作る</button>
+    <div id="labGifResult" style="display:none">
+      <img id="labGifPreview" alt="GIFに使う全コマの切り替えプレビュー">
+      <a id="labGifDownload" class="labDownload" download="memory-roulette-frames.gif">GIFを保存して見る</a>
+    </div>
+  </div>
+</section>
+<section id="labCollectionSection" class="card labCollectionCard appView" data-app-view="favorites">
+  <div class="viewTopbar"><button class="viewBack" type="button" data-nav-back>← ホーム</button><span>お気に入り</span></div>
+  <div class="step">FAVORITES</div>
+  <h2>お気に入り</h2>
+  <p class="note">「お気に入りに保存」で残した写真です。見返したい写真だけをここにまとめます。</p>
+  <div id="labCollection"><div class="note">まだ保存されていません。</div></div>
+</section>
+
+<section id="settingsSection" class="card appView settingsCard" data-app-view="settings">
+  <div class="viewTopbar"><button class="viewBack" type="button" data-nav-back>← ホーム</button><span>設定</span></div>
+  <div class="step">SETTINGS</div>
+  <h2>設定・データ管理</h2>
+  <p class="note viewIntro">ルーレットの作り方と、保存データの管理をここにまとめています。設定は次に作るルーレットにも引き継がれます。</p>
+
+  <section class="settingsGroup" aria-labelledby="rouletteSettingsTitle">
+    <div class="settingsGroupHead">
+      <div>
+        <span class="settingsGroupEyebrow">ROULETTE</span>
+        <h3 id="rouletteSettingsTitle">ルーレット設定</h3>
+      </div>
+    </div>
+    <label class="settingsItem settingsSelectItem">
+      <span><b>抽出枚数</b><span class="note">動画1本から保存する一瞬の数です。通常は「おまかせ」がおすすめです。</span></span>
+      <select id="frameCount">
+        <option value="auto" selected>おまかせ（8〜15枚）</option>
+        <option value="8">8枚</option>
+        <option value="12">12枚</option>
+        <option value="15">15枚</option>
+      </select>
+    </label>
+    <label class="settingsItem">
+      <span><b>通常ルーレットにする</b><span class="note">ONにすると運勢を付けず、「どの一瞬で止まるか」だけを楽しみます。豪華演出も自動でOFFになります。</span></span>
+      <input id="plainMode" type="checkbox">
+    </label>
+    <label class="settingsItem">
+      <span><b>運勢サンプルを表示する</b><span class="note">候補確認画面に運勢のサンプルを表示します。実際の運勢はSTOPしたときに写真とは独立して抽選します。</span></span>
+      <input id="showFortunes" type="checkbox">
+    </label>
+  </section>
+
+  <button id="settingsVersionTrigger" class="settingsVersionTrigger" data-lab-trigger type="button" title="5回タップでLAB設定を表示">
+    <span>アプリバージョン</span>
+    <strong>v1.3.0</strong>
+  </button>
+  <div id="labSettingsHint" class="labSettingsHint settingsLabHint">LAB設定：上のバージョン表示を5回タップで表示</div>
+
+  <section id="labSettingsInline" class="labSettingsInline" hidden>
+        <div class="labSettingsInlineHead">
+          <span class="labSettingsInlineBadge">LAB</span>
+          <div>
+            <b>隠し設定</b>
+            <span>実験・確認用の設定です</span>
+          </div>
+        </div>
+        <label class="labSettingsItem">
+          <span><b>特徴度を表示する</b><span class="note">初期値はOFFです。写真の良し悪しではなく、動画内での「くっきり・珍しさ・変化」の違いを見る補助値です。</span></span>
+          <input id="showScores" type="checkbox">
+        </label>
+        <label class="labSettingsItem" id="labDeluxeItem">
+          <span><b>豪華演出モード</b><span class="note">初期値はONです。結果札・光・粒子・効果音などの演出を切り替えます。通常ルーレット時は自動でOFFになります。</span></span>
+          <input id="deluxeMode" type="checkbox" checked>
+        </label>
+        <label class="labSettingsItem labSpecialTestItem">
+          <span><b>特別スローモーションを強制する（実験用）</b><span class="note">特別演出をすぐ確認したいときに使います。通常のおみくじでは確率どおりに動作します。</span></span>
+          <select id="labSpecialMode">
+            <option value="normal" selected>通常（確率どおり）</option>
+            <option value="slow">毎回スローモーション</option>
+            <option value="miracle">特大吉を毎回表示</option>
+            <option value="reversal">大逆転大吉を毎回表示</option>
+          </select>
+        </label>
+        <label class="labSettingsItem">
+          <span><b>拡張共有機能を表示</b><span class="note">動画・画像の共有、停止コマ選択、ひみつスタンプなど旧共有機能を表示します。通常はOFFです。</span></span>
+          <input id="labAdvancedShare" type="checkbox">
+        </label>
+        <div class="labSettingsItem labResetItem">
+          <span><b>この端末のアプリデータを完全初期化</b><span class="note">思い出デッキ・保存済みルーレット・お気に入り・LAB設定・キャッシュをこの端末から削除します。元に戻せません。</span></span>
+          <button id="labResetAppData" type="button">完全初期化</button>
+        </div>
+      </section>
+  <h3 class="settingsSubhead">データ管理</h3>
+  <div id="deckManage" class="deckManage">
+    <div id="deckStorage" class="deckStorage">保存容量を確認しています…</div>
+    <div id="appStorageBreakdown" class="appStorageBreakdown"></div>
+    <div class="settingsDataSummary">このアプリが端末内に保存しているデータの概算です。保存済み動画の候補画像・特別リプレイ・サムネイル、ルーレット履歴、お気に入りを含みます。処理再開用の一時動画が残っている場合は、それも含めます。</div>
+    <details class="storageTechnical">
+      <summary>ブラウザの保存領域について</summary>
+      <div id="browserStorageDetails" class="browserStorageDetails">確認しています…</div>
+      <p class="note">これは参考情報です。このアプリ専用の容量ではなく、同じサイト由来の別データを含む場合があります。端末全体の使用量や空き容量でもありません。</p>
+    </details>
+    <div class="deckBackupActions">
+      <button id="deckBackupBtn" class="secondary" type="button">バックアップを書き出す</button>
+      <button id="deckRestoreBtn" class="secondary" type="button">バックアップから復元</button>
+      <button id="deckClearBtn" class="danger" type="button">保存済み動画をすべて削除</button>
+      <input id="deckRestoreInput" type="file" accept=".mmrbackup,application/x-ndjson,application/json,.json" hidden>
+    </div>
+    <p class="note">元動画そのものは保存しません。候補画像と特別リプレイ用の短い連続コマを端末内へ保存します。継続利用する場合は定期的なデッキの書き出しがおすすめです。</p>
+  </div>
+</section>
+
+<div id="howtoModal" aria-hidden="true">
+  <div class="howtoPanel" role="dialog" aria-modal="true" aria-labelledby="howtoTitle">
+    <div class="howtoHead">
+      <div>
+        <div class="howtoEyebrow">HOW TO PLAY</div>
+        <h2 id="howtoTitle">使い方</h2>
+      </div>
+      <button id="howtoClose" class="howtoClose" type="button" aria-label="使い方を閉じる">×</button>
+    </div>
+    <section class="conceptCard howtoConcept" aria-label="このアプリが目指すこと">
+      <span class="conceptLabel">このアプリが目指すこと</span>
+      <strong>自分では選ばなかった一枚に、偶然出会う。</strong>
+      <p>写真を撮るとき、私たちは笑顔やきれいに写った「いい瞬間」を残そうとします。でも動画には、その間の半目や動きの途中、思いがけない表情まで、たくさんの一瞬が残っています。</p>
+      <p>そんな普通なら写真にしなかった一瞬をルーレットで偶然引き、「こんな顔してたんだ」「こんな一瞬あったんだ」と家族や身近な人と楽しむ。さらにその一枚におみくじを重ね、今日だけの結果にする。それが、このアプリの中心にある体験です。</p>
+    </section>
+    <p class="howtoLead">まずはホームの「新しい動画から作る」「過去の動画から作る」の<b>どちらか一方</b>を選びます。どちらもそのままルーレットで遊べます。動画はブラウザ内で処理し、元動画を外部へ送信しません。</p>
+
+    <div class="howtoSteps">
+      
+<article class="howtoStep">
+        <div class="howtoNum">1A</div>
+        <div class="howtoCopy">
+          <h3>新しい動画から作る</h3>
+          <p>ホームの「新しい動画から作る」で端末の動画を1本または複数本選びます。動画から一瞬を切り出したら、そのままルーレットへ進みます。取り込んだ動画の候補画像は、次回以降も使えます。</p>
+        </div>
+        <div class="howtoMock mockUpload" aria-hidden="true">
+          <div class="mockLabel">ADD MOMENTS</div>
+          <div class="mockTitle">思い出動画を追加</div>
+          <div class="mockFile">📹 動画を複数選択</div>
+          <div class="mockNote">元動画は外部へ送信しません</div>
+        </div>
+      </article>
+
+      <article class="howtoStep">
+        <div class="howtoNum">1B</div>
+        <div class="howtoCopy">
+          <h3>過去の動画から作る</h3>
+          <p>ホームの「過去の動画から作る」では、以前取り込んだ動画がサムネイルで並びます。今回使いたい動画をタップして選び、「選んだ動画でおみくじを引く」を押します。新しく動画を取り込む必要はありません。</p>
+        </div>
+        <div class="howtoMock mockPreview" aria-hidden="true">
+          <div class="mockLabel">VIDEO LIBRARY</div>
+          <div class="mockThumbGrid">
+            <span class="mockThumb mockThumb1"></span><span class="mockThumb mockThumb2"></span><span class="mockThumb mockThumb3"></span>
+            <span class="mockThumb mockThumb4"></span><span class="mockThumb mockThumb5"></span><span class="mockThumb mockThumb6"></span>
+          </div>
+          <div class="mockPrimary">選んだ動画でおみくじを引く</div>
+        </div>
+      </article>
+
+      <article class="howtoStep">
+        <div class="howtoNum">2</div>
+        <div class="howtoCopy">
+          <h3>ルーレットを回してストップ</h3>
+          <p>複数の動画から集めた一瞬が次々に切り替わります。好きなタイミングでタップしてストップ。同じ一瞬は、原則としてデッキを一巡するまで結果として再登場しません。</p>
+        </div>
+        <div class="howtoMock mockPlay">
+          <div class="mockLabel">PLAY DEMO</div>
+          <button class="mockPhoto mockAnimated" id="howtoDemoPhoto" type="button" aria-label="説明用ルーレットを止める">
+            <span id="howtoDemoFace" class="mockFace">😊</span>
+            <b id="howtoDemoLabel">タップでストップ</b>
+          </button>
+          <div class="mockFilmstrip" aria-hidden="true"><i>😊</i><i>😮</i><i>😆</i><i>🥺</i></div>
+          <div class="mockTap">この見本もタップできます</div>
+        </div>
+      </article>
+
+      <article class="howtoStep">
+        <div class="howtoNum">3</div>
+        <div class="howtoCopy">
+          <h3>残したい一瞬を保存</h3>
+          <p>止まった写真は履歴にたまります。きれいさに関係なく、「この一瞬を残したい」と思った写真を「お気に入り」に保存できます。</p>
+        </div>
+        <div class="howtoMock mockResult" aria-hidden="true">
+          <div class="mockResultPhoto">🎞️</div>
+          <div class="mockFortune">🌟 大吉</div>
+          <div class="mockActions"><span>♡ お気に入り</span><span>↓ 画像保存</span></div>
+        </div>
+      </article>
+    </div>
+
+    <section class="howtoSecret">
+      <div class="secretBadge">✨ 特別運勢「特大吉」</div>
+      <h3>ときどき、特別な運勢とリプレイが登場</h3>
+      <div class="secretVisual" aria-hidden="true">
+        <div class="secretFortune">おみくじ</div>
+        <div class="secretArrow">→</div>
+        <div class="secretReplay"><span>▶</span><b>SLOW REPLAY</b></div>
+        <div class="secretArrow">→</div>
+        <div class="secretFortune special">特大吉</div>
+      </div>
+      <p>おみくじでは、<b>大凶以外で低い確率で「特大吉」</b>が出て、特別リプレイが始まることがあります。特大吉は写真の良し悪しを評価するものではなく、その場でしか引けなかった一瞬との出会いそのものを特別な運勢として扱います。</p>
+      <p><b>大凶では、一定確率で「大逆転大吉」</b>が発生します。どちらも写真とは別の賞ではなく、その回のおみくじ結果です。</p>
+    </section>
+
+    <section class="howtoTips">
+      <h3>もっと楽しむための便利な機能</h3>
+      <p class="howtoTipsLead">止めて終わりではなく、気に入った一瞬を残したり、動きとしてまとめたりできます。</p>
+      <div class="howtoTipGrid">
+        <div class="howtoFeature"><b>🎴 おみくじモード</b><span>止まった一瞬と一緒に今日の運勢やメッセージを楽しむ基本モードです。特別なリプレイが現れることもあります。</span></div>
+        <div class="howtoFeature"><b>🎯 通常ルーレット</b><span>運勢を付けず、純粋に「どの瞬間で止まるか」だけを楽しみたいときに使えます。</span></div>
+        <div class="howtoFeature featureSave"><b>🖼 お気に入り</b><span>気に入った停止写真をアプリ内に残せます。あとから「開く」で大きく見返せます。</span></div>
+        <div class="howtoFeature featureSave"><b>↓ 画像をダウンロード</b><span>「お気に入り」に残した写真は、コレクションから端末へ画像ファイルとして保存できます。</span></div>
+        <div class="howtoFeature"><b>🎞 動画からGIFを作る</b><span>ホームの「GIF作成」から保存済み動画や新しい動画を選び、ルーレットを回さずに抽出コマを時間順にGIFへ。0.05・0.1・0.2・0.5・1秒ごとの切り替えを選べます。標準は0.2秒です。</span></div>
+        <div class="howtoFeature"><b>💾 デッキのバックアップ</b><span>育てたデッキはファイルに書き出して復元できます。機種変更やブラウザデータ消去への備えに使えます。</span></div>
+      </div>
+    </section>
+
+    <button id="howtoDone" class="primary howtoDone" type="button">使ってみる</button>
+  </div>
+</div>
+
+<video id="video" playsinline muted preload="metadata" style="display:none"></video><canvas id="captureCanvas" style="display:none"></canvas><canvas id="smallCanvas" width="28" height="28" style="display:none"></canvas>
+</div>
+<div id="bigOverlay"><div id="bigText">大吉！</div></div>
+<script src="./i18n.js?v=1.3.0-release-20261109" defer></script>
+<script src="./navigation.js?v=1.3.0-release-20261109" defer></script>
+<script src="./app.js?v=1.3.0-release-20261109" defer></script>
+<script src="./deck.js?v=1.3.0-release-20261109" defer></script>
+<script src="./deluxe.js?v=1.3.0-release-20261109" defer></script>
+<script src="./mp4-duration-fix.js?v=1.3.0-release-20261109" defer></script>
+<script src="./media-save.js?v=1.3.0-release-20261109" defer></script>
+<script src="./features.js?v=1.3.0-release-20261109" defer></script>
+<script src="./shared-html-i18n.js?v=1.3.0-release-20261109" defer></script>
+<script src="./share-studio.js?v=1.3.0-release-20261109" defer></script>
+<script src="./hidden-settings.js?v=1.3.0-release-20261109" defer></script>
+<script>
+(()=>{
+  const scoreBox=document.getElementById('showScores');
+  const fortuneBox=document.getElementById('showFortunes');
+  const grid=document.getElementById('grid');
+  const status=document.getElementById('analysisStatus');
+  const sync=()=>{
+    document.body.classList.toggle('show-score-details',!!scoreBox?.checked);
+    document.body.classList.toggle('show-fortune-map',!!fortuneBox?.checked);
+  };
+  scoreBox?.addEventListener('change',sync);fortuneBox?.addEventListener('change',sync);
+  sync();
+})();
+</script>
+
+
+
+<script>
+(()=>{
+  const modal=document.getElementById('howtoModal');
+  const open=document.getElementById('howtoOpen');
+  const close=document.getElementById('howtoClose');
+  const done=document.getElementById('howtoDone');
+  const demo=document.getElementById('howtoDemoPhoto');
+  const demoFace=document.getElementById('howtoDemoFace');
+  const demoLabel=document.getElementById('howtoDemoLabel');
+  const faces=['😊','😮','🙂','😴','😆','🥺'];
+  let previousFocus=null;
+  let demoIndex=0;
+  let demoTimer=null;
+  let demoPaused=false;
+  const tickDemo=()=>{
+    if(!demoFace||demoPaused)return;
+    demoIndex=(demoIndex+1)%faces.length;
+    demoFace.classList.remove('swap');
+    void demoFace.offsetWidth;
+    demoFace.textContent=faces[demoIndex];
+    demoFace.classList.add('swap');
+  };
+  const startDemo=()=>{
+    clearInterval(demoTimer);
+    demoPaused=false;
+    if(demoLabel)demoLabel.textContent='タップでストップ';
+    demoTimer=setInterval(tickDemo,430);
+  };
+  const stopDemo=()=>{
+    clearInterval(demoTimer);
+    demoTimer=null;
+  };
+  const show=()=>{
+    if(!modal)return;
+    previousFocus=document.activeElement;
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden','false');
+    document.body.classList.add('howto-open');
+    startDemo();
+    close?.focus();
+  };
+  const hide=()=>{
+    if(!modal)return;
+    stopDemo();
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden','true');
+    document.body.classList.remove('howto-open');
+    previousFocus?.focus?.();
+  };
+  demo?.addEventListener('click',()=>{
+    if(demoPaused){
+      startDemo();
+      return;
+    }
+    demoPaused=true;
+    stopDemo();
+    demo.classList.add('stopped');
+    if(demoLabel)demoLabel.textContent='この瞬間！';
+    setTimeout(()=>{
+      demo.classList.remove('stopped');
+      if(modal?.classList.contains('show'))startDemo();
+    },1300);
+  });
+  open?.addEventListener('click',show);
+  close?.addEventListener('click',hide);
+  done?.addEventListener('click',hide);
+  modal?.addEventListener('click',e=>{if(e.target===modal)hide();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modal?.classList.contains('show'))hide();});
+})();
+</script>
+
+</body>
+</html>

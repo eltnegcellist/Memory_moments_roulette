@@ -4,7 +4,7 @@
 
 **公開版：v1.3.0**（12言語対応、共有・受信機能を含む）
 
-正式なWebアプリの公開URLは、Cloudflare Pagesへの切り替え完了時に掲載します。
+**Webアプリ：[思い出ルーレットを開く](https://memory-moments-roulette.pages.dev/)**
 
 ## できること
 

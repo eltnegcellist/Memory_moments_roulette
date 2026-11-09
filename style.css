@@ -1009,7 +1009,10 @@ button#howtoOpen:focus-visible {
 /* One clear, colourful action, based on the approved film-frame concept. */
 #homeActions .homeChoicePrimary {
   position: relative;
-  display: block;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
   isolation: isolate;
   overflow: hidden;
   min-height: 194px;
@@ -1025,10 +1028,10 @@ button#howtoOpen:focus-visible {
 
 /* The entire magenta card is the button; this is a visual affordance, not a nested button. */
 #homeActions .homeStartAction {
-  position: absolute;
+  position: relative;
   z-index: 4;
-  left: 26px;
-  bottom: 22px;
+  margin-top: auto;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1249,8 +1252,8 @@ section.homeBenefits .homeBenefit small {
 @media (max-width: 520px) {
   body[data-app-view="home"] header.hero[data-app-view="home"] { padding: 6px 4px 16px; gap: 12px; }
   body[data-app-view="home"] header.hero[data-app-view="home"] .heroMark { width: 56px; height: 56px; flex-basis: 56px; border-radius: 15px; }
-  #homeActions .homeChoicePrimary { min-height: 173px; padding: 20px 17px; }
-  #homeActions .homeStartAction { left: 17px; bottom: 16px; min-height: 38px; padding: 8px 10px; gap: 5px; font-size: 12px; }
+  #homeActions .homeChoicePrimary { min-height: 173px; padding: 20px 17px; gap: 12px; }
+  #homeActions .homeStartAction { min-height: 38px; padding: 8px 10px; gap: 5px; font-size: 12px; }
   #homeActions .homeStartAction svg { width: 17px; height: 17px; }
   #homeActions .homeStartActionArrow { font-size: 19px; }
   #homeActions .homeChoicePrimary .homeChoiceCopy { width: 53%; gap: 11px; }
@@ -1265,7 +1268,7 @@ section.homeBenefits .homeBenefit small {
 }
 @media (max-width: 360px) {
   #homeActions .homeChoicePrimary .homeChoiceCopy { width: 55%; }
-  #homeActions .homeStartAction { left: 16px; padding: 8px 9px; font-size: 11.5px; }
+  #homeActions .homeStartAction { padding: 8px 9px; font-size: 11.5px; }
   #homeActions .homeChoicePrimary .homeChoiceCopy strong { font-size: 19px; }
   #homeActions .homeRouletteVisual { right: -21px; bottom: -42px; transform: scale(.63); }
   #homeActions .homeShortcuts { gap: 7px; }

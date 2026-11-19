@@ -655,8 +655,8 @@
     document.title=t('思い出ルーレット')+' · '+t('おみくじ');
     const manifest=document.querySelector('link[rel="manifest"]');
     if (manifest) {
-      const desired=language==='ja'?'./manifest.webmanifest?v=1.3.1':
-        './manifest.intl.webmanifest?v=1.3.1';
+      const desired=language==='ja'?'./manifest.webmanifest?v=1.4.0':
+        './manifest.intl.webmanifest?v=1.4.0';
       if (manifest.getAttribute('href')!==desired) manifest.setAttribute('href',desired);
     }
     const labels=LABELS[language];

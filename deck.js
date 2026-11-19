@@ -1500,16 +1500,13 @@ async function preparedDrawState(ids){
   await metaPut('drawState',state);
   return state;
 }
-window.__memoryDeckResolveStop=(creation,fallback)=>{
+window.__memoryDeckResolveStop=(creation,fallback,visible)=>{
   const state=creation?.deckDrawState;
   const ids=creation?.deckCandidateIds||[];
   if(!state||!ids.length)return fallback;
-  if(!state.remainingIds.length){
-    state.remainingIds=shuffle(ids);
-    state.universeIds=ids.slice();
-    state.cycle=(state.cycle||1)+1;
-  }
-  const id=state.remainingIds.shift();
+  const visibleIds=visible&&new Set([...visible].map(index=>ids[index]));
+  const id=drawNextRouletteCandidate(state,ids,visibleIds);
+  if(id===undefined)return fallback;
   metaPut('drawState',state).catch(()=>{});
   const ix=ids.indexOf(id);
   return ix>=0?ix:fallback;

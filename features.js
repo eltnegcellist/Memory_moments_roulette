@@ -1975,10 +1975,8 @@ function addHistory(item){
   persistDrawHistory();
 }
 function showHistoryEntry(x){
-  clearInterval(timer);
-  timer=null;
-  running=false;
-  stageEl.classList.remove('pulse');
+  cancelRouletteSpin();
+  window.__memoryStopRouletteEffects?.();
   clearSpecial();
   undockResult();
   setSpecialResultStyle(null);

@@ -1281,3 +1281,75 @@ section.homeBenefits .homeBenefit small {
   #homeActions .homeShortcuts button { transition: none; }
 }
 
+
+#playSection .playShell:has(> .photoWheelActive) {
+  width: min(100%, 85svh, 820px);
+  margin-inline: auto;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+#playSection #stage.photoWheelActive {
+  --photo-wheel-backdrop:
+    radial-gradient(ellipse at 50% 40%, #fff9ed 8%, #fff4e683 48%, transparent 78%) padding-box,
+    repeating-linear-gradient(135deg, #fff8eb55 0 1px, transparent 1px 6px) padding-box,
+    linear-gradient(145deg, #f7e0c7, #eac1b5 65%, #dfb19b) padding-box;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 1 !important;
+  border-radius: 0;
+  background: var(--photo-wheel-backdrop);
+  box-shadow: none;
+}
+#stage.photoWheelActive #playImage,
+#stage.photoWheelActive #rouletteBadge,
+#photoWheel[hidden], #photoWheelAction[hidden] { display: none; }
+#photoWheel {
+  display: grid;
+  place-items: center;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  padding: 0;
+  background: transparent;
+  touch-action: manipulation;
+}
+/* The wheel is also a button. Keep the photos opaque while the result is drawn. */
+#photoWheel:disabled { opacity: 1; cursor: default; }
+#photoWheel svg {
+  display: block;
+  width: 100%;
+  /* The camera clips to the stage edges while the disc itself stays circular. */
+  overflow: hidden;
+}
+.photoWheelSelection { visibility: hidden; }
+#photoWheel [data-selected] > .photoWheelSelection { visibility: visible; }
+#photoWheelAction {
+  display: block;
+  width: min(100%, 340px);
+  min-height: 50px;
+  margin: 12px auto 0;
+  touch-action: manipulation;
+}
+
+@media (max-width: 600px) and (orientation: portrait) {
+  #playSection .playShell:has(> .photoWheelActive) {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    width: auto;
+    /* Extend past the card border and the card and body padding. */
+    margin-inline: -29px;
+    max-height: max(180px, calc(100svh - 190px - env(safe-area-inset-top)));
+    padding: 0;
+    overflow: clip;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  #playSection #stage.photoWheelActive {
+    flex: none;
+    width: min(100%, max(180px, calc(100svh - 190px - env(safe-area-inset-top))));
+  }
+}

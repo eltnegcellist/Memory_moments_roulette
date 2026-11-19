@@ -38,9 +38,12 @@ function startDrumRoll(){
   hit();
   drumRollTimer=setInterval(hit,92);
 }
+function stopDrumAudio(){
+  clearTimeout(drumStartTimer);drumStartTimer=null;
+  stopDrumRoll();
+}
 function clearFx(){
-clearTimeout(drumStartTimer);drumStartTimer=null;
-stopDrumRoll();
+stopDrumAudio();
 clearTimeout(photoFocusTimer);photoFocusTimer=null;
 Object.values(clsMap).forEach(c=>stage.classList.remove(c));
 stage.classList.remove('result-reveal','photo-focus');
@@ -91,14 +94,11 @@ startRun=function(withSound=true){
 };
 celebrate=function(){bigOverlay.classList.remove('deluxe');originals.celebrate();};
 stopRun=function(){
-  stopDrumRoll();running=false;clearInterval(timer);timer=null;stage.classList.remove('pulse');
-  if(activeCreation?.deckMode&&typeof window.__memoryDeckResolveStop==='function'){
-    const resolved=window.__memoryDeckResolveStop(activeCreation,currentIndex);
-    if(Number.isInteger(resolved)&&resolved>=0&&resolved<activeCreation.frames.length){
-      currentIndex=resolved;
-      playImage.src=activeCreation.frames[currentIndex];
-    }
-  }
+  if(!wheelActive)stopDrumAudio();
+  else if(!pendingStop&&!pendingWheelStart&&drumStartTimer===null&&drumRollTimer===null)startDrumRoll();
+  stopRouletteAtResult(showDeluxeStoppedRoulette,stopDrumAudio);
+};
+function showDeluxeStoppedRoulette(){
   if(activeCreation.mode==='omikuji'){
     const baseFortune=window.__babyLabForcedSpecial==='reversal'?'大凶':drawFortune();
     const resolved=typeof window.__memoryResolveStoppedFortune==='function'
@@ -114,13 +114,13 @@ stopRun=function(){
     if(deluxe){stage.classList.add('result-reveal');stage.classList.remove('photo-focus');particles('吉');impact('吉');clearTimeout(photoFocusTimer);photoFocusTimer=setTimeout(focusPhoto,1500);}
     playSound('吉');
   }
-  tapHint.textContent='もう一度タップすると再開します';
+  tapHint.textContent='画像をもう一度タップすると再開します';
   if(activeCreation?.deckMode){
     const sourceId=activeCreation.deckSourceIds?.[currentIndex];
     if(sourceId)window.__memoryDeckRecordDraw?.(sourceId);
   }
   window.__memoryOnRouletteStopped?.();
-};
+}
 
 const photoViewer=document.createElement('div');
 photoViewer.id='photoViewer';

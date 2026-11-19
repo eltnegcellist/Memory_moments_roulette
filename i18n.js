@@ -83,6 +83,9 @@
   const ENGLISH_EXTRA = {
     '特別リプレイ':'Special replay',
     '保存した写真':'Saved photos','作ったルーレット':'Created roulettes',
+    'ルーレットの表示':'Roulette display','ランダム表示':'Random slideshow',
+    '円盤ルーレット':'Photo wheel',
+    'ルーレットを回す':'Spin the wheel','ストップ':'Stop','減速中…':'Slowing down…','準備中…':'Preparing…',
     'ルーレット・データ':'Roulette & data','動画から作る':'From video',
     'もらったファイルを開く':'Open received file','ルーレットを作る':'Create roulette',
     '動画を選ぶ・選び直す':'Choose or change videos',
@@ -303,7 +306,7 @@
   "このルーレットの元になった保存済み動画データが削除されているため、再生できません。履歴自体は削除できます。": "This roulette cannot be played because its saved source video frames were deleted. The history record can still be removed.",
   "削除しますか？": "Delete?",
   "この瞬間！": "This moment!",
-  "もう一度タップすると再開します": "Tap again to restart",
+  "画像をもう一度タップすると再開します": "Tap the image again to restart",
   "タップで再開": "Tap to restart",
   "画像をタップすると再開します": "Tap the image to restart",
   "0個の一瞬をバックアップから復元しました。": "Restored zero moments from backup.",
@@ -652,8 +655,8 @@
     document.title=t('思い出ルーレット')+' · '+t('おみくじ');
     const manifest=document.querySelector('link[rel="manifest"]');
     if (manifest) {
-      const desired=language==='ja'?'./manifest.webmanifest?v=1.3.0-release-20261109':
-        './manifest.intl.webmanifest?v=1.3.0-release-20261109';
+      const desired=language==='ja'?'./manifest.webmanifest?v=1.3.1':
+        './manifest.intl.webmanifest?v=1.3.1';
       if (manifest.getAttribute('href')!==desired) manifest.setAttribute('href',desired);
     }
     const labels=LABELS[language];

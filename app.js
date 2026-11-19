@@ -14,6 +14,7 @@ const video=$("video"), captureCanvas=$("captureCanvas"), smallCanvas=$("smallCa
 const playSection=$("playSection"), stage=$("stage"), playImage=$("playImage"), fortuneBadge=$("fortuneBadge"), resultCard=$("resultCard"), resultText=$("resultText"), message=$("message"), rouletteBadge=$("rouletteBadge"), tapHint=$("tapHint");
 const bigOverlay=$("bigOverlay");
 let objectUrl=null, lastFile=null, currentSourceKey=null, selectedFrames=[], selectedFortunes=[], selectedAppealDetails=[], currentCreation=null, activeCreation=null, running=false, timer=null, currentIndex=0, primed=false;
+const rouletteDisplayEl=$('rouletteDisplay');
 const PUBLIC_SETTINGS_KEY='memory-roulette-settings-v1';
 let publicSettingsChanged=false;
 let publicSettingsWrites=Promise.resolve();
@@ -21,6 +22,7 @@ function applyPublicSettings(data){
   const frame=String(data.frameCount||'auto');
   if([...frameCountEl.options].some(x=>x.value===frame))frameCountEl.value=frame;
   plainModeEl.checked=!!data.plainMode;
+  rouletteDisplayEl.value=data.rouletteDisplay==='random'?'random':'reel';
   if(showFortunesEl)showFortunesEl.checked=!!data.showFortunes;
 }
 function loadPublicSettings(){
@@ -33,6 +35,7 @@ function savePublicSettings(){
   const data={
     frameCount:frameCountEl.value||'auto',
     plainMode:!!plainModeEl.checked,
+    rouletteDisplay:rouletteDisplayEl.value,
     showFortunes:!!showFortunesEl?.checked
   };
   try{
@@ -78,6 +81,7 @@ function autoTargetCount(duration,distinctCount,totalCount){ const choices=[12,1
 function updatePreviewMeta(){ const mode=modeName(); previewTitle.textContent=mode==='omikuji' ? '自動で作成したおみくじ' : '自動で作成した思い出ルーレット'; previewNote.textContent=mode==='omikuji' ? '保存名は自動で付けます。必要なら保存後に変更できます。特徴度は写真の良し悪しを決める点数ではなく、候補どうしの違いを見るための補助値です。' : '保存名は自動で付けます。必要なら保存後に変更できます。'; }
 plainModeEl.addEventListener('change',async()=>{ savePublicSettings(); if(selectedFrames.length){ if(modeName()==='omikuji'){ selectedFortunes=await assignFortunes(selectedFrames); } renderGrid(); } updatePreviewMeta(); });
 frameCountEl.addEventListener('change',savePublicSettings);
+rouletteDisplayEl.addEventListener('change',savePublicSettings);
 showFortunesEl?.addEventListener('change',savePublicSettings);
 function once(target,event,timeout=6000){return new Promise((resolve,reject)=>{let done=false; const fn=()=>{if(done)return; done=true; clearTimeout(to); target.removeEventListener(event,fn); resolve();}; const to=setTimeout(()=>{if(done)return; done=true; target.removeEventListener(event,fn); reject(new Error(event+' timeout'));},timeout); target.addEventListener(event,fn,{once:true});})}
 async function loadVideo(file){ if(objectUrl) URL.revokeObjectURL(objectUrl); currentSourceKey=sourceKeyFor(file); objectUrl=URL.createObjectURL(file); video.src=objectUrl; video.load(); if(video.readyState<1) await once(video,'loadedmetadata',10000); if(!isFinite(video.duration)||video.duration<=0) throw new Error('動画の長さを取得できません'); }
@@ -185,6 +189,8 @@ grid.appendChild(d);
 function makeCreation(){ const mode=modeName(); const id=currentCreation?.id || ('r'+Date.now()+Math.random().toString(36).slice(2,8)); return { id, title: currentCreation?.title || autoTitle(mode), createdAt: currentCreation?.createdAt || Date.now(), updatedAt: Date.now(), sourceKey: currentSourceKey, mode, frames: selectedFrames.map(f=>f.dataUrl), fortunes: mode==='omikuji' ? selectedFortunes.slice() : [], times: selectedFrames.map(f=>f.time), appeal: mode==='omikuji' ? selectedAppealDetails.map(x=>({score:x.score,clarityScore:x.clarityScore,rarityScore:x.rarityScore,changeScore:x.changeScore})) : [] }; }
 const DBNAME='babyExpressionRouletteDB', STORE='creations';
 const LAST_ROULETTE_KEY='memory-moments-last-roulette-v1';
+const receivedDrawStates=new WeakMap();
+const receivedDrawKey=id=>'receivedDrawState:'+id;
 function openDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DBNAME,3);r.onupgradeneeded=()=>{
   const db=r.result;
   if(!db.objectStoreNames.contains(STORE))db.createObjectStore(STORE,{keyPath:'id'});
@@ -302,7 +308,16 @@ window.__memoryReceivedOnOpen=refreshReceivedList;
 function rememberLastRoulette(x){if(!x?.id)return;try{localStorage.setItem(LAST_ROULETTE_KEY,x.id);}catch(e){}}
 async function persistCreation(x){if(!x?.id||!Array.isArray(x.frames)||!x.frames.length)return;await dbPut(x);rememberLastRoulette(x);refreshLibrary().catch(e=>console.error('roulette history refresh failed',e));}
 async function dbAll(){const db=await openDB();return new Promise((res,rej)=>{const r=db.transaction(STORE).objectStore(STORE).getAll();r.onsuccess=()=>res(r.result.sort((a,b)=>(b.updatedAt||b.createdAt)-(a.updatedAt||a.createdAt)));r.onerror=()=>rej(r.error)})}
-async function dbDelete(id){const db=await openDB();return new Promise((res,rej)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).delete(id);tx.oncomplete=res;tx.onerror=()=>rej(tx.error)})}
+async function dbDelete(id){
+ const db=await openDB();
+ return new Promise((resolve,reject)=>{
+  const tx=db.transaction([STORE,'deckMeta'],'readwrite');
+  tx.objectStore(STORE).delete(id);
+  tx.objectStore('deckMeta').delete(receivedDrawKey(id));
+  tx.oncomplete=resolve;
+  tx.onabort=()=>reject(tx.error);
+ });
+}
 async function creationPreview(x){
   if(x?.frames?.[0])return x.frames[0];
   const id=x?.deckCandidateIds?.[0];
@@ -372,7 +387,9 @@ osc.start(now); osc.stop(now+dur+.03);
 // Extraction finishes asynchronously, so unlocking only at the first STOP is too late:
 // the very first deluxe drum roll would otherwise be silent.
 function primeRouletteAudio(){ primed=true; ensureAudio(); }
-fileInput.addEventListener('click',primeRouletteAudio);
+for(const input of [fileInput,$('receivedImportFile'),$('shareImportFile')]){
+  input?.addEventListener('click',primeRouletteAudio);
+}
 function unlockAudio(){ primeRouletteAudio(); playSound('start'); }
 function playSound(name){
 if(!primed||!ensureAudio()) return;
@@ -401,30 +418,226 @@ probe.onload=()=>{
 };
 probe.src=src;
 }
+let wheelActive=false;
+let pendingStop=null;
+let pendingWheelStart=null;
+const localWheelDrawStates=new WeakMap();
+
 function preparePlay(x){
-window.__memoryNavigate?.('play');
-rememberLastRoulette(x);
-activeCreation=x; running=false; clearInterval(timer); currentIndex=0;
-updatePlayStageAspect(x);
-playSection.style.display='block';
-fortuneBadge.style.display='none'; resultCard.style.display='none';
-rouletteBadge.style.display='block'; rouletteBadge.textContent='タップでストップ';
-tapHint.textContent='画像をタップすると止まります'; playImage.src=x.frames[0];
-window.__memoryOnRoulettePrepared?.(x);
-playSection.scrollIntoView({behavior:'smooth'});
-startRun(false);
+  cancelRouletteSpin();
+  window.__memoryNavigate?.('play');
+  if(x.shareImported&&!receivedDrawStates.has(x)){
+    receivedDrawStates.set(x,newFrameDrawState(x));
+  }
+  rememberLastRoulette(x);
+  activeCreation=x; currentIndex=0;
+  updatePlayStageAspect(x);
+  playSection.style.display='block';
+  fortuneBadge.style.display='none'; resultCard.style.display='none';
+  playImage.src=x.frames[0];
+  window.__memoryOnRoulettePrepared?.(x);
+  playSection.scrollIntoView({behavior:'smooth'});
+  startRun(false);
 }
-function showRandom(){ const arr=activeCreation.frames; if(!arr?.length) return; let n=currentIndex; while(arr.length>1 && n===currentIndex) n=Math.floor(Math.random()*arr.length); currentIndex=n; playImage.src=arr[n]; window.__memoryShareOnFrame?.(n); }
-function startRun(withSound=true){ running=true; window.__memoryShareOnStarted?.(activeCreation); window.__memoryOnRouletteStarted?.(); stage.classList.add('pulse'); fortuneBadge.style.display='none'; resultCard.style.display='none'; rouletteBadge.style.display='block'; rouletteBadge.textContent='タップでストップ'; tapHint.textContent='画像をタップすると止まります'; showRandom(); clearInterval(timer); timer=setInterval(showRandom,75); if(withSound) playSound('start'); }
-function stopRun(){
-running=false; clearInterval(timer); timer=null; stage.classList.remove('pulse');
-if(activeCreation?.deckMode&&typeof window.__memoryDeckResolveStop==='function'){
-  const resolved=window.__memoryDeckResolveStop(activeCreation,currentIndex);
-  if(Number.isInteger(resolved)&&resolved>=0&&resolved<activeCreation.frames.length){
-    currentIndex=resolved;
-    playImage.src=activeCreation.frames[currentIndex];
+
+function showRandom(){
+  const arr=activeCreation.frames;
+  if(!arr?.length)return;
+  let n=currentIndex;
+  while(arr.length>1&&n===currentIndex)n=Math.floor(Math.random()*arr.length);
+  currentIndex=n;
+  playImage.src=arr[n];
+  window.__memoryShareOnFrame?.(n);
+}
+function startRun(withSound=true){
+  if(running||!activeCreation?.frames?.length)return;
+  running=true;
+  window.__memoryShareOnStarted?.(activeCreation);
+  window.__memoryOnRouletteStarted?.();
+  fortuneBadge.style.display='none'; resultCard.style.display='none';
+  clearInterval(timer); timer=null;
+  wheelActive=rouletteDisplayEl.value==='reel';
+  if(wheelActive){
+    startPhotoWheel(activeCreation);
+  }else{
+    stage.classList.add('pulse');
+    rouletteBadge.style.display='block'; rouletteBadge.textContent='タップでストップ';
+    tapHint.textContent='画像をタップすると止まります';
+    showRandom();
+    timer=setInterval(showRandom,75);
+  }
+  if(withSound)playSound('start');
+}
+
+function newFrameDrawState(creation){
+  const ids=creation.frames.map((_,index)=>index);
+  return {remainingIds:shuffle(ids),universeIds:ids,cycle:1};
+}
+function getDrawOrder(state,ids){
+  if(!state.remainingIds.length){
+    state.remainingIds=shuffle(ids);
+    state.universeIds=ids.slice();
+    state.cycle=(state.cycle||1)+1;
+  }
+  return state.remainingIds;
+}
+function drawNextRouletteCandidate(state, ids, visible){
+  const order=getDrawOrder(state,ids);
+  const position=visible ? order.findIndex(id=>visible.has(id)) : 0;
+  return position<0 ? undefined : order.splice(position,1)[0];
+}
+function localWheelDrawState(creation){
+  if(!localWheelDrawStates.has(creation))localWheelDrawStates.set(creation,newFrameDrawState(creation));
+  return localWheelDrawStates.get(creation);
+}
+function startPhotoWheel(creation){
+  tapHint.textContent='';
+  if(creation.receivedRoulette&&creation.id){
+    photoWheel.waiting(creation.frames);
+    const request=readReceivedDrawState(creation);
+    pendingWheelStart=request;
+    request.then(()=>{
+      if(pendingWheelStart!==request)return;
+      pendingWheelStart=null;
+      photoWheel.start(creation.frames);
+    });
+    return;
+  }
+  photoWheel.start(creation.frames);
+}
+async function readReceivedDrawState(creation){
+  const state=receivedDrawStates.get(creation);
+  try{
+    const db=await openDB();
+    return await new Promise((resolve,reject)=>{
+      const request=db.transaction('deckMeta').objectStore('deckMeta').get(receivedDrawKey(creation.id));
+      request.onsuccess=()=>{
+        const saved=request.result?.value;
+        if(saved){
+          getDrawOrder(saved,state.universeIds);
+          receivedDrawStates.set(creation,saved);
+        }
+        resolve(saved||state);
+      };
+      request.onerror=()=>reject(request.error);
+    });
+  }catch(err){
+    console.warn('received roulette draw state read failed',err);
+    return state;
   }
 }
+function drawReceivedCandidate(creation,visible){
+ const memoryState=receivedDrawStates.get(creation);
+ const ids=memoryState.universeIds;
+ const drawInMemory=()=>drawNextRouletteCandidate(memoryState,ids,visible);
+ if(!creation.receivedRoulette||!creation.id)return drawInMemory();
+
+ return openDB().then(db=>new Promise((resolve,reject)=>{
+  const tx=db.transaction([STORE,'deckMeta'],'readwrite');
+  const meta=tx.objectStore('deckMeta');
+  const key=receivedDrawKey(creation.id);
+  let result;
+  const exists=tx.objectStore(STORE).getKey(creation.id);
+  exists.onsuccess=()=>{
+   if(exists.result===undefined)return;
+   const request=meta.get(key);
+   request.onsuccess=()=>{
+    // A wheel that already displayed the first frame of a new cycle must
+    // continue from the same shuffled order when it commits that draw.
+    const saved=request.result?.value;
+    const state=saved&&(!visible||saved.cycle>=memoryState.cycle)
+      ? saved : {...memoryState,remainingIds:memoryState.remainingIds.slice()};
+    result={state,index:drawNextRouletteCandidate(state,ids,visible)};
+    if(result.index!==undefined)meta.put({key,value:state,updatedAt:Date.now()});
+   };
+  };
+  tx.oncomplete=()=>{
+   if(result)receivedDrawStates.set(creation,result.state);
+   resolve(result ? result.index : drawInMemory());
+  };
+  tx.onabort=()=>reject(tx.error);
+ })).catch(err=>{
+  console.warn('received roulette draw state save failed',err);
+  return drawInMemory();
+ });
+}
+
+function stopRouletteAtResult(showResult,onWheelLanded){
+  if(!running||pendingStop||pendingWheelStart)return;
+  const creation=activeCreation;
+  clearInterval(timer); timer=null;
+  stage.classList.remove('pulse');
+  const finish=index=>{
+    running=false;
+    if(Number.isInteger(index)&&index>=0&&index<creation.frames.length){
+      currentIndex=index;
+      playImage.src=creation.frames[index];
+    }
+    showResult();
+  };
+  if(wheelActive){
+    const eligible = creation.deckMode && creation.deckDrawState
+      ? getDrawOrder(creation.deckDrawState, creation.deckCandidateIds)
+          .map(id => creation.deckCandidateIds.indexOf(id))
+      : creation.shareImported
+        ? getDrawOrder(receivedDrawStates.get(creation),
+            receivedDrawStates.get(creation).universeIds)
+        : getDrawOrder(localWheelDrawState(creation),
+            creation.frames.map((_, i) => i));
+    const visible=photoWheel.selection(eligible);
+    if(!visible)return;
+    photoWheel.hold();
+    const token={};
+    pendingStop=token;
+    const index=creation.shareImported ? drawReceivedCandidate(creation,visible)
+      : creation.deckMode&&creation.deckDrawState
+        ? window.__memoryDeckResolveStop(creation,undefined,visible)
+        : drawNextRouletteCandidate(localWheelDrawState(creation),creation.frames.map((_,i)=>i),visible);
+    Promise.resolve(index).then(selected=>{
+      if(pendingStop!==token)return;
+      if(selected===undefined){
+        // Another tab may have used all candidates displayed by this wheel.
+        wheelActive=running=false;
+        pendingStop=null;
+        startRun(false);
+        return;
+      }
+      photoWheel.stop(selected,async()=>{
+        onWheelLanded?.();
+        playImage.src=creation.frames[selected];
+        await playImage.decode().catch(()=>{});
+        if(pendingStop!==token)return;
+        pendingStop=null;
+        wheelActive=false;
+        photoWheel.hide();
+        finish(selected);
+      });
+    });
+    return;
+  }
+  if(creation.shareImported){
+    const index=drawReceivedCandidate(creation);
+    if(typeof index==='number'){finish(index);return;}
+    pendingStop=index;
+    index.then(result=>{
+      if(pendingStop!==index)return;
+      pendingStop=null;
+      if(activeCreation===creation&&running)finish(result);
+    });
+    return;
+  }
+  finish(creation.deckMode?window.__memoryDeckResolveStop?.(creation,currentIndex):undefined);
+}
+
+function cancelRouletteSpin(){
+  pendingStop=pendingWheelStart=null;
+  running=wheelActive=false;
+  clearInterval(timer); timer=null;
+  photoWheel.hide();
+  stage.classList.remove('pulse');
+}
+function stopRun(){stopRouletteAtResult(showStoppedRoulette);}
+function showStoppedRoulette(){
 if(activeCreation.mode==='omikuji'){
   const baseFortune=!activeCreation?.shareImported&&window.__babyLabForcedSpecial==='reversal'?'大凶':drawFortune();
   const resolved=typeof window.__memoryResolveStoppedFortune==='function'
@@ -438,7 +651,7 @@ if(activeCreation.mode==='omikuji'){
 }else{
   rouletteBadge.style.display='block'; rouletteBadge.textContent='この瞬間！'; playSound('吉');
 }
-tapHint.textContent='もう一度タップすると再開します';
+tapHint.textContent='画像をもう一度タップすると再開します';
 if(activeCreation?.deckMode){
   const sourceId=activeCreation.deckSourceIds?.[currentIndex];
   if(sourceId)window.__memoryDeckRecordDraw?.(sourceId);
@@ -450,13 +663,11 @@ function celebrate(){ bigOverlay.classList.remove('show'); void bigOverlay.offse
 fileInput.addEventListener('change',()=>{ if(fileInput.files?.length){ currentCreation=null; if(typeof window.__memoryDeckHandleFiles==='function'){ window.__memoryDeckHandleFiles(Array.from(fileInput.files)); return; } extractFromCurrentFile(); } });
 reextractBtn.addEventListener('click',()=>{ if(lastFile){ currentCreation=null; extractFromCurrentFile(); } });
 playBtn.addEventListener('click',()=>{ if(!selectedFrames.length) return; unlockAudio(); currentCreation=makeCreation(); persistCreation(currentCreation).catch(e=>console.error('roulette history save failed',e)); preparePlay(currentCreation); });
-stage.addEventListener('pointerdown',e=>{ e.preventDefault(); if(!primed) unlockAudio(); if(running) stopRun(); else startRun(); },{passive:false});
+stage.addEventListener('pointerdown',e=>{ if(e.target.closest('#photoWheel'))return; e.preventDefault(); if(!primed) unlockAudio(); if(running) stopRun(); else startRun(); },{passive:false});
 // Abandoning a spin does not count as stopping/drawing a result.
 function exitRoulette(){
   const interrupted=running;
-  running=false;
-  clearInterval(timer);timer=null;
-  stage.classList.remove('pulse');
+  cancelRouletteSpin();
   window.__memoryStopRouletteEffects?.();
   window.__memoryOnRouletteExit?.();
   document.querySelectorAll('.confetti').forEach(e=>e.remove());

@@ -1,4 +1,39 @@
-# 思い出ルーレットおみくじ
+# Memory Roulette Fortune / 思い出ルーレットおみくじ
+
+[English](#english) · [日本語](#日本語)
+
+## English
+
+**Rediscover an unexpected moment from your videos.**
+
+**Public release: v1.4.0** (12 languages, including sharing and receiving roulettes)
+
+**Web app: [Open Memory Roulette Fortune](https://memory-moments-roulette.pages.dev/)**
+
+### What you can do
+
+- Extract frames from a video and play roulette or draw a fortune (omikuji).
+- Switch between the photo wheel and random display in Settings.
+- Choose videos you’ve already saved to your deck.
+- Review your favorites and roulette history.
+- Make GIFs from videos.
+- Share photos, videos, or a playable roulette that others can spin.
+- Manually cover part of an image with a stamp before sharing it.
+- Back up and restore your deck.
+
+### Browser support
+
+The web app is designed for phones. You can add it to your home screen in supported browsers. Supported video formats and where files are saved vary by browser and device.
+
+### Data and privacy
+
+Frame extraction and deck storage happen in your browser. The app does not automatically upload your videos or photos to an app server for analysis.
+
+If you share through an external service, that service’s data practices apply. Covering a face with a stamp may still leave someone identifiable from the background or other details. Check every frame before sharing.
+
+Your deck and history are saved in your browser. Clearing browser data can erase them, so back up anything you want to keep.
+
+## 日本語
 
 **動画の中から、思いがけない一瞬に出会うWebアプリ。**
 
@@ -6,7 +41,7 @@
 
 **Webアプリ：[思い出ルーレットを開く](https://memory-moments-roulette.pages.dev/)**
 
-## できること
+### できること
 
 - 動画から候補フレームを抽出し、ルーレットやおみくじを楽しむ
 - 円盤ルーレットとランダム表示を設定から切り替える
@@ -17,11 +52,11 @@
 - ひみつスタンプを使って、共有する画像の一部を手動で隠す
 - デッキのバックアップと復元を行う
 
-## 利用環境
+### 利用環境
 
 スマートフォン向けのWebアプリです。対応ブラウザではホーム画面に追加して利用できます。ファイルの保存先や動画形式はブラウザ・端末によって異なります。
 
-## データとプライバシー
+### データとプライバシー
 
 動画のフレーム抽出やデッキの保存など、基本的な処理はブラウザ内で行います。動画や写真を解析のためにアプリ専用サーバーへ自動送信する仕組みはありません。
 

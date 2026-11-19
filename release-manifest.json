@@ -1,10 +1,10 @@
 {
-  "version": "v1.3.1",
+  "version": "v1.4.0",
   "files": [
     {
       "path": "README.md",
       "bytes": 1797,
-      "sha256": "3859b370f24aac8ff2bbde9a3c91df00ca24d020c5808c63cc9276f104a2fee9"
+      "sha256": "ec7f78dabaee5ab2deba7a2b68bc8c494d1692c95692becab7797fa7f312c590"
     },
     {
       "path": "_headers",
@@ -54,7 +54,7 @@
     {
       "path": "i18n.js",
       "bytes": 233333,
-      "sha256": "b574dbedccbcf3385053461c71d2bb2b56f7fda14c8d847e0085cb602df77955"
+      "sha256": "f2d13d68cf5895ba27d9573863eaa0ba6c0d79792ea706f365fc83b2dab38b80"
     },
     {
       "path": "icons/memory-roulette-omikuji.png",
@@ -64,7 +64,7 @@
     {
       "path": "index.html",
       "bytes": 57576,
-      "sha256": "91c271082c1f082815c539cc3fce89db66ced5ac4f91eb15d374819a658c828b"
+      "sha256": "bf6deb801ccd1e645653c7066c51dfcf75118a94d43441c6cf4b749104051f7d"
     },
     {
       "path": "manifest.intl.webmanifest",
@@ -119,7 +119,7 @@
     {
       "path": "sw.js",
       "bytes": 1215,
-      "sha256": "c05a28479de0e8696b2ca644d7c536f8baf6df6c0cc70fb37875656394fc5503"
+      "sha256": "6266686590463f89a8b5a980f3dc6a97c12b16544e4ea2ca4433808d3ce4bacb"
     },
     {
       "path": "wheel.js",

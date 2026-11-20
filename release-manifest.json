@@ -3,8 +3,8 @@
   "files": [
     {
       "path": "README.md",
-      "bytes": 3298,
-      "sha256": "6d09bbdd574b7e8732f8e8da00a479584e0aefa82b028d2820fe49fb421bc69c"
+      "bytes": 3326,
+      "sha256": "98d4de37ef508f453731d47218df5dd762b5bbe74e1ae29d7946755dd1963aac"
     },
     {
       "path": "_headers",
@@ -13,8 +13,8 @@
     },
     {
       "path": "app.js",
-      "bytes": 44148,
-      "sha256": "4ab3cb6a6606b6cd4ee633ddbe20fd33ff038302785638579e8325b9bb010b3e"
+      "bytes": 44436,
+      "sha256": "ee192fae64dae0a654f8576c30949e4c1c46320db6efd7375780b59c29354542"
     },
     {
       "path": "build-cloudflare-pages.py",
@@ -23,8 +23,8 @@
     },
     {
       "path": "deck.js",
-      "bytes": 96790,
-      "sha256": "06a97b1a6cc46a2dd2b505c5d627a1e6defa671db0891403a9ba493e817248d1"
+      "bytes": 97091,
+      "sha256": "b53eb4cdf5cfcc06bcb7e7a56c87631b23039287d0277f6cea508a30758bc6d5"
     },
     {
       "path": "deluxe.css",
@@ -33,8 +33,8 @@
     },
     {
       "path": "deluxe.js",
-      "bytes": 14098,
-      "sha256": "2ccd47e58ae7fd1c34dc2c33e0fabac0a29dfd1592b5c2abfa7be5c7e7b31a5d"
+      "bytes": 14146,
+      "sha256": "8c66dd3c0b98ee73b51501d1ad714cbeaa7890442f4dc3057fee5e238df9b82d"
     },
     {
       "path": "features.css",
@@ -43,8 +43,8 @@
     },
     {
       "path": "features.js",
-      "bytes": 110019,
-      "sha256": "30e6bdc65d2707c167c1113d92df5e7ede5f9fd9982ba4a248142089aadb1fff"
+      "bytes": 111454,
+      "sha256": "0670c91940e258dafb275c704ebc1c0dfd4c301e0358eb201a20af2e606b238d"
     },
     {
       "path": "hidden-settings.js",
@@ -53,8 +53,8 @@
     },
     {
       "path": "i18n.js",
-      "bytes": 233333,
-      "sha256": "f2d13d68cf5895ba27d9573863eaa0ba6c0d79792ea706f365fc83b2dab38b80"
+      "bytes": 92012,
+      "sha256": "195e91f820242d5dbd7bc16e812e790783b29c2d4f6ec5b5c5aacd317516a240"
     },
     {
       "path": "icons/memory-roulette-omikuji.png",
@@ -63,8 +63,8 @@
     },
     {
       "path": "index.html",
-      "bytes": 57576,
-      "sha256": "bf6deb801ccd1e645653c7066c51dfcf75118a94d43441c6cf4b749104051f7d"
+      "bytes": 57938,
+      "sha256": "24745199e6e09841f10afadaca454754fc47fa975fda6a544d3c9f072462e306"
     },
     {
       "path": "manifest.intl.webmanifest",
@@ -78,8 +78,8 @@
     },
     {
       "path": "media-save.js",
-      "bytes": 3120,
-      "sha256": "d1fafd16c6459214b4cf19e23fffaa4748e44b005dbfe81a452c94e376f8c01a"
+      "bytes": 3155,
+      "sha256": "8b189bd132f7e35586d39d7b98e757bf08b1f9ec60fd100de2572aacc884ac90"
     },
     {
       "path": "mp4-duration-fix.js",
@@ -93,8 +93,8 @@
     },
     {
       "path": "reset.html",
-      "bytes": 3482,
-      "sha256": "d2628854547c14a7416c62d08930d8eb084dd22f3f1803820fc2a42540ec0373"
+      "bytes": 3693,
+      "sha256": "b59b4ca2e8e2a09b5cedb126b7714a625b6e810e77127d7139e5b266de2ff51e"
     },
     {
       "path": "share-studio.css",
@@ -103,13 +103,13 @@
     },
     {
       "path": "share-studio.js",
-      "bytes": 55290,
-      "sha256": "18f08f7bfe62c3e7c955c32e82ed127b138b6a139d6ede07c8b019aabbc21b34"
+      "bytes": 56102,
+      "sha256": "95f084969342bce3c15c15a1fb038b30046cd858781a4afbdf167d579f0a7ec0"
     },
     {
       "path": "shared-html-i18n.js",
-      "bytes": 23801,
-      "sha256": "2800b3c866cc88e3bb90b29cabffbb67b92d0d2f70c70529939df66d584bed68"
+      "bytes": 7080,
+      "sha256": "bf2b8c6a530cef4764d5283ae297b045c05b86a31c604df08fd00c8ce08153c6"
     },
     {
       "path": "style.css",
@@ -118,8 +118,8 @@
     },
     {
       "path": "sw.js",
-      "bytes": 1215,
-      "sha256": "6266686590463f89a8b5a980f3dc6a97c12b16544e4ea2ca4433808d3ce4bacb"
+      "bytes": 1577,
+      "sha256": "8d86e977324071249c4ee38751f3cb6e77aaa9f07a28db21fbfbf7352803726d"
     },
     {
       "path": "wheel.js",

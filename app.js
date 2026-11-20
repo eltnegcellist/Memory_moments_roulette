@@ -1,6 +1,11 @@
 const FORTUNE_ICONS={"大大吉":"🎊","大吉":"🌟","中吉":"✨","小吉":"🍀","吉":"🎈","末吉":"🌸","凶":"☁️","大凶":"⚡","特大吉":"🎊"};
 const FORTUNE_COLORS={"大大吉":"#9f003f","大吉":"#b40000","中吉":"#b85d00","小吉":"#28752c","吉":"#754600","末吉":"#8b5f00","凶":"#56616c","大凶":"#4b2b7f","特大吉":"#9a5b00"};
 const FORTUNE_MESSAGES={"大大吉":"特別な運勢。思いがけない一瞬との出会いまで、今日のおみくじの結果です。","大吉":"今日は特別ないい日。笑顔で過ごすとさらに運気アップ！","中吉":"いい流れの日。落ち着いて進めばいいことがありそう。","小吉":"小さな幸せを見つけられる日。やさしい気持ちで。","吉":"安定したいい日。いつも通りがいちばんの近道です。","末吉":"これからじわっと上向き。あせらずゆっくりいこう。","凶":"今日は慎重めで。無理せず、のんびりが吉です。","大凶":"ひと休みの日。深呼吸して、気楽にいきましょう。","特大吉":"特別な運勢。思いがけない一瞬との出会いまで、今日のおみくじの結果です。"};
+function setLocalizedResultText(element,source){
+  if(!element)return;
+  if(window.MemoryI18n?.setText)window.MemoryI18n.setText(element,source);
+  else element.textContent=String(source??'');
+}
 const FORTUNE_WEIGHTS=[["大吉",10],["吉",20],["中吉",20],["小吉",20],["末吉",15],["凶",10],["大凶",5]];
 function drawFortune(){
   const total=FORTUNE_WEIGHTS.reduce((s,x)=>s+x[1],0);
@@ -282,7 +287,7 @@ async function refreshReceivedList(){
   const photo=document.createElement('img');photo.alt='';photo.loading='lazy';
   photo.src=await creationPreview(x)||'./icons/memory-roulette-omikuji.png?v=memorybrand2';
   const info=document.createElement('div');info.className='receivedCardDetails';
-  const title=document.createElement('strong');title.dataset.noI18n='';title.textContent=x.title||'友達からのルーレット';
+  const title=document.createElement('strong');window.MemoryI18n.setCreationTitle(title,x,'友達からのルーレット');
   const meta=document.createElement('small');
   meta.textContent=new Date(x.receivedAt||x.createdAt).toLocaleString(window.MemoryI18n?.language||'ja-JP')+' ・ '+(x.frameCount||x.frames?.length||0)+'コマ';
   info.append(title,meta);
@@ -301,7 +306,8 @@ async function refreshReceivedList(){
    try{await dbDelete(x.id);await refreshReceivedList();}
    catch(err){if(status)status.textContent='削除できませんでした：'+String(err?.message||err);}
   });
-  actions.append(play,remove);row.append(photo,info,actions);list.appendChild(row);
+  actions.append(play,remove);row.append(photo,info,actions);
+  window.MemoryI18n.localize(row);list.appendChild(row);
  }
 }
 window.__memoryReceivedOnOpen=refreshReceivedList;
@@ -348,7 +354,7 @@ async function refreshLibrary(){
     el.className='saved';
     const thumb=preview||'./icons/memory-roulette-omikuji.png?v=memorybrand2';
     el.innerHTML=`<img src="${thumb}"><div class="savedMain"><div class="savedTitle"></div><div class="savedMeta">${x.mode==='omikuji'?'おみくじ':'通常ルーレット'} ・ ${new Date(x.updatedAt||x.createdAt).toLocaleString(window.MemoryI18n?.language||'ja-JP')} ・ ${count}枚</div><div class="savedBtns"><button class="primary open">遊ぶ</button><button class="secondary renameToggle">名前変更</button><button class="danger del">削除</button></div><div class="renameRow" style="display:none"><input type="text" value=""><button class="secondary saveName">保存</button></div></div>`;
-    el.querySelector('.savedTitle').dataset.noI18n='';el.querySelector('.savedTitle').textContent=x.title;
+    window.MemoryI18n.setCreationTitle(el.querySelector('.savedTitle'),x,'ルーレット');
     el.querySelector('.renameRow input').value=x.title;
     el.querySelector('.open').onclick=async()=>{
       unlockAudio();
@@ -362,7 +368,7 @@ async function refreshLibrary(){
     el.querySelector('.renameToggle').onclick=()=>{const row=el.querySelector('.renameRow');row.style.display=row.style.display==='none'?'flex':'none';};
     el.querySelector('.saveName').onclick=async()=>{const nx=(el.querySelector('.renameRow input').value||'').trim();if(!nx)return;x.title=nx;x.updatedAt=Date.now();await dbPut(x);refreshLibrary();};
     el.querySelector('.del').onclick=async()=>{if(confirm('削除しますか？')){await dbDelete(x.id);refreshLibrary();}};
-    library.appendChild(el);
+    window.MemoryI18n.localize(el);library.appendChild(el);
   });
 }
 async function saveCurrentCreation(){ currentCreation=makeCreation(); await persistCreation(currentCreation); }
@@ -645,11 +651,11 @@ if(activeCreation.mode==='omikuji'){
     : baseFortune;
   const f=resolved||baseFortune;
   if(Array.isArray(activeCreation.fortunes))activeCreation.fortunes[currentIndex]=f;
-  fortuneBadge.style.display='block'; fortuneBadge.textContent=(FORTUNE_ICONS[f]||'🎴')+' '+f; fortuneBadge.style.color=FORTUNE_COLORS[f]||'#700';
-  resultCard.style.display='block'; resultText.dataset.fortune=f; resultText.textContent=f; resultText.style.color=FORTUNE_COLORS[f]||'#700'; message.textContent=FORTUNE_MESSAGES[f]||'';
+  fortuneBadge.style.display='block'; setLocalizedResultText(fortuneBadge,(FORTUNE_ICONS[f]||'🎴')+' '+f); fortuneBadge.style.color=FORTUNE_COLORS[f]||'#700';
+  resultCard.style.display='block'; resultText.dataset.fortune=f; setLocalizedResultText(resultText,f); resultText.style.color=FORTUNE_COLORS[f]||'#700'; setLocalizedResultText(message,FORTUNE_MESSAGES[f]||'');
   rouletteBadge.style.display='none'; if(f==='大吉') celebrate(); else playSound(f);
 }else{
-  rouletteBadge.style.display='block'; rouletteBadge.textContent='この瞬間！'; playSound('吉');
+  rouletteBadge.style.display='block'; setLocalizedResultText(rouletteBadge,'この瞬間！'); playSound('吉');
 }
 tapHint.textContent='画像をもう一度タップすると再開します';
 if(activeCreation?.deckMode){

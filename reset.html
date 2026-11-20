@@ -12,11 +12,12 @@ h1{font-size:20px;margin:0 0 12px}
 p{font-size:14px;line-height:1.7;margin:0}
 </style>
 </head>
-<body>
+<body data-i18n-title="思い出ルーレットおみくじ - 完全初期化">
 <main>
 <h1>この端末のアプリデータを完全初期化しています</h1>
 <p id="status">履歴・保存データ・設定・キャッシュを削除しています…</p>
 </main>
+<script src="./i18n.js?v=english-ui-audit-20261120"></script>
 <script>
 (async()=>{
   const status=document.getElementById('status');
@@ -30,6 +31,7 @@ p{font-size:14px;line-height:1.7;margin:0}
     location.replace('./');
     return;
   }
+  window.MemoryI18n.refresh();
   const path=new URL('./',location.href).pathname;
   const dbNames=['babyExpressionRouletteDB','babyExpressionRouletteLabDB'];
   const localKeys=[
@@ -80,12 +82,12 @@ p{font-size:14px;line-height:1.7;margin:0}
 
     const deleted=await Promise.all(dbNames.map(deleteDb));
     if(deleted.every(Boolean)){
-      status.textContent='完全初期化しました。最新版を開きます。';
+      window.MemoryI18n.setText(status,'完全初期化しました。最新版を開きます。');
     }else{
-      status.textContent='ほぼ初期化しました。別タブでアプリを開いている場合は閉じて、もう一度このページを開いてください。';
+      window.MemoryI18n.setText(status,'ほぼ初期化しました。別タブでアプリを開いている場合は閉じて、もう一度このページを開いてください。');
     }
   }catch(e){
-    status.textContent='初期化処理を続行しました。最新版を開きます。';
+    window.MemoryI18n.setText(status,'初期化処理を続行しました。最新版を開きます。');
   }
 
   setTimeout(()=>location.replace('./?fresh='+Date.now()),800);

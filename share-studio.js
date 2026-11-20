@@ -62,7 +62,8 @@ function ready(blob,name,label){
  // bytes intact, but send the file with the permitted text/html media type.
  const fileType=/\.html?$/i.test(name)?'text/html':(blob.type||'application/octet-stream');
  outputFile=new File([blob],name,{type:fileType});
- byId('shareOutputLabel').textContent=label+'（'+Math.max(1,Math.ceil(blob.size/1024))+'KB）';
+ window.MemoryI18n.setMessage(byId('shareOutputLabel'),'{0}（{1}KB）',
+   () => window.MemoryI18n.translate(label),Math.max(1,Math.ceil(blob.size/1024)));
  byId('shareOutputSave').textContent=typeof window.showSaveFilePicker==='function'?'保存先を選んで保存':'↓ 端末に保存';
  const isBundle=/\.(?:html|zip)$/i.test(name);
  const supported=!!(navigator.share&&navigator.canShare?.({files:[outputFile]}));
@@ -113,7 +114,8 @@ byId('shareOutputSend').addEventListener('click',async()=>{
    // ZIP/HTML must be sent as an actual attachment. Sending a title/text/URL
    // alongside it makes some Android share targets treat the intent as text.
    // Trigger navigator.share directly from the click handler (user activation).
-   const data=isBundle?{files:[file]}:{files:[file],title:'思い出ルーレットおみくじ',text:'自分の動画から作った思い出ルーレット '+BASE};
+   const data=isBundle?{files:[file]}:{files:[file],title:window.MemoryI18n.t('思い出ルーレットおみくじ'),
+     text:window.MemoryI18n.t('自分の動画から作った思い出ルーレット ')+BASE};
    await navigator.share(data);
    closeOutput();
  }catch(err){
@@ -124,7 +126,8 @@ byId('shareOutputSend').addEventListener('click',async()=>{
      kind==='DataError'?'ファイルを共有先に引き渡せなかった可能性があります。':
      kind==='TypeError'?'ブラウザーがこのファイル形式を共有対象として受け付けていません。':
      '共有先のアプリやブラウザーがファイルを受け取れなかった可能性があります。';
-   byId('shareOutputHelp').textContent='ZIP/HTMLの直接共有に失敗しました（'+kind+'）。'+diagnosis+(detail?' 詳細: '+detail:'');
+   window.MemoryI18n.setMessage(byId('shareOutputHelp'),'ZIP/HTMLの直接共有に失敗しました（{0}）。{1}',
+     kind,() => window.MemoryI18n.t(diagnosis)+(detail?' '+window.MemoryI18n.format('詳細: {0}',window.MemoryI18n.errorDetail(detail)):''));
  }
 });
 function snapshot(){
@@ -248,7 +251,8 @@ byId('shareDirectHtml').addEventListener('click',async()=>{
   byId('shareSimpleStatus').textContent='共有先でHTMLファイルの送信を確認してください。';
  }catch(err){
   if(err?.name==='AbortError')return;
-  byId('shareSimpleStatus').textContent='直接共有に失敗しました（'+String(err?.name||'Error')+'）：'+String(err?.message||'共有先で拒否された可能性があります。');
+  window.MemoryI18n.setMessage(byId('shareSimpleStatus'),'直接共有に失敗しました（{0}）：{1}',
+    String(err?.name||'Error'),() => window.MemoryI18n.errorDetail(err?.message||'共有先で拒否された可能性があります。'));
  }
 });
 byId('shareSaveZip').addEventListener('click',async()=>{
@@ -378,6 +382,9 @@ async function makeNormalMovie(frameImages){
  });
  const spinSeconds=Math.max(1.2,Math.min(5.4,indices.length*.075));
  const total=spinSeconds+1.8;
+ // Canvas text is baked into the shared video, so translate it explicitly.
+ const exportLanguage=window.MemoryI18n?.language||'ja';
+ const localize=value=>window.MemoryI18n?.t?.(value,exportLanguage)||value;
  const paint=(index,stopped)=>{
   const img=cache.get(index)||cache.get(playback.stopIndex);
   ctx.fillStyle='#17141d';ctx.fillRect(0,0,w,h);
@@ -385,13 +392,13 @@ async function makeNormalMovie(frameImages){
   ctx.fillStyle='rgba(26,18,29,.78)';
   ctx.fillRect(0,0,w,76);
   ctx.font='bold '+(w>h?25:29)+'px sans-serif';ctx.textAlign='center';ctx.fillStyle='#fff7e5';
-  ctx.fillText('思い出ルーレットおみくじ',w/2,48);
+  ctx.fillText(localize('思い出ルーレットおみくじ'),w/2,48);
   ctx.fillStyle=stopped?'rgba(255,245,222,.95)':'rgba(0,0,0,.65)';
   ctx.fillRect(0,h-170,w,170);
   ctx.fillStyle=stopped?'#8d324c':'#fff';ctx.font='bold '+(w>h?39:49)+'px sans-serif';
-  ctx.fillText(stopped?(playback.mode==='omikuji'?(playback.fortune||'結果発表'):'この瞬間！'):'ルーレット抽選中…',w/2,h-87);
+  ctx.fillText(localize(stopped?(playback.mode==='omikuji'?(playback.fortune||'結果発表'):'この瞬間！'):'ルーレット抽選中…'),w/2,h-87);
   ctx.fillStyle='#494047';ctx.font='19px sans-serif';
-  if(stopped)ctx.fillText('自分では選ばなかった一枚に出会う',w/2,h-42);
+  if(stopped)ctx.fillText(localize('自分では選ばなかった一枚に出会う'),w/2,h-42);
  };
  paint(indices[0]??playback.stopIndex,false);
  rec.start(250);
@@ -538,9 +545,11 @@ byId('shareAllFramesDetails').addEventListener('toggle',()=>{
 });
 function setPreviewMeta(){
  const c=getCreation(),count=c?.frames?.length||0;
- byId('shareSourceState').textContent=count
-  ? (shareFromPlayer?'現在のルーレット：':'選んだルーレット：')+(c.title||'')+'（'+count+'コマ）'
-  : '共有するルーレットがありません。ホームの「共有する」から履歴を選択してください。';
+ const state=byId('shareSourceState');
+ if(count){
+  window.MemoryI18n.setMessage(state,shareFromPlayer?'現在のルーレット：{0}（{1}コマ）':'選んだルーレット：{0}（{1}コマ）',
+    () => window.MemoryI18n.creationTitle(c,''),count);
+ }else window.MemoryI18n.setText(state,'共有するルーレットがありません。ホームの「共有する」から履歴を選択してください。');
  byId('shareRouletteBuild').disabled=count<1;
  const format=byId('shareRouletteFormat').value;
  byId('shareRouletteBuild').textContent=format==='movie'?'動画を作成して保存・共有':
@@ -583,7 +592,7 @@ async function showSavedHistory(){
     preview.appendChild(image);
    }
    const caption=document.createElement('span');caption.className='shareSavedCaption';
-   const title=document.createElement('strong');title.dataset.noI18n='';title.textContent=x.title||'ルーレット';
+   const title=document.createElement('strong');window.MemoryI18n.setCreationTitle(title,x,'ルーレット');
    const date=new Date(x.updatedAt||x.createdAt||Date.now()).toLocaleString(window.MemoryI18n?.language||'ja-JP');
    const meta=document.createElement('small');
    meta.textContent=(x.mode==='omikuji'?'おみくじ':'通常ルーレット')+' ・ '+date+' ・ '+count+'コマ';
@@ -849,13 +858,14 @@ byId('sharePrivacyGif').addEventListener('click',()=>{
 function openEditor(src){
  editorSource=src;marks=src.frames.map(()=>[]);editIndex=src.kind==='roulette'?Math.max(0,Math.min(src.frames.length-1,src.stopIndex||0)):0;chosen='🐻';maskSize=.27;
  editor.hidden=false;clearOutput();
- byId('sharePrivacyTitle').textContent='ひみつスタンプ：'+src.title;
+ window.MemoryI18n.setMessage(byId('sharePrivacyTitle'),'ひみつスタンプ：{0}',
+   () => src.creation ? window.MemoryI18n.creationTitle(src.creation,'ルーレット') : src.title);
  const hasMore=src.frames.length>1;
  byId('shareMaskPrev').disabled=!hasMore;byId('shareMaskNext').disabled=!hasMore;
  const format=src.selectedFormat||'photo';
- byId('sharePrivacyExportSelected').textContent='スタンプ付き'+
-   (format==='movie'?'動画':format==='play'?'遊べるルーレット':format==='zip'?'ZIPルーレット':format==='html'?'HTMLルーレット':format==='gif'?'GIF':'写真')+
-   'を作成して保存・共有';
+ const label=format==='movie'?'動画':format==='play'?'遊べるルーレット':format==='zip'?'ZIPルーレット':format==='html'?'HTMLルーレット':format==='gif'?'GIF':'写真';
+ window.MemoryI18n.setMessage(byId('sharePrivacyExportSelected'),'スタンプ付き{0}を作成して保存・共有',
+   () => window.MemoryI18n.t(label));
  editorMessage('スタンプで顔を隠せます。顔以外の背景や服装も確認してください。');
  renderEditor();
  editor.scrollIntoView({behavior:'smooth',block:'start'});

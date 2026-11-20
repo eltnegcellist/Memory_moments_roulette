@@ -33,7 +33,7 @@ async function prepare(filename){
     id:media?.folder==='videos'?'memory-roulette-videos':media?.folder==='pictures'?'memory-roulette-pictures':'memory-roulette-files',
     startIn:media?.folder||'downloads'
   };
-  if(media)options.types=[{description:media.label,accept:{[media.type]:[ext]}}];
+  if(media)options.types=[{description:window.MemoryI18n?.t(media.label)||media.label,accept:{[media.type]:[ext]}}];
   try{
     // This must run immediately in the user's click handler, before long-running encoding.
     const handle=await window.showSaveFilePicker(options);

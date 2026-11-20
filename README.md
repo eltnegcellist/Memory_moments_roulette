@@ -6,7 +6,7 @@
 
 **Rediscover an unexpected moment from your videos.**
 
-**Public release: v1.4.0** (12 languages, including sharing and receiving roulettes)
+**Public release: v1.4.0** (Japanese and English, including sharing and receiving roulettes)
 
 **Web app: [Open Memory Roulette Fortune](https://memory-moments-roulette.pages.dev/)**
 
@@ -37,7 +37,7 @@ Your deck and history are saved in your browser. Clearing browser data can erase
 
 **動画の中から、思いがけない一瞬に出会うWebアプリ。**
 
-**公開版：v1.4.0**（12言語対応、共有・受信機能を含む）
+**公開版：v1.4.0**（日本語・英語の2言語対応、共有・受信機能を含む）
 
 **Webアプリ：[思い出ルーレットを開く](https://memory-moments-roulette.pages.dev/)**
 

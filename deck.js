@@ -616,6 +616,7 @@ function makeSourceTile(src,{selectable=false,manageable=false}={}){
     };
     card.appendChild(del);
   }
+  window.MemoryI18n.localize(card);
   return card;
 }
 function renderGroupedLibrary(container,sources,options){
@@ -742,7 +743,7 @@ async function renderDeck(){
   const storage=await storageInfo(s.bytes);
   if(deckStorage)deckStorage.textContent=storage.appText;
   if(appStorageBreakdown)appStorageBreakdown.textContent=storage.breakdownText;
-  if(browserStorageDetails)browserStorageDetails.textContent=storage.browserText;
+  if(browserStorageDetails)window.MemoryI18n.setText(browserStorageDetails,storage.browserText);
   renderSourceLibraries();
 }
 async function deleteSource(sourceId){
@@ -1426,7 +1427,7 @@ window.__memoryDeckHandleFiles=async(files,options={})=>{
         if(r.duplicate)duplicates++;else added+=r.count;
       }catch(e){
         failed++;
-        errors.push(files[i].name+': '+(e?.message||e));
+        errors.push({name:files[i].name,error:e});
       }
     }
     requestPersistence().catch(()=>{});
@@ -1448,7 +1449,7 @@ window.__memoryDeckHandleFiles=async(files,options={})=>{
     // Optional quality/replay enhancement work continues silently in the background.
     progressText.textContent=msg;
     const standalone=window.matchMedia?.('(display-mode: standalone)')?.matches||navigator.standalone===true;
-    let notice=errors.length?errors.join(' / '):msg;
+    let notice=msg;
     if(added&&!standalone){
       try{
         if(!localStorage.getItem('memory-deck-home-hint-v1')){
@@ -1457,7 +1458,11 @@ window.__memoryDeckHandleFiles=async(files,options={})=>{
         }
       }catch(e){}
     }
-    deckNotice.textContent=notice;
+    if(errors.length){
+      window.MemoryI18n.setMessage(deckNotice, '{0}', () => errors.map(({name,error}) =>
+        name + ': ' + window.MemoryI18n.errorDetail(error)).join(' / ') +
+        (notice===msg?'':window.MemoryI18n.translate(notice.slice(msg.length))));
+    }else window.MemoryI18n.setText(deckNotice,notice);
     deckNotice.className='note deckNotice '+(failed?'warn':'ok');
     if(batchSourceIds.length&&!options.gifOnly){
       const creation=await buildDeckCreation(batchSourceIds);

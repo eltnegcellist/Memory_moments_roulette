@@ -106,11 +106,11 @@ function showDeluxeStoppedRoulette(){
       : baseFortune;
     const f=resolved||baseFortune;
     if(Array.isArray(activeCreation.fortunes))activeCreation.fortunes[currentIndex]=f;
-    fortuneBadge.style.display='block';fortuneBadge.textContent=(FORTUNE_ICONS[f]||'🎴')+' '+f;fortuneBadge.style.color=FORTUNE_COLORS[f]||'#700';
-    resultCard.style.display='block';resultText.dataset.fortune=f;resultText.textContent=f;resultText.style.color=FORTUNE_COLORS[f]||'#700';message.textContent=(window.MemoryI18n?.language && window.MemoryI18n.language!=='ja' ? FORTUNE_MESSAGES[f] : pick(f))||FORTUNE_MESSAGES[f]||'';rouletteBadge.style.display='none';
+    fortuneBadge.style.display='block';setLocalizedResultText(fortuneBadge,(FORTUNE_ICONS[f]||'🎴')+' '+f);fortuneBadge.style.color=FORTUNE_COLORS[f]||'#700';
+    resultCard.style.display='block';resultText.dataset.fortune=f;setLocalizedResultText(resultText,f);resultText.style.color=FORTUNE_COLORS[f]||'#700';setLocalizedResultText(message,(window.MemoryI18n?.language && window.MemoryI18n.language!=='ja' ? FORTUNE_MESSAGES[f] : pick(f))||FORTUNE_MESSAGES[f]||'');rouletteBadge.style.display='none';
     if(deluxe)reveal(f);else if(f==='大吉')celebrate();else playSound(f);photoAction.style.display='inline-flex';
   }else{
-    rouletteBadge.style.display='block';rouletteBadge.textContent='この瞬間！';
+    rouletteBadge.style.display='block';setLocalizedResultText(rouletteBadge,'この瞬間！');
     if(deluxe){stage.classList.add('result-reveal');stage.classList.remove('photo-focus');particles('吉');impact('吉');clearTimeout(photoFocusTimer);photoFocusTimer=setTimeout(focusPhoto,1500);}
     playSound('吉');
   }

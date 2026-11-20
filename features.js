@@ -277,6 +277,7 @@ function renderLucky(lucky){
   luckyEl.innerHTML=
     '<div class="labLuckyRow"><span>今日のラッキーカラー</span><b><i style="background:'+lucky.color.hex+'"></i>'+lucky.color.name+'</b></div>'+
     '<div class="labLuckyRow"><span>今日のラッキーポイント</span><b>✨ '+lucky.point+'</b></div>';
+  window.MemoryI18n?.localize?.(luckyEl);
 }
 function specialFor(fortune){
   // Imported .mmrplay and URL-only shared roulettes contain still frames only.
@@ -325,13 +326,13 @@ function specialFortuneDisplay(special,baseFortune){
 function applySpecialFortuneDisplay(special,baseFortune){
   const d=specialFortuneDisplay(special,baseFortune);
   setSpecialResultStyle(special);
-  if(resultHeadEl)resultHeadEl.textContent=d.head;
-  resultTextEl.dataset.fortune=d.fortune;resultTextEl.textContent=d.fortune;
+  if(resultHeadEl)setLocalizedResultText(resultHeadEl,d.head);
+  resultTextEl.dataset.fortune=d.fortune;setLocalizedResultText(resultTextEl,d.fortune);
   const colorKey=d.fortune==='大逆転大吉'?'大吉':d.fortune;
   resultTextEl.style.color=FORTUNE_COLORS[colorKey]||'#700';
-  fortuneBadgeEl.textContent=d.badge;
+  setLocalizedResultText(fortuneBadgeEl,d.badge);
   fortuneBadgeEl.style.color=FORTUNE_COLORS[colorKey]||'#700';
-  if(d.message&&messageEl)messageEl.textContent=d.message;
+  if(d.message&&messageEl)setLocalizedResultText(messageEl,d.message);
   return d;
 }
 function resolvedDisplayFortune(item){
@@ -532,6 +533,13 @@ function drawMovieIntroBackdrop(ctx,source,w,h,kind){
   ctx.restore();
 }
 function drawMovieText(ctx,w,h,kicker,title,sub,theme='gold',alpha=1,phase='intro'){
+  // Canvas text is outside the DOM observer; translate before recording the pixels.
+  const localize=window.MemoryI18n?.translate;
+  if(typeof localize==='function'){
+    kicker=localize(kicker||'');
+    title=localize(title||'');
+    sub=localize(sub||'');
+  }
   // The live overlay centers the introductory text, but places the result
   // title high on the final photograph (mobile CSS: top 16%).
   const final=phase==='final';
@@ -1129,9 +1137,9 @@ function hideMiracleOverlay(clearReplay=false){
   cancelMiracleSequence(clearReplay);
   miracleOverlay.className='';
   document.body.classList.remove('labMiracleOpen');
-  miracleKicker.textContent='';
-  miracleTitle.textContent='';
-  miracleSub.textContent='';
+  setLocalizedResultText(miracleKicker,'');
+  setLocalizedResultText(miracleTitle,'');
+  setLocalizedResultText(miracleSub,'');
   miracleSparkles.innerHTML='';
   miracleConfetti.innerHTML='';
   miracleStill.removeAttribute('src');
@@ -1178,7 +1186,7 @@ async function attemptReplay(src,targetTime,token,forceReload=false){
 
     miracleVideo.muted=true;
     miracleVideo.playbackRate=replayRate;
-    miracleReplayLabel.textContent=(Math.round(replayRate*100)/100)+'× SLOW REPLAY';
+    setLocalizedResultText(miracleReplayLabel,(Math.round(replayRate*100)/100)+'× SLOW REPLAY');
     await miracleVideo.play();
     diag('forward-play-started',{target,start,replayRate,forceReload,readyState:miracleVideo.readyState});
 
@@ -1269,8 +1277,8 @@ async function captureReverseReplayFrames(src,targetTime,token){
 
     const count=Math.max(12,Math.min(18,Math.ceil(span/.18)));
     const frames=[];
-    miracleReplayLabel.textContent='↶ REVERSE REPLAY · PREPARING';
-    miracleSub.textContent='逆再生を準備中…';
+    setLocalizedResultText(miracleReplayLabel,'↶ REVERSE REPLAY · PREPARING');
+    setLocalizedResultText(miracleSub,'逆再生を準備中…');
 
     // Capture real source-video frames first. We later show them in reverse,
     // rather than relying on Android to repaint a video element after rapid seeks.
@@ -1307,9 +1315,9 @@ async function replayReverseTowardTarget(src,targetTime,token){
 
   miracleVideo.style.display='none';
   miracleStill.style.display='block';
-  miracleReplayLabel.textContent='↶ REVERSE SLOW REPLAY';
-  miracleKicker.textContent='特別な一瞬へ';
-  miracleSub.textContent='逆再生で近づいています';
+  setLocalizedResultText(miracleReplayLabel,'↶ REVERSE SLOW REPLAY');
+  setLocalizedResultText(miracleKicker,'特別な一瞬へ');
+  setLocalizedResultText(miracleSub,'逆再生で近づいています');
 
   const reversed=frames.slice().reverse();
   // About 6 seconds of clearly visible reverse motion.
@@ -1330,7 +1338,7 @@ async function runForwardSourceReplay(targetTime,token){
     return false;
   }
   const src=replaySourceUrl();
-  miracleReplayLabel.textContent='0.42× SLOW REPLAY';
+  setLocalizedResultText(miracleReplayLabel,'0.42× SLOW REPLAY');
   miracleVideo.style.display='block';
   miracleStill.style.display='none';
   miracleVideo.muted=true;
@@ -1339,13 +1347,13 @@ async function runForwardSourceReplay(targetTime,token){
   if(await attemptReplay(src,targetTime,token,false))return true;
   if(token!==miracleSequenceToken)return false;
 
-  miracleReplayLabel.textContent='0.42× SLOW REPLAY · RETRY';
+  setLocalizedResultText(miracleReplayLabel,'0.42× SLOW REPLAY · RETRY');
   await sleep(180);
   if(token!==miracleSequenceToken)return false;
   if(await attemptReplay(src,targetTime,token,true))return true;
   if(token!==miracleSequenceToken)return false;
 
-  miracleReplayLabel.textContent='0.42× SLOW REPLAY · RETRY 2';
+  setLocalizedResultText(miracleReplayLabel,'0.42× SLOW REPLAY · RETRY 2');
   await sleep(260);
   if(token!==miracleSequenceToken)return false;
   return await attemptReplay(src,targetTime,token,true);
@@ -1377,9 +1385,9 @@ async function replayStoredDeckFrames(token){
   const span=Math.max(.04,Number(stored.span)||Number(activeCreation?.deckReplaySpans?.[currentIndex])||MIRACLE_REPLAY_LEAD_SECONDS);
   miracleVideo.style.display='none';
   miracleStill.style.display='block';
-  miracleReplayLabel.textContent=mode==='reverse'?'↶ REVERSE 0.42× REPLAY':'0.42× SLOW REPLAY';
-  miracleKicker.textContent='特別な一瞬へ';
-  miracleSub.textContent=mode==='reverse'?'逆再生で近づいています':'保存した連続コマをスロー再生中';
+  setLocalizedResultText(miracleReplayLabel,mode==='reverse'?'↶ REVERSE 0.42× REPLAY':'0.42× SLOW REPLAY');
+  setLocalizedResultText(miracleKicker,'特別な一瞬へ');
+  setLocalizedResultText(miracleSub,mode==='reverse'?'逆再生で近づいています':'保存した連続コマをスロー再生中');
   const totalMs=(span/Math.max(.1,MIRACLE_REPLAY_RATE))*1000;
   const hold=Math.max(120,Math.min(850,totalMs/seq.length));
   let shown=0;
@@ -1417,9 +1425,9 @@ async function replayReverseFramesFallback(targetTime,token){
 
   miracleVideo.style.display='none';
   miracleStill.style.display='block';
-  miracleReplayLabel.textContent='↶ REVERSE REPLAY';
-  miracleKicker.textContent='特別な一瞬へ';
-  miracleSub.textContent='逆向きフレームリプレイ';
+  setLocalizedResultText(miracleReplayLabel,'↶ REVERSE REPLAY');
+  setLocalizedResultText(miracleKicker,'特別な一瞬へ');
+  setLocalizedResultText(miracleSub,'逆向きフレームリプレイ');
 
   const hold=Math.max(500,Math.min(800,3000/seq.length));
   let shown=0;
@@ -1478,8 +1486,8 @@ async function executeReplayPlan(targetTime,token,frameSrc){
     miracleStill.style.display='block';
     miracleStill.src=frameSrc;
     miracleBackdropImage.src=frameSrc;
-    miracleReplayLabel.textContent='SPECIAL PHOTO';
-    miracleSub.textContent='この一枚をゆっくり表示します';
+    setLocalizedResultText(miracleReplayLabel,'SPECIAL PHOTO');
+    setLocalizedResultText(miracleSub,'この一枚をゆっくり表示します');
     try{
       miracleStill.getAnimations?.().forEach(x=>x.cancel());
       miracleStill.animate?.(
@@ -1514,18 +1522,18 @@ function showFinalMiraclePhoto(kind,frameSrc){
   if(kind==='reversal'){
     // Until this moment the normal result card intentionally remains "大凶".
     applySpecialFortuneDisplay('reversal','大凶');
-    miracleKicker.textContent='大凶かと思ったら…';
-    miracleTitle.textContent='大逆転大吉！';
-    miracleSub.textContent='🌈 SPECIAL FORTUNE 🌈';
+    setLocalizedResultText(miracleKicker,'大凶かと思ったら…');
+    setLocalizedResultText(miracleTitle,'大逆転大吉！');
+    setLocalizedResultText(miracleSub,'🌈 SPECIAL FORTUNE 🌈');
     playSpecialSound('reversal');
     if(navigator.vibrate)navigator.vibrate([120,40,120,40,220,60,320]);
   }else{
     const baseFortune=currentMiracleReplay?.fortune||currentLab?.fortune||'吉';
     // The special moment is itself the rare fortune: 特大吉.
     applySpecialFortuneDisplay('miracle',baseFortune);
-    miracleKicker.textContent='特別な一瞬を引きました';
-    miracleTitle.textContent='特大吉！';
-    miracleSub.textContent='✨ SPECIAL FORTUNE ✨';
+    setLocalizedResultText(miracleKicker,'特別な一瞬を引きました');
+    setLocalizedResultText(miracleTitle,'特大吉！');
+    setLocalizedResultText(miracleSub,'✨ SPECIAL FORTUNE ✨');
     playSpecialSound('miracle');
     if(navigator.vibrate)navigator.vibrate([90,45,120,55,180,60,260]);
   }
@@ -1560,18 +1568,18 @@ async function playMiracleSequence(kind,replayAgain=false){
   miracleConfetti.innerHTML='';
 
   miracleOverlay.className='show '+(kind==='reversal'?'reversal-wait-mode':'miracle-intro-mode');
-  miracleKicker.textContent=replayAgain?'もう一度、その瞬間へ':spec.intro.kicker;
-  miracleTitle.textContent=replayAgain?(kind==='reversal'?'大逆転の瞬間':'特大吉の一瞬'):spec.intro.title;
-  miracleSub.textContent=replayAgain?'まもなくスローリプレイ':spec.intro.sub;
+  setLocalizedResultText(miracleKicker,replayAgain?'もう一度、その瞬間へ':spec.intro.kicker);
+  setLocalizedResultText(miracleTitle,replayAgain?(kind==='reversal'?'大逆転の瞬間':'特大吉の一瞬'):spec.intro.title);
+  setLocalizedResultText(miracleSub,replayAgain?'まもなくスローリプレイ':spec.intro.sub);
   if(kind==='reversal'&&!replayAgain&&navigator.vibrate)navigator.vibrate([70,80,70]);
   await sleep(replayAgain?280:Math.round(spec.introDuration*1000));
   if(token!==miracleSequenceToken)return;
 
   miracleOverlay.className='show replay-mode '+(kind==='reversal'?'reversal-replay':'miracle-replay');
-  miracleKicker.textContent=spec.replay.kicker;
-  miracleTitle.textContent=spec.replay.title;
-  miracleSub.textContent=spec.replay.sub;
-  miracleReplayLabel.textContent=spec.replay.sub;
+  setLocalizedResultText(miracleKicker,spec.replay.kicker);
+  setLocalizedResultText(miracleTitle,spec.replay.title);
+  setLocalizedResultText(miracleSub,spec.replay.sub);
+  setLocalizedResultText(miracleReplayLabel,spec.replay.sub);
 
   await executeReplayPlan(targetTime,token,frameSrc);
   if(token!==miracleSequenceToken)return;
@@ -1656,10 +1664,10 @@ async function replayMiracleImmediately(){
 
   document.body.classList.add('labMiracleOpen');
   miracleOverlay.className='show replay-mode '+(replay.kind==='reversal'?'reversal-replay':'miracle-replay');
-  miracleKicker.textContent='もう一度、その瞬間へ';
-  miracleTitle.textContent='';
-  miracleSub.textContent='0.5× SLOW REPLAY';
-  miracleReplayLabel.textContent='0.5× SLOW REPLAY';
+  setLocalizedResultText(miracleKicker,'もう一度、その瞬間へ');
+  setLocalizedResultText(miracleTitle,'');
+  setLocalizedResultText(miracleSub,'0.5× SLOW REPLAY');
+  setLocalizedResultText(miracleReplayLabel,'0.5× SLOW REPLAY');
   miracleSparkles.innerHTML='';
   miracleConfetti.innerHTML='';
   miracleStill.style.display='none';
@@ -1746,7 +1754,8 @@ function renderGifSourceCards(groups){
       const check=document.createElement('span');check.className='deckVideoCheck';check.textContent='✓';
       media.append(icon,check);
       const info=document.createElement('div');info.className='deckVideoInfo';
-      const name=document.createElement('strong');name.textContent=g.label;
+      const name=document.createElement('strong');
+      name.dataset.noI18n='';name.textContent=g.label;
       const note=document.createElement('small');
       note.textContent=g.count+'コマ'+(g.origin==='legacy'?' ・ 旧履歴':'');
       info.append(name,note);button.append(media,info);tile.appendChild(button);grid.appendChild(tile);
@@ -1812,7 +1821,7 @@ async function loadGifSource(sourceKey){
       return;
     }
     const name=gifSourceCatalog.find(g=>g.id===sourceKey)?.label||'選択した動画';
-    gifSelectedTitle.textContent=name+'（'+gifLoadedFrames.length+'コマ）';
+    window.MemoryI18n.setMessage(gifSelectedTitle,'{0}（{1}コマ）',name,gifLoadedFrames.length);
     gifSelectedFrames.replaceChildren();
     [gifLoadedFrames[0],gifLoadedFrames[Math.floor((gifLoadedFrames.length-1)/2)],gifLoadedFrames[gifLoadedFrames.length-1]].forEach(frame=>{
       const img=document.createElement('img');
@@ -1931,6 +1940,7 @@ function renderHistory(){
       ? (x.sourceName||'動画')+' ・ '+x.time.toFixed(1)+'秒'
       : '元動画 '+x.time.toFixed(1)+'秒';
     card.addEventListener('click',()=>showHistoryEntry(x));
+    window.MemoryI18n.localize(card);
     historyEl.appendChild(card);
   });
   syncGifSourceChooser();
@@ -1994,7 +2004,7 @@ function showHistoryEntry(x){
     fortuneBadgeEl.style.display='none';
     resultCardEl.style.display='none';
     rouletteBadgeEl.style.display='block';
-    rouletteBadgeEl.textContent='この瞬間！';
+    setLocalizedResultText(rouletteBadgeEl,'この瞬間！');
     currentLab={fortune:null,displayFortune:'この瞬間！',lucky:null,special:null,plain:true,fromHistory:true};
     extra.style.display='none';
   }else{
@@ -2003,17 +2013,22 @@ function showHistoryEntry(x){
     if(x.special){
       applySpecialFortuneDisplay(x.special,x.fortune);
     }else{
-      if(resultHeadEl)resultHeadEl.textContent='きょうの運勢';
-      fortuneBadgeEl.textContent=(FORTUNE_ICONS[x.fortune]||'🎴')+' '+x.fortune;
+      if(resultHeadEl)setLocalizedResultText(resultHeadEl,'きょうの運勢');
+      setLocalizedResultText(fortuneBadgeEl,(FORTUNE_ICONS[x.fortune]||'🎴')+' '+x.fortune);
       fortuneBadgeEl.style.color=FORTUNE_COLORS[x.fortune]||'#700';
-      resultTextEl.dataset.fortune=x.fortune;resultTextEl.textContent=x.fortune;
+      resultTextEl.dataset.fortune=x.fortune;setLocalizedResultText(resultTextEl,x.fortune);
       resultTextEl.style.color=FORTUNE_COLORS[x.fortune]||'#700';
     }
-    messageEl.textContent=x.special==='miracle'
+    // Older saved draws may contain an untranslatable Japanese deluxe message.
+    // Fall back to the canonical localized message without rewriting the saved history.
+    const historyMessage=x.special==='miracle'
       ? FORTUNE_MESSAGES['特大吉']
       : x.special==='reversal'
         ? '大凶から一転。今日は大逆転大吉！'
-        : (x.message||'このときの結果です。');
+        : (window.MemoryI18n?.language && window.MemoryI18n.language!=='ja'
+          ? (FORTUNE_MESSAGES[x.fortune]||'このときの結果です。')
+          : (x.message||'このときの結果です。'));
+    setLocalizedResultText(messageEl,historyMessage);
 
     currentLab={fortune:x.fortune,displayFortune:resolvedDisplayFortune(x),lucky:x.lucky||pickLucky(),special:x.special,fromHistory:true};
     renderLucky(currentLab.lucky);
@@ -2026,7 +2041,7 @@ function showHistoryEntry(x){
       };
       replaySpecialBtn.style.display='block';
       movieResultBtn.style.display='block';
-      specialLine.textContent=x.special==='reversal'?'🌈 大逆転大吉・特別リプレイ':'✨ 特大吉・特別リプレイ';
+      setLocalizedResultText(specialLine,x.special==='reversal'?'🌈 大逆転大吉・特別リプレイ':'✨ 特大吉・特別リプレイ');
       specialLine.className=x.special==='reversal'?'reversal':'miracle';
       specialLine.style.display='block';
     }
@@ -2100,7 +2115,7 @@ function showLabResult(){
   const special=activeCreation.shareImported?null:(pending ? pending.special : specialFor(fortune));
   const targetTime=Number(activeCreation?.times?.[currentIndex]);
 
-  if(resultHeadEl)resultHeadEl.textContent='きょうの運勢';
+  if(resultHeadEl)setLocalizedResultText(resultHeadEl,'きょうの運勢');
   setSpecialResultStyle(null);
   currentLab={fortune,lucky,special,displayFortune:fortune};
   if(special){
@@ -2185,7 +2200,7 @@ window.__memoryOnRouletteStarted=()=>{
   window.__memoryPendingSpecialResult=null;
   clearTimeout(rouletteStoppedTimer);rouletteStoppedTimer=null;
   clearLab();
-  if(resultHeadEl)resultHeadEl.textContent='きょうの運勢';
+  if(resultHeadEl)setLocalizedResultText(resultHeadEl,'きょうの運勢');
 };
 window.__memoryOnRoulettePrepared=x=>{
   window.__memoryPendingSpecialResult=null;
@@ -2277,10 +2292,10 @@ makeGifBtn.addEventListener('click',async()=>{
   gifGenerating=true;
   syncGifSourceChooser();
   gifStatus.style.display='block';
-  gifStatus.textContent='「'+group.label+'」の全'+frames.length+'コマからGIFを作っています… 0/'+frames.length;
+  window.MemoryI18n.setMessage(gifStatus,'「{0}」の全{1}コマからGIFを作っています… {2}/{1}',group.label,frames.length,0);
   try{
     const blob=await makeGif(frames,(done,total)=>{
-      if(generation===gifGeneration)gifStatus.textContent='「'+group.label+'」のGIFを作っています… '+done+'/'+total;
+      if(generation===gifGeneration)window.MemoryI18n.setMessage(gifStatus,'「{0}」のGIFを作っています… {1}/{2}',group.label,done,total);
     },centiseconds,()=>generation!==gifGeneration);
     if(generation!==gifGeneration)return;
     gifBlob=blob;
@@ -2291,7 +2306,7 @@ makeGifBtn.addEventListener('click',async()=>{
     gifFileName='memory-roulette-'+safe+'.gif';
     gifDownload.download=gifFileName;
     gifResult.style.display='block';
-    gifStatus.textContent='「'+group.label+'」の全'+frames.length+'コマを時間順に並べました（'+seconds+'秒ごとに切り替え）。';
+    window.MemoryI18n.setMessage(gifStatus,'「{0}」の全{1}コマを時間順に並べました（{2}秒ごとに切り替え）。',group.label,frames.length,seconds);
   }catch(err){
     if(generation===gifGeneration){
       console.error(err);
@@ -2662,6 +2677,7 @@ async function renderCollection(){
       else pendingFavoriteDeletes.add(x.id);
       setFavoriteDeleteState(card,deleteBtn,!undo);
     });
+    window.MemoryI18n.localize(card);
     collectionEl.appendChild(card);
   });
 }
